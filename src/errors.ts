@@ -10,6 +10,9 @@ export abstract class AbstractFileError implements Error {
   // #region Constructors (1)
 
   constructor(repository: string, path: string, detail: any) {
+    if (repository === "/") {
+      repository = "";
+    }
     this.message = repository + path + ": ";
     if (typeof detail === "object") {
       if (detail.message) {
