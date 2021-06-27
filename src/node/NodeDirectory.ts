@@ -27,23 +27,26 @@ export class NodeDirectory extends Directory {
   }
 
   public mkdir(
-    path: string,
     options: MakeDirectoryOptions & { recursive: true }
   ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      fs.mkdir(path, { recursive: options.recursive }, (err) => {
-        if (err) {
-          reject(this.nodeFSO.convertError(err, true));
-        } else {
-          resolve();
+      fs.mkdir(
+        this.nodeFSO.getFullPath(),
+        { recursive: options.recursive },
+        (err) => {
+          if (err) {
+            reject(this.nodeFSO.convertError(err, true));
+          } else {
+            resolve();
+          }
         }
-      });
+      );
     });
   }
 
-  public readdir(path: string): Promise<string[]> {
+  public readdir(): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
-      fs.readdir(path, (err, fullPathes) => {
+      fs.readdir(this.nodeFSO.getFullPath(), (err, fullPathes) => {
         if (err) {
           reject(this.nodeFSO.convertError(err, false));
         } else {

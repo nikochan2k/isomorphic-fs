@@ -110,14 +110,12 @@ export abstract class Directory extends FileSystemObject {
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
   public abstract mkdir(
-    path: string,
     options: MakeDirectoryOptions & { recursive: true }
   ): Promise<void>;
   /**
    * Read a directory.
-   * @param path A path to a file. If a URL is provided, it must use the `file:` protocol.
    */
-  public abstract readdir(path: string): Promise<string[]>;
+  public abstract readdir(): Promise<string[]>;
 }
 
 export abstract class File extends FileSystemObject {
