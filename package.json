@@ -1,0 +1,60 @@
+{
+  "name": "isomorphic-fs",
+  "version": "0.0.1",
+  "description": "Isomorphic Filesystem",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "keywords": [
+    "fs",
+    "filesystem",
+    "storage",
+    "isomorphic",
+    "universal"
+  ],
+  "scripts": {
+    "clean": "rimraf ./lib",
+    "compile": "tsc",
+    "build": "npm-run-all clean compile",
+    "npm-version": "npm version patch",
+    "npm-publish": "npm publish",
+    "release": "npm-run-all clean compile npm-version npm-publish",
+    "test": "jest --runInBand"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "ts",
+      "tsx"
+    ],
+    "transform": {
+      "^.+\\.(ts|tsx)$": "ts-jest"
+    },
+    "globals": {
+      "ts-jest": {
+        "tsConfig": "tsconfig.json"
+      }
+    },
+    "testMatch": [
+      "<rootDir>/src/__tests__/*.spec.+(ts|tsx|js)"
+    ],
+    "preset": "ts-jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "@types/node": "^15.12.4",
+    "jest": "^26.6.3",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^3.0.2",
+    "ts-jest": "^26.5.6",
+    "typescript": "^4.3.4"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "author": "Yoshihiro Seki",
+  "license": "MIT"
+}
