@@ -26,21 +26,16 @@ export class NodeDirectory extends Directory {
     return this.nodeFSO.getURL();
   }
 
-  public mkdir(
-    options: MakeDirectoryOptions & { recursive: true }
-  ): Promise<void> {
+  public mkdir(options?: MakeDirectoryOptions): Promise<void> {
+    const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
-      fs.mkdir(
-        this.nodeFSO.getFullPath(),
-        { recursive: options.recursive },
-        (err) => {
-          if (err) {
-            reject(this.nodeFSO.convertError(err, true));
-          } else {
-            resolve();
-          }
+      fs.mkdir(this.nodeFSO.getFullPath(), { recursive }, (err) => {
+        if (err) {
+          reject(this.nodeFSO.convertError(err, true));
+        } else {
+          resolve();
         }
-      );
+      });
     });
   }
 

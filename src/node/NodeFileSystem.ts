@@ -26,7 +26,7 @@ export class NodeFileSystem extends FileSystem {
 
   public async openWrite(
     path: string,
-    options: OpenWriteOptions
+    options?: OpenWriteOptions
   ): Promise<FileWrite> {
     return new NodeFileWrite(this, path, options);
   }

@@ -47,7 +47,7 @@ export abstract class FileSystem {
    */
   public abstract openWrite(
     path: string,
-    options: OpenWriteOptions
+    options?: OpenWriteOptions
   ): Promise<FileWrite>;
 }
 
@@ -62,8 +62,6 @@ export abstract class FileSystemObject {
 
   public abstract getStats(): Promise<Stats>;
   public abstract getURL(urlType?: URLType): Promise<string>;
-  public abstract isDirectory(): boolean;
-  public abstract isFile(): boolean;
   /**
    * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
    */
@@ -96,22 +94,12 @@ export interface RmOptions {
 }
 
 export abstract class Directory extends FileSystemObject {
-  public isDirectory(): boolean {
-    return true;
-  }
-
-  public isFile(): boolean {
-    return false;
-  }
-
   /**
    * Create a directory.
    * @param path A path to a file. If a URL is provided, it must use the `file:` protocol.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
-  public abstract mkdir(
-    options: MakeDirectoryOptions & { recursive: true }
-  ): Promise<void>;
+  public abstract mkdir(options?: MakeDirectoryOptions): Promise<void>;
   /**
    * Read a directory.
    */

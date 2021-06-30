@@ -1,12 +1,6 @@
 import * as fs from "fs";
 import { pathToFileURL } from "url";
 import {
-  InvalidModificationError,
-  InvalidStateError,
-  NotFoundError,
-  NotReadableError,
-} from "../errors";
-import {
   FileSystem,
   FileSystemObject,
   RmOptions,
@@ -14,8 +8,15 @@ import {
   Times,
   URLType,
 } from "../core";
-import { isArrayBuffer, isBuffer, isUint8Array } from "../util/buffer";
+import {
+  InvalidModificationError,
+  InvalidStateError,
+  NotFoundError,
+  NotReadableError,
+} from "../errors";
+import { isArrayBuffer, isUint8Array } from "../util/buffer";
 import { joinPathes } from "../util/path";
+import { isBuffer } from "./buffer";
 
 export class NodeFileSystemObject extends FileSystemObject {
   constructor(fs: FileSystem, path: string) {

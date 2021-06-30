@@ -15,7 +15,7 @@ export class NodeFileWrite extends FileWrite {
   private nodeFSO: NodeFileSystemObject;
   private writeStream?: fs.WriteStream;
 
-  constructor(fs: FileSystem, path: string, options: OpenWriteOptions) {
+  constructor(fs: FileSystem, path: string, options?: OpenWriteOptions) {
     super(fs, path, options);
     this.nodeFSO = new NodeFileSystemObject(fs, path);
   }
