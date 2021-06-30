@@ -18,7 +18,7 @@ export function isArrayBuffer(value: unknown): value is ArrayBuffer {
 export function toArrayBuffer(
   value: ArrayBuffer | Uint8Array | string,
   encoding: "utf8" | "base64" = "utf8"
-) {
+): ArrayBuffer {
   if (!value) {
     return EMPTY_ARRAY_BUFFER;
   }
@@ -62,7 +62,7 @@ export function isUint8Array(value: unknown): value is Uint8Array {
 export function toUint8Array(
   value: ArrayBuffer | Uint8Array | string,
   encoding: "utf8" | "base64" = "utf8"
-) {
+): Uint8Array {
   if (!value) {
     return EMPTY_U8;
   }
