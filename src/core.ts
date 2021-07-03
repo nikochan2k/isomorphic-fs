@@ -11,15 +11,11 @@ export interface Stats extends Times {
   size?: number;
 }
 
+export type OpenFlags = "r" | "a" | "ax" | "w" | "wx";
 export interface OpenOptions {
+  flags?: OpenFlags;
   highWaterMark?: number;
   start?: number;
-}
-
-export type OpenWriteFlags = "a" | "ax" | "w" | "wx";
-
-export interface OpenWriteOptions extends OpenOptions {
-  flag?: OpenWriteFlags;
 }
 
 export abstract class FileSystem {
@@ -36,19 +32,7 @@ export abstract class FileSystem {
    * @param path A path to a file.
    * @param options
    */
-  public abstract openFileForRead(
-    path: string,
-    options: OpenOptions
-  ): Promise<FileForRead>;
-  /**
-   * Open a file for writing.
-   * @param path A path to a file..
-   * @param options
-   */
-  public abstract openFileForWrite(
-    path: string,
-    options?: OpenWriteOptions
-  ): Promise<FileForWrite>;
+  public abstract openFile(path: string, options?: OpenOptions): Promise<File>;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -107,6 +91,7 @@ export abstract class Directory extends FileSystemObject {
 }
 
 export abstract class File extends FileSystemObject {
+  protected flags: OpenFlags = "r";
   protected highWaterMark = 64 * 1024;
   protected start = 0;
 
@@ -118,20 +103,9 @@ export abstract class File extends FileSystemObject {
     if (options?.start) {
       this.start = options.start;
     }
-  }
-
-  public isDirectory(): boolean {
-    return false;
-  }
-
-  public isFile(): boolean {
-    return true;
-  }
-}
-
-export abstract class FileForRead extends File {
-  constructor(fs: FileSystem, path: string, options?: OpenOptions) {
-    super(fs, path, options);
+    if (options?.flags) {
+      this.flags = options.flags;
+    }
   }
 
   /**
@@ -143,16 +117,6 @@ export abstract class FileForRead extends File {
    * The `File` must have been opened for reading.
    */
   public abstract read(): Promise<BufferSource>;
-}
-
-export abstract class FileForWrite extends File {
-  protected flags: OpenWriteFlags;
-
-  constructor(fs: FileSystem, path: string, options?: OpenWriteOptions) {
-    super(fs, path, options);
-    this.flags = options?.flag || "w";
-  }
-
   /**
    * Truncate a file to a specified length.
    * @param len If not specified, defaults to `0`.

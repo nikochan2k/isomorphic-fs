@@ -1,33 +1,47 @@
+import { createHash } from "crypto";
 import * as fs from "fs";
-import { InvalidModificationError } from "../errors";
 import {
+  File,
   FileSystem,
-  FileForWrite,
-  OpenWriteOptions,
+  OpenOptions,
   RmOptions,
   Stats,
   Times,
   URLType,
 } from "../core";
+import { InvalidModificationError } from "../errors";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
-export class NodeFileWrite extends FileForWrite {
+export class NodeFile extends File {
   private nodeFSO: NodeFileSystemObject;
+  private readStream?: fs.ReadStream;
   private writeStream?: fs.WriteStream;
 
-  constructor(fs: FileSystem, path: string, options?: OpenWriteOptions) {
+  constructor(fs: FileSystem, path: string, options: OpenOptions) {
     super(fs, path, options);
     this.nodeFSO = new NodeFileSystemObject(fs, path);
   }
 
   public async close(): Promise<void> {
-    if (this.writeStream && !this.writeStream.destroyed) {
-      this.writeStream.close();
+    if (this.readStream && !this.readStream.destroyed) {
+      this.readStream.close();
     }
   }
 
   public getHash(): Promise<string> {
-    throw new Error("Method not implemented.");
+    return new Promise<string>((resolve, reject) => {
+      const hash = createHash("sha256");
+      const input = fs.createReadStream(this.nodeFSO.getFullPath());
+      input.on("data", (data) => {
+        hash.update(data);
+      });
+      input.on("end", () => {
+        resolve(hash.digest("hex"));
+      });
+      input.on("error", (err) => {
+        reject(this.nodeFSO.convertError(err, false));
+      });
+    });
   }
 
   public getStats(): Promise<Stats> {
@@ -36,6 +50,10 @@ export class NodeFileWrite extends FileForWrite {
 
   public getURL(_urlType?: URLType): Promise<string> {
     return this.nodeFSO.getURL();
+  }
+
+  public async read(): Promise<BufferSource> {
+    return this.createReadStream().read();
   }
 
   public rm(options?: RmOptions): Promise<void> {
@@ -73,6 +91,16 @@ export class NodeFileWrite extends FileForWrite {
       writable.write(buffer);
       writable.end();
     });
+  }
+
+  private createReadStream() {
+    if (!this.readStream || this.readStream.destroyed) {
+      this.readStream = fs.createReadStream(this.nodeFSO.getFullPath(), {
+        highWaterMark: this.highWaterMark || this.highWaterMark,
+        start: this.start,
+      });
+    }
+    return this.readStream;
   }
 
   private createWriteStream() {

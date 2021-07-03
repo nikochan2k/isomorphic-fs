@@ -1,9 +1,9 @@
-import "../index";
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
 import { FileSystem } from "../core";
 import { NotFoundError } from "../errors";
+import "../index";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
 import { DIR_SEPARATOR } from "../util/path";
@@ -35,7 +35,7 @@ test("readdir", async () => {
 });
 
 test("add empty file", async () => {
-  const file = await fs.openFileForWrite("/empty.txt");
+  const file = await fs.openFile("/empty.txt", { flags: "w" });
   try {
     await file.getStats();
     fail("Found file: " + file.path);
@@ -49,7 +49,7 @@ test("add empty file", async () => {
 });
 
 test("add text file", async () => {
-  const file = await fs.openFileForWrite("/test.txt");
+  const file = await fs.openFile("/test.txt", { flags: "w" });
   try {
     await file.getStats();
     fail("Found file: " + file.path);
