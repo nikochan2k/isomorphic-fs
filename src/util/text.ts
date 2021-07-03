@@ -27,7 +27,7 @@ export function toBase64(
   return encode(value);
 }
 
-export function toUTF8(
+export function toString(
   value: ArrayBuffer | Uint8Array | string,
   encoding: "utf8" | "base64" = "utf8"
 ): string {

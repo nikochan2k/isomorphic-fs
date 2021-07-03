@@ -63,9 +63,7 @@ export class NodeFileSystemObject extends FileSystemObject {
         { force: options?.force, recursive: options?.recursive },
         (err) => {
           if (err) {
-            reject(
-              new InvalidModificationError(this.fs.repository, this.path, err)
-            );
+            reject(this.convertError(err, true));
           } else {
             resolve();
           }

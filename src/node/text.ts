@@ -12,7 +12,7 @@ export function toBase64(
   return text.toBase64(value, encoding);
 }
 
-export function toUTF8(
+export function toString(
   value: Buffer | ArrayBuffer | Uint8Array | string,
   encoding: "utf8" | "base64" = "utf8"
 ): string {
@@ -20,5 +20,5 @@ export function toUTF8(
     return value.toString("utf8");
   }
 
-  return text.toUTF8(value, encoding);
+  return text.toString(value, encoding);
 }

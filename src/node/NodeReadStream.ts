@@ -47,7 +47,6 @@ export class NodeReadStream extends ReadStream {
       this.readStream.destroy();
     }
 
-    const flags = origin === SeekOrigin.End ? "a" : "w";
     let start: number | undefined;
     if (origin === SeekOrigin.Begin) {
       start = offset;
@@ -58,7 +57,7 @@ export class NodeReadStream extends ReadStream {
     }
 
     this.readStream = fs.createReadStream(this.fso.getFullPath(), {
-      flags,
+      flags: "r",
       highWaterMark: this.bufferSize,
       start,
     });

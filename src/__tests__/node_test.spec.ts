@@ -1,12 +1,12 @@
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
-import { FileSystem } from "../core";
+import { FileSystem, SeekOrigin } from "../core";
 import { NotFoundError } from "../errors";
 import "../index";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
-import { toUTF8 } from "../node/text";
+import { toText } from "../node/text";
 import { DIR_SEPARATOR } from "../util/path";
 
 const tempDir = tmpdir();
@@ -72,6 +72,18 @@ test("read text file", async () => {
   const rs = file.openReadStream();
   const buffer = await rs.read();
   expect(buffer.byteLength).toBe(4);
-  const text = toUTF8(buffer);
+  const text = toText(buffer);
   expect(text).toBe("test");
+});
+
+test("continuous read and write", async () => {
+  const file = await fs.openFile("/cont.txt");
+  const ws = file.openWriteStream();
+  await ws.write(toBuffer("大谷"));
+  await ws.write(toBuffer("翔平"));
+  await ws.close();
+  const rs = file.openReadStream();
+  await rs.seek(6, SeekOrigin.Begin);
+  const text = toText(await rs.read());
+  expect(text).toBe("翔平");
 });
