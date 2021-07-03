@@ -58,14 +58,6 @@ export class NodeFileSystemObject extends FileSystemObject {
     return pathToFileURL(this.getFullPath()).href;
   }
 
-  public isDirectory(): boolean {
-    throw new Error("Method not implemented.");
-  }
-
-  public isFile(): boolean {
-    throw new Error("Method not implemented.");
-  }
-
   public rm(options?: RmOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       fs.rm(

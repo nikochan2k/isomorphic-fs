@@ -36,19 +36,19 @@ export abstract class FileSystem {
    * @param path A path to a file.
    * @param options
    */
-  public abstract openRead(
+  public abstract openFileForRead(
     path: string,
     options: OpenOptions
-  ): Promise<FileRead>;
+  ): Promise<FileForRead>;
   /**
    * Open a file for writing.
    * @param path A path to a file..
    * @param options
    */
-  public abstract openWrite(
+  public abstract openFileForWrite(
     path: string,
     options?: OpenWriteOptions
-  ): Promise<FileWrite>;
+  ): Promise<FileForWrite>;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -129,7 +129,7 @@ export abstract class File extends FileSystemObject {
   }
 }
 
-export abstract class FileRead extends File {
+export abstract class FileForRead extends File {
   constructor(fs: FileSystem, path: string, options?: OpenOptions) {
     super(fs, path, options);
   }
@@ -145,7 +145,7 @@ export abstract class FileRead extends File {
   public abstract read(): Promise<BufferSource>;
 }
 
-export abstract class FileWrite extends File {
+export abstract class FileForWrite extends File {
   protected flags: OpenWriteFlags;
 
   constructor(fs: FileSystem, path: string, options?: OpenWriteOptions) {

@@ -1,14 +1,14 @@
 import {
   Directory,
-  FileRead,
+  FileForRead,
   FileSystem,
-  FileWrite,
+  FileForWrite,
   OpenOptions,
   OpenWriteOptions,
 } from "../core";
 import { normalizePath } from "../util/path";
 import { NodeDirectory } from "./NodeDirectory";
-import { NodeFileRead } from "./NodeFileRead";
+import { NodeFileRead } from "./NodeFileForRead";
 import { NodeFileWrite } from "./NodeFileWrite";
 
 export class NodeFileSystem extends FileSystem {
@@ -20,14 +20,17 @@ export class NodeFileSystem extends FileSystem {
     return new NodeDirectory(this, path);
   }
 
-  public async openRead(path: string, options: OpenOptions): Promise<FileRead> {
+  public async openFileForRead(
+    path: string,
+    options: OpenOptions
+  ): Promise<FileForRead> {
     return new NodeFileRead(this, path, options);
   }
 
-  public async openWrite(
+  public async openFileForWrite(
     path: string,
     options?: OpenWriteOptions
-  ): Promise<FileWrite> {
+  ): Promise<FileForWrite> {
     return new NodeFileWrite(this, path, options);
   }
 }

@@ -1,8 +1,10 @@
+import "../index";
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
 import { FileSystem } from "../core";
 import { NotFoundError } from "../errors";
+import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
 import { DIR_SEPARATOR } from "../util/path";
 
@@ -32,19 +34,16 @@ test("readdir", async () => {
   expect(pathes.length).toBe(0);
 });
 
-/*
 test("add empty file", async () => {
-  const file = await fs.openWrite("/empty.txt");
-  file.write()
-  const dir = await fs.openDirectory("/");
+  const file = await fs.openFileForWrite("/empty.txt");
   try {
-    await dir.getStats();
-    fail("Found directory: " + dir.path);
+    await file.getStats();
+    fail("Found file: " + file.path);
   } catch (e) {
     expect(e).toBeInstanceOf(NotFoundError);
   }
-  await dir.mkdir();
-  const pathes = await dir.readdir();
-  expect(pathes.length).toBe(0);
+  const buffer = toBuffer("");
+  await file.write(buffer);
+  const stats = await file.getStats();
+  expect(stats.size).toBe(0);
 });
-*/

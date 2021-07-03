@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import { createReadStream, ReadStream } from "fs";
 import {
-  FileRead,
+  FileForRead,
   FileSystem,
   OpenOptions,
   RmOptions,
@@ -11,7 +11,7 @@ import {
 } from "../core";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
-export class NodeFileRead extends FileRead {
+export class NodeFileRead extends FileForRead {
   private nodeFSO: NodeFileSystemObject;
   private readStream?: ReadStream;
 

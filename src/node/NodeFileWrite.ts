@@ -2,7 +2,7 @@ import * as fs from "fs";
 import { InvalidModificationError } from "../errors";
 import {
   FileSystem,
-  FileWrite,
+  FileForWrite,
   OpenWriteOptions,
   RmOptions,
   Stats,
@@ -11,7 +11,7 @@ import {
 } from "../core";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
-export class NodeFileWrite extends FileWrite {
+export class NodeFileWrite extends FileForWrite {
   private nodeFSO: NodeFileSystemObject;
   private writeStream?: fs.WriteStream;
 
