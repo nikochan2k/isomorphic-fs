@@ -35,7 +35,7 @@ test("readdir", async () => {
 });
 
 test("add empty file", async () => {
-  const file = await fs.openFile("/empty.txt", { flags: "w" });
+  const file = await fs.openFile("/empty.txt");
   try {
     await file.getStats();
     fail("Found file: " + file.path);
@@ -43,13 +43,15 @@ test("add empty file", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   const buffer = toBuffer("");
-  await file.write(buffer);
+  const ws = file.openWriteStream();
+  await ws.write(buffer);
+  await ws.close();
   const stats = await file.getStats();
   expect(stats.size).toBe(0);
 });
 
 test("add text file", async () => {
-  const file = await fs.openFile("/test.txt", { flags: "w" });
+  const file = await fs.openFile("/test.txt");
   try {
     await file.getStats();
     fail("Found file: " + file.path);
@@ -57,7 +59,9 @@ test("add text file", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   const buffer = toBuffer("test");
-  await file.write(buffer);
+  const ws = file.openWriteStream();
+  await ws.write(buffer);
+  await ws.close();
   const stats = await file.getStats();
   expect(stats.size).toBe(4);
 });

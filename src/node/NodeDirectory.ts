@@ -11,27 +11,27 @@ import {
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeDirectory extends Directory {
-  private nodeFSO: NodeFileSystemObject;
+  private fso: NodeFileSystemObject;
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    this.nodeFSO = new NodeFileSystemObject(fs, path);
+    this.fso = new NodeFileSystemObject(fs, path);
   }
 
   public getStats(): Promise<Stats> {
-    return this.nodeFSO.getStats();
+    return this.fso.getStats();
   }
 
   public getURL(_urlType?: URLType): Promise<string> {
-    return this.nodeFSO.getURL();
+    return this.fso.getURL();
   }
 
   public mkdir(options?: MakeDirectoryOptions): Promise<void> {
     const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
-      fs.mkdir(this.nodeFSO.getFullPath(), { recursive }, (err) => {
+      fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
         if (err) {
-          reject(this.nodeFSO.convertError(err, true));
+          reject(this.fso.convertError(err, true));
         } else {
           resolve();
         }
@@ -41,9 +41,9 @@ export class NodeDirectory extends Directory {
 
   public readdir(): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
-      fs.readdir(this.nodeFSO.getFullPath(), (err, fullPathes) => {
+      fs.readdir(this.fso.getFullPath(), (err, fullPathes) => {
         if (err) {
-          reject(this.nodeFSO.convertError(err, false));
+          reject(this.fso.convertError(err, false));
         } else {
           const pathes: string[] = [];
           const from = this.fs.repository.length;
@@ -57,10 +57,10 @@ export class NodeDirectory extends Directory {
   }
 
   public rm(options?: RmOptions): Promise<void> {
-    return this.nodeFSO.rm(options);
+    return this.fso.rm(options);
   }
 
   public setTimes(times: Times): Promise<void> {
-    return this.nodeFSO.setTimes(times);
+    return this.fso.setTimes(times);
   }
 }

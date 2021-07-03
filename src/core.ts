@@ -10,14 +10,6 @@ export interface Times {
 export interface Stats extends Times {
   size?: number;
 }
-
-export type OpenFlags = "r" | "a" | "ax" | "w" | "wx";
-export interface OpenOptions {
-  flags?: OpenFlags;
-  highWaterMark?: number;
-  start?: number;
-}
-
 export abstract class FileSystem {
   constructor(public repository: string) {}
 
@@ -91,41 +83,50 @@ export abstract class Directory extends FileSystemObject {
 }
 
 export abstract class File extends FileSystemObject {
-  protected flags: OpenFlags = "r";
-  protected highWaterMark = 64 * 1024;
-  protected start = 0;
-
-  constructor(fs: FileSystem, path: string, options?: OpenOptions) {
+  constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    if (options?.highWaterMark) {
-      this.highWaterMark = options.highWaterMark;
-    }
-    if (options?.start) {
-      this.start = options.start;
-    }
-    if (options?.flags) {
-      this.flags = options.flags;
+  }
+
+  public abstract getHash(): Promise<string>;
+  public abstract openReadStream(options?: OpenOptions): ReadStream;
+  public abstract openWriteStream(options?: OpenOptions): WriteStream;
+}
+
+export enum SeekOrigin {
+  Begin,
+  Current,
+  End,
+}
+
+export interface OpenOptions {
+  bufferSize?: number;
+}
+export abstract class Stream {
+  protected bufferSize = 64 * 1024;
+
+  constructor(protected path: string, options?: OpenOptions) {
+    if (options?.bufferSize) {
+      this.bufferSize = options.bufferSize;
     }
   }
 
-  /**
-   * Close a `File`.
-   */
   public abstract close(): Promise<void>;
+  public abstract seek(offset: number, origin: SeekOrigin): Promise<void>;
+}
+
+export abstract class ReadStream extends Stream {
   /**
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
   public abstract read(): Promise<BufferSource>;
+}
+
+export abstract class WriteStream extends Stream {
+  public abstract setLength(len: number): Promise<void>;
   /**
-   * Truncate a file to a specified length.
-   * @param len If not specified, defaults to `0`.
-   */
-  public abstract truncate(len?: number): Promise<void>;
-  /**
-   * Asynchronously writes `buffer` to the file.
-   * The `FileHandle` must have been opened for writing.
-   * @param data The buffer that the data will be written to.
+   * Asynchronously reads data from the file.
+   * The `File` must have been opened for reading.
    */
   public abstract write(data: BufferSource): Promise<number>;
 }

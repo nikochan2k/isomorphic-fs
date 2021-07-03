@@ -4,34 +4,29 @@ import {
   File,
   FileSystem,
   OpenOptions,
+  ReadStream,
   RmOptions,
   Stats,
   Times,
   URLType,
+  WriteStream,
 } from "../core";
-import { InvalidModificationError } from "../errors";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
+import { NodeReadStream } from "./NodeReadStream";
+import { NodeWriteStream } from "./NodeWriteStream";
 
 export class NodeFile extends File {
-  private nodeFSO: NodeFileSystemObject;
-  private readStream?: fs.ReadStream;
-  private writeStream?: fs.WriteStream;
+  private fso: NodeFileSystemObject;
 
-  constructor(fs: FileSystem, path: string, options: OpenOptions) {
-    super(fs, path, options);
-    this.nodeFSO = new NodeFileSystemObject(fs, path);
-  }
-
-  public async close(): Promise<void> {
-    if (this.readStream && !this.readStream.destroyed) {
-      this.readStream.close();
-    }
+  constructor(fs: FileSystem, path: string) {
+    super(fs, path);
+    this.fso = new NodeFileSystemObject(fs, path);
   }
 
   public getHash(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const hash = createHash("sha256");
-      const input = fs.createReadStream(this.nodeFSO.getFullPath());
+      const input = fs.createReadStream(this.fso.getFullPath());
       input.on("data", (data) => {
         hash.update(data);
       });
@@ -39,78 +34,32 @@ export class NodeFile extends File {
         resolve(hash.digest("hex"));
       });
       input.on("error", (err) => {
-        reject(this.nodeFSO.convertError(err, false));
+        reject(this.fso.convertError(err, false));
       });
     });
   }
 
   public getStats(): Promise<Stats> {
-    return this.nodeFSO.getStats();
+    return this.fso.getStats();
   }
 
   public getURL(_urlType?: URLType): Promise<string> {
-    return this.nodeFSO.getURL();
+    return this.fso.getURL();
   }
 
-  public async read(): Promise<BufferSource> {
-    return this.createReadStream().read();
+  public openReadStream(options?: OpenOptions): ReadStream {
+    return new NodeReadStream(this.fso, options);
+  }
+
+  public openWriteStream(options?: OpenOptions): WriteStream {
+    return new NodeWriteStream(this.fso, options);
   }
 
   public rm(options?: RmOptions): Promise<void> {
-    return this.nodeFSO.rm(options);
+    return this.fso.rm(options);
   }
 
   public setTimes(times: Times): Promise<void> {
-    return this.nodeFSO.setTimes(times);
-  }
-
-  public truncate(len?: number): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      fs.truncate(this.nodeFSO.getFullPath(), len, (err) => {
-        if (err) {
-          reject(this.nodeFSO.convertError(err, true));
-        } else {
-          resolve();
-        }
-      });
-    });
-  }
-
-  public write(data: BufferSource): Promise<number> {
-    return new Promise<number>((resolve, reject) => {
-      const writable = this.createWriteStream();
-      const buffer = this.nodeFSO.toBuffer(data);
-      writable.on("error", (err) => {
-        reject(
-          new InvalidModificationError(this.fs.repository, this.path, err)
-        );
-      });
-      writable.on("finish", () => {
-        resolve(buffer.length);
-      });
-      writable.write(buffer);
-      writable.end();
-    });
-  }
-
-  private createReadStream() {
-    if (!this.readStream || this.readStream.destroyed) {
-      this.readStream = fs.createReadStream(this.nodeFSO.getFullPath(), {
-        highWaterMark: this.highWaterMark || this.highWaterMark,
-        start: this.start,
-      });
-    }
-    return this.readStream;
-  }
-
-  private createWriteStream() {
-    if (!this.writeStream || this.writeStream.destroyed) {
-      this.writeStream = fs.createWriteStream(this.nodeFSO.getFullPath(), {
-        highWaterMark: this.highWaterMark || this.highWaterMark,
-        start: this.start,
-        flags: this.flags,
-      });
-    }
-    return this.writeStream;
+    return this.fso.setTimes(times);
   }
 }

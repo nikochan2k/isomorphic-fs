@@ -1,4 +1,4 @@
-import { Directory, File, FileSystem, OpenOptions } from "../core";
+import { Directory, File, FileSystem } from "../core";
 import { normalizePath } from "../util/path";
 import { NodeDirectory } from "./NodeDirectory";
 import { NodeFile } from "./NodeFile";
@@ -12,7 +12,7 @@ export class NodeFileSystem extends FileSystem {
     return new NodeDirectory(this, path);
   }
 
-  public async openFile(path: string, options: OpenOptions): Promise<File> {
-    return new NodeFile(this, path, options);
+  public async openFile(path: string): Promise<File> {
+    return new NodeFile(this, path);
   }
 }
