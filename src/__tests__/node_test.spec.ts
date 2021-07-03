@@ -47,3 +47,17 @@ test("add empty file", async () => {
   const stats = await file.getStats();
   expect(stats.size).toBe(0);
 });
+
+test("add text file", async () => {
+  const file = await fs.openFileForWrite("/test.txt");
+  try {
+    await file.getStats();
+    fail("Found file: " + file.path);
+  } catch (e) {
+    expect(e).toBeInstanceOf(NotFoundError);
+  }
+  const buffer = toBuffer("test");
+  await file.write(buffer);
+  const stats = await file.getStats();
+  expect(stats.size).toBe(4);
+});

@@ -60,7 +60,7 @@ export class NodeFileWrite extends FileForWrite {
 
   public write(data: BufferSource): Promise<number> {
     return new Promise<number>((resolve, reject) => {
-      const writable = this.getStream();
+      const writable = this.createWriteStream();
       const buffer = this.nodeFSO.toBuffer(data);
       writable.on("error", (err) => {
         reject(
@@ -75,7 +75,7 @@ export class NodeFileWrite extends FileForWrite {
     });
   }
 
-  private getStream() {
+  private createWriteStream() {
     if (!this.writeStream || this.writeStream.destroyed) {
       this.writeStream = fs.createWriteStream(this.nodeFSO.getFullPath(), {
         highWaterMark: this.highWaterMark || this.highWaterMark,

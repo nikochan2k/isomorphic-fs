@@ -51,7 +51,7 @@ export class NodeFileRead extends FileForRead {
   }
 
   public async read(): Promise<BufferSource> {
-    return this.getStream().read();
+    return this.createReadStream().read();
   }
 
   public rm(options?: RmOptions): Promise<void> {
@@ -62,7 +62,7 @@ export class NodeFileRead extends FileForRead {
     return this.nodeFSO.setTimes(times);
   }
 
-  private getStream() {
+  private createReadStream() {
     if (!this.readStream || this.readStream.destroyed) {
       this.readStream = createReadStream(this.nodeFSO.getFullPath(), {
         highWaterMark: this.highWaterMark || this.highWaterMark,
