@@ -14,13 +14,12 @@ export class NodeWriteStream extends WriteStream {
   public async close(): Promise<void> {
     if (this.writeStream && !this.writeStream.destroyed) {
       this.writeStream.destroy();
+      this.writeStream = undefined;
     }
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
-    if (this.writeStream && !this.writeStream.destroyed) {
-      this.writeStream.destroy();
-    }
+    await this.close();
 
     const flags = origin === SeekOrigin.End ? "a" : "w";
     let start: number | undefined;
@@ -41,9 +40,7 @@ export class NodeWriteStream extends WriteStream {
   }
 
   public async setLength(len: number): Promise<void> {
-    if (this.writeStream && !this.writeStream.destroyed) {
-      this.writeStream.destroy();
-    }
+    await this.close();
 
     return new Promise<void>((resolve, reject) => {
       fs.truncate(this.fso.getFullPath(), len, (err) => {
@@ -62,31 +59,23 @@ export class NodeWriteStream extends WriteStream {
     });
   }
 
-  public write(data: BufferSource): Promise<number> {
+  public write(buffer: ArrayBuffer | Uint8Array): Promise<number> {
     if (!this.writeStream || this.writeStream.destroyed) {
       this.writeStream = fs.createWriteStream(this.fso.getFullPath(), {
-        flags: "w+",
+        flags: "w",
         highWaterMark: this.bufferSize,
       });
     }
 
     const writeStream = this.writeStream;
     return new Promise<number>((resolve, reject) => {
-      const buffer = this.fso.toBuffer(data);
-      writeStream.on("error", (err) =>
-        reject(
-          new InvalidModificationError(
-            this.fso.fs.repository,
-            this.fso.path,
-            err
-          )
-        )
-      );
-      writeStream.on("finish", () => {
-        this.position += buffer.byteLength;
+      writeStream.write(buffer, (err) => {
+        if (err) {
+          reject(this.fso.convertError(err, true));
+          return;
+        }
         resolve(buffer.byteLength);
       });
-      writeStream.end(buffer);
     });
   }
 }

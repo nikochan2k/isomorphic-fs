@@ -6,6 +6,7 @@ import { NotFoundError } from "../errors";
 import "../index";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
+import { toUTF8 } from "../node/text";
 import { DIR_SEPARATOR } from "../util/path";
 
 const tempDir = tmpdir();
@@ -64,4 +65,13 @@ test("add text file", async () => {
   await ws.close();
   const stats = await file.getStats();
   expect(stats.size).toBe(4);
+});
+
+test("read text file", async () => {
+  const file = await fs.openFile("/test.txt");
+  const rs = file.openReadStream();
+  const buffer = await rs.read();
+  expect(buffer.byteLength).toBe(4);
+  const text = toUTF8(buffer);
+  expect(text).toBe("test");
 });

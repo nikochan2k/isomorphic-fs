@@ -14,9 +14,7 @@ import {
   NotFoundError,
   NotReadableError,
 } from "../errors";
-import { isArrayBuffer, isUint8Array } from "../util/buffer";
 import { joinPathes } from "../util/path";
-import { isBuffer } from "./buffer";
 
 export class NodeFileSystemObject extends FileSystemObject {
   constructor(fs: FileSystem, path: string) {
@@ -106,27 +104,5 @@ export class NodeFileSystemObject extends FileSystemObject {
         }
       });
     });
-  }
-
-  public toBuffer(data: BufferSource): Buffer | Uint8Array {
-    if (!data) {
-      return Buffer.from([]);
-    }
-
-    let buffer: Buffer | Uint8Array;
-    if (isBuffer(data)) {
-      buffer = data;
-    } else if (isUint8Array(data)) {
-      buffer = data;
-    } else if (isArrayBuffer(data)) {
-      buffer = Buffer.from(data);
-    } else {
-      throw new InvalidStateError(
-        this.fs.repository,
-        this.path,
-        "Illegal buffer: " + data
-      );
-    }
-    return buffer;
   }
 }
