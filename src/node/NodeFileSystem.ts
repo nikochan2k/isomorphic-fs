@@ -8,11 +8,11 @@ export class NodeFileSystem extends FileSystem {
     super(normalizePath(rootDir));
   }
 
-  public async openDirectory(path: string): Promise<Directory> {
+  public async getDirectory(path: string): Promise<Directory> {
     return new NodeDirectory(this, path);
   }
 
-  public async openFile(path: string): Promise<File> {
+  public async getFile(path: string): Promise<File> {
     return new NodeFile(this, path);
   }
 }

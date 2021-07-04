@@ -14,17 +14,17 @@ export abstract class FileSystem {
   constructor(public repository: string) {}
 
   /**
-   * Open a directory.
+   * Get a directory.
    * @param path A path to a directory.
    * @param options
    */
-  public abstract openDirectory(path: string): Promise<Directory>;
+  public abstract getDirectory(path: string): Promise<Directory>;
   /**
-   * Open a file for reading.
+   * Get a file.
    * @param path A path to a file.
    * @param options
    */
-  public abstract openFile(path: string, options?: OpenOptions): Promise<File>;
+  public abstract getFile(path: string, options?: OpenOptions): Promise<File>;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
