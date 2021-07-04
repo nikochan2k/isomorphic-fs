@@ -43,7 +43,7 @@ export class NodeFile extends File {
     return this.fso.doPatch(props);
   }
 
-  public override getHash(): Promise<string> {
+  public override hash(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const hash = createHash("sha256");
       const input = fs.createReadStream(this.fso.getFullPath());

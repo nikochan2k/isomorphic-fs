@@ -1,4 +1,5 @@
 import { createHash } from "sha256-uint8array";
+import { NotFoundError } from "./errors";
 import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
 import { getParentPath } from "./util/path";
@@ -266,11 +267,40 @@ export abstract class Directory extends FileSystemObject {
 }
 
 export abstract class File extends FileSystemObject {
+  private afterGet?: (file: File, rs: ReadStream) => Promise<void>;
+  private afterPost?: (file: File, ws: WriteStream) => Promise<void>;
+  private afterPut?: (file: File, ws: WriteStream) => Promise<void>;
+  private beforeGet?: (
+    file: File,
+    options?: OpenOptions | undefined
+  ) => Promise<ReadStream | null>;
+  private beforePost?: (
+    file: File,
+    options?: OpenOptions | undefined
+  ) => Promise<WriteStream | null>;
+  private beforePut?: (
+    file: File,
+    options?: OpenOptions | undefined
+  ) => Promise<WriteStream | null>;
+
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
+    const bi = fs.options?.beforeInterceptor;
+    if (bi) {
+      this.beforeGet = bi.beforeGet;
+      this.beforePost = bi.beforePost;
+      this.beforePut = bi.beforePut;
+    }
+
+    const ai = fs.options?.afterInterceptor;
+    if (ai) {
+      this.afterGet = ai.afterGet;
+      this.afterPost = ai.afterPost;
+      this.afterPut = ai.afterPut;
+    }
   }
 
-  public async getHash(): Promise<string> {
+  public async hash(): Promise<string> {
     const rs = await this.openReadStream();
     try {
       const hash = createHash();
@@ -285,12 +315,48 @@ export abstract class File extends FileSystemObject {
     }
   }
 
-  public openReadStream(options?: OpenOptions): Promise<ReadStream> {
-    return this.doOpenReadStream(options);
+  public async openReadStream(options?: OpenOptions): Promise<ReadStream> {
+    let rs: ReadStream | null | undefined;
+    if (this.beforeGet) {
+      rs = await this.beforeGet(this, options);
+    }
+    if (!rs) {
+      rs = await this.doOpenReadStream(options);
+    }
+    if (this.afterGet) {
+      await this.afterGet(this, rs);
+    }
+    return rs;
   }
 
-  public openWriteStream(options?: OpenOptions): Promise<WriteStream> {
-    return this.doOpenWriteStream(options);
+  public async openWriteStream(options?: OpenOptions): Promise<WriteStream> {
+    let ws: WriteStream | null | undefined;
+    let post: boolean;
+    try {
+      await this.head();
+      if (this.beforePut) {
+        ws = await this.beforePut(this, options);
+      }
+      post = false;
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        if (this.beforePost) {
+          ws = await this.beforePost(this, options);
+        }
+        post = true;
+      } else {
+        throw e;
+      }
+    }
+    if (!ws) {
+      ws = await this.doOpenWriteStream(options);
+    }
+    if (post && this.afterPost) {
+      await this.afterPost(this, ws);
+    } else if (!post && this.afterPut) {
+      await this.afterPut(this, ws);
+    }
+    return ws;
   }
 
   public abstract doOpenReadStream(options?: OpenOptions): Promise<ReadStream>;
