@@ -63,22 +63,6 @@ export class NodeFileSystemObject extends FileSystemObject {
     return pathToFileURL(this.getFullPath()).href;
   }
 
-  public rm(options?: RmOptions): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      fs.rm(
-        this.getFullPath(),
-        { force: options?.force, recursive: options?.recursive },
-        (err) => {
-          if (err) {
-            reject(this.convertError(err, true));
-          } else {
-            resolve();
-          }
-        }
-      );
-    });
-  }
-
   public setTimes(times: Times): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (typeof times.accessed !== "number") {
@@ -108,6 +92,22 @@ export class NodeFileSystemObject extends FileSystemObject {
           resolve();
         }
       });
+    });
+  }
+
+  protected doDelete(options?: RmOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rm(
+        this.getFullPath(),
+        { force: options?.force, recursive: options?.recursive },
+        (err) => {
+          if (err) {
+            reject(this.convertError(err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
     });
   }
 }

@@ -23,7 +23,7 @@ beforeAll(async () => {
 });
 
 test("readdir", async () => {
-  const dir = await fs.openDirectory("/");
+  const dir = await fs.getDirectory("/");
   try {
     await dir.getStats();
     fail("Found directory: " + dir.path);
@@ -36,7 +36,7 @@ test("readdir", async () => {
 });
 
 test("add empty file", async () => {
-  const file = await fs.openFile("/empty.txt");
+  const file = await fs.getFile("/empty.txt");
   try {
     await file.getStats();
     fail("Found file: " + file.path);
@@ -52,7 +52,7 @@ test("add empty file", async () => {
 });
 
 test("add text file", async () => {
-  const file = await fs.openFile("/test.txt");
+  const file = await fs.getFile("/test.txt");
   try {
     await file.getStats();
     fail("Found file: " + file.path);
@@ -68,7 +68,7 @@ test("add text file", async () => {
 });
 
 test("read text file", async () => {
-  const file = await fs.openFile("/test.txt");
+  const file = await fs.getFile("/test.txt");
   const rs = file.openReadStream();
   const buffer = await rs.read();
   expect(buffer.byteLength).toBe(4);
@@ -77,7 +77,7 @@ test("read text file", async () => {
 });
 
 test("continuous read and write", async () => {
-  const file = await fs.openFile("/otani.txt");
+  const file = await fs.getFile("/otani.txt");
 
   const ws = file.openWriteStream();
   await ws.write(toBuffer("大谷"));
@@ -106,14 +106,14 @@ test("continuous read and write", async () => {
 });
 
 test("mkdir test", async () => {
-  const dir = await fs.openDirectory("/");
+  const dir = await fs.getDirectory("/");
   let dirs = await dir.readdir();
   expect(dirs.length).toBe(3);
   expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
   expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
   expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
 
-  const folder = await fs.openDirectory("/folder");
+  const folder = await fs.getDirectory("/folder");
   try {
     await folder.getStats();
     fail("Found folder: " + folder.path);
