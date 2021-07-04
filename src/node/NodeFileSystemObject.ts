@@ -32,11 +32,23 @@ export class NodeFileSystemObject extends FileSystemObject {
     }
   }
 
-  public getFullPath() {
-    return joinPathes(this.fs.repository, this.path);
+  public doDelete(options?: RmOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rm(
+        this.getFullPath(),
+        { force: options?.force, recursive: options?.recursive },
+        (err) => {
+          if (err) {
+            reject(this.convertError(err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
   }
 
-  public getStats(): Promise<Stats> {
+  public doHead(): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(), (err, stats) => {
         if (err) {
@@ -57,6 +69,10 @@ export class NodeFileSystemObject extends FileSystemObject {
         }
       });
     });
+  }
+
+  public getFullPath() {
+    return joinPathes(this.fs.repository, this.path);
   }
 
   public async getURL(_urlType?: URLType): Promise<string> {
@@ -92,22 +108,6 @@ export class NodeFileSystemObject extends FileSystemObject {
           resolve();
         }
       });
-    });
-  }
-
-  protected doDelete(options?: RmOptions): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      fs.rm(
-        this.getFullPath(),
-        { force: options?.force, recursive: options?.recursive },
-        (err) => {
-          if (err) {
-            reject(this.convertError(err, true));
-          } else {
-            resolve();
-          }
-        }
-      );
     });
   }
 }

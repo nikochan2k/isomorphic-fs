@@ -23,6 +23,14 @@ export class NodeFile extends File {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
+  public doDelete(options?: RmOptions): Promise<void> {
+    return this.fso.doDelete(options);
+  }
+
+  public doHead(): Promise<Stats> {
+    return this.fso.doHead();
+  }
+
   public getHash(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const hash = createHash("sha256");
@@ -39,10 +47,6 @@ export class NodeFile extends File {
     });
   }
 
-  public getStats(): Promise<Stats> {
-    return this.fso.getStats();
-  }
-
   public getURL(_urlType?: URLType): Promise<string> {
     return this.fso.getURL();
   }
@@ -53,10 +57,6 @@ export class NodeFile extends File {
 
   public openWriteStream(options?: OpenOptions): WriteStream {
     return new NodeWriteStream(this.fso, options);
-  }
-
-  public rm(options?: RmOptions): Promise<void> {
-    return this.fso.rm(options);
   }
 
   public setTimes(times: Times): Promise<void> {

@@ -19,8 +19,12 @@ export class NodeDirectory extends Directory {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public getStats(): Promise<Stats> {
-    return this.fso.getStats();
+  public doDelete(options?: RmOptions): Promise<void> {
+    return this.fso.doDelete(options);
+  }
+
+  public doHead(): Promise<Stats> {
+    return this.fso.doHead();
   }
 
   public getURL(_urlType?: URLType): Promise<string> {
@@ -50,10 +54,6 @@ export class NodeDirectory extends Directory {
         }
       });
     });
-  }
-
-  public rm(options?: RmOptions): Promise<void> {
-    return this.fso.rm(options);
   }
 
   public setTimes(times: Times): Promise<void> {

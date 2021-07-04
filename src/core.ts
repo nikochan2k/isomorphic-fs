@@ -36,6 +36,10 @@ export abstract class FileSystemObject {
     return getParentPath(this.path);
   }
 
+  public getStats(): Promise<Stats> {
+    return this.doHead();
+  }
+
   /**
    * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
    */
@@ -43,11 +47,11 @@ export abstract class FileSystemObject {
     return this.doDelete(options);
   }
 
-  public abstract getStats(): Promise<Stats>;
+  public abstract doDelete(options?: RmOptions): Promise<void>;
+  public abstract doHead(): Promise<Stats>;
+
   public abstract getURL(urlType?: URLType): Promise<string>;
   public abstract setTimes(times: Times): Promise<void>;
-
-  protected abstract doDelete(options?: RmOptions): Promise<void>;
 }
 
 export interface MakeDirectoryOptions {
