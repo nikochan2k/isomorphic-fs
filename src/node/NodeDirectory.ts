@@ -4,7 +4,7 @@ import {
   FileSystem,
   MakeDirectoryOptions,
   Props,
-  RmOptions,
+  DeleteOptions,
   Stats,
   URLType,
 } from "../core";
@@ -19,8 +19,8 @@ export class NodeDirectory extends Directory {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public doGetStats(): Promise<Stats> {
-    return this.fso.doGetStats();
+  public doHead(): Promise<Stats> {
+    return this.fso.doHead();
   }
 
   public doList(): Promise<string[]> {
@@ -48,15 +48,15 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public doRm(options?: RmOptions): Promise<void> {
-    return this.fso.doRm(options);
+  public doDelete(options?: DeleteOptions): Promise<void> {
+    return this.fso.doDelete(options);
   }
 
-  public doSetProps(props: Props): Promise<void> {
-    return this.fso.doSetProps(props);
+  public doPatch(props: Props): Promise<void> {
+    return this.fso.doPatch(props);
   }
 
-  public getURL(_urlType?: URLType): Promise<string> {
-    return this.fso.getURL();
+  public toURL(_urlType?: URLType): Promise<string> {
+    return this.fso.toURL();
   }
 }

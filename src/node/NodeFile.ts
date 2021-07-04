@@ -6,7 +6,7 @@ import {
   OpenOptions,
   Props,
   ReadStream,
-  RmOptions,
+  DeleteOptions,
   Stats,
   URLType,
   WriteStream,
@@ -23,8 +23,8 @@ export class NodeFile extends File {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public doGetStats(): Promise<Stats> {
-    return this.fso.doGetStats();
+  public doHead(): Promise<Stats> {
+    return this.fso.doHead();
   }
 
   public async doOpenReadStream(options?: OpenOptions): Promise<ReadStream> {
@@ -35,12 +35,12 @@ export class NodeFile extends File {
     return new NodeWriteStream(this.fso, options);
   }
 
-  public doRm(options?: RmOptions): Promise<void> {
-    return this.fso.doRm(options);
+  public doDelete(options?: DeleteOptions): Promise<void> {
+    return this.fso.doDelete(options);
   }
 
-  public doSetProps(props: Props): Promise<void> {
-    return this.fso.doSetProps(props);
+  public doPatch(props: Props): Promise<void> {
+    return this.fso.doPatch(props);
   }
 
   public override getHash(): Promise<string> {
@@ -59,7 +59,7 @@ export class NodeFile extends File {
     });
   }
 
-  public getURL(_urlType?: URLType): Promise<string> {
-    return this.fso.getURL();
+  public toURL(_urlType?: URLType): Promise<string> {
+    return this.fso.toURL();
   }
 }

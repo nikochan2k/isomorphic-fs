@@ -7,7 +7,7 @@ export interface BeforeInterceptor {
   beforeCopy?: (fso: FileSystemObject) => Promise<boolean>;
   beforeDelete?: (
     fso: FileSystemObject,
-    options?: RmOptions
+    options?: DeleteOptions
   ) => Promise<boolean>;
   beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
   beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
@@ -83,7 +83,7 @@ export abstract class FileSystem {
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
-export interface RmOptions {
+export interface DeleteOptions {
   /**
    * When `true`, exceptions will be ignored if `path` does not exist.
    * @default false
@@ -104,7 +104,7 @@ export abstract class FileSystemObject {
   private afterPatch?: (fso: FileSystemObject) => Promise<void>;
   private beforeDelete?: (
     fso: FileSystemObject,
-    options?: RmOptions
+    options?: DeleteOptions
   ) => Promise<boolean>;
   private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
   private beforePatch?: (
@@ -128,17 +128,29 @@ export abstract class FileSystemObject {
     }
   }
 
+  public async delete(options?: DeleteOptions): Promise<void> {
+    if (this.beforeDelete) {
+      if (await this.beforeDelete(this, options)) {
+        return;
+      }
+    }
+    await this.doDelete(options);
+    if (this.afterDelete) {
+      await this.afterDelete(this);
+    }
+  }
+
   public async getParent(): Promise<string> {
     return getParentPath(this.path);
   }
 
-  public async getStats(): Promise<Stats> {
+  public async head(): Promise<Stats> {
     let stats: Stats | null | undefined;
     if (this.beforeHead) {
       stats = await this.beforeHead(this);
     }
     if (!stats) {
-      stats = await this.doGetStats();
+      stats = await this.doHead();
     }
     if (this.afterHead) {
       await this.afterHead(this, stats);
@@ -146,37 +158,33 @@ export abstract class FileSystemObject {
     return stats;
   }
 
-  /**
-   * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
-   */
-  public async rm(options?: RmOptions): Promise<void> {
-    if (this.beforeDelete) {
-      if (await this.beforeDelete(this, options)) {
-        return;
-      }
-    }
-    await this.doRm(options);
-    if (this.afterDelete) {
-      await this.afterDelete(this);
-    }
-  }
-
-  public async setProps(props: Props): Promise<void> {
+  public async patch(props: Props): Promise<void> {
     if (this.beforePatch) {
       if (await this.beforePatch(this, props)) {
         return;
       }
     }
-    await this.doSetProps(props);
+    await this.doPatch(props);
     if (this.afterPatch) {
       await this.afterPatch(this);
     }
   }
 
-  public abstract doGetStats(): Promise<Stats>;
-  public abstract doRm(options?: RmOptions): Promise<void>;
-  public abstract doSetProps(props: Props): Promise<void>;
-  public abstract getURL(urlType?: URLType): Promise<string>;
+  /**
+   * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
+   */
+  public async rm(options?: DeleteOptions): Promise<void> {
+    return this.delete(options);
+  }
+
+  public stat(): Promise<Stats> {
+    return this.head();
+  }
+
+  public abstract doDelete(options?: DeleteOptions): Promise<void>;
+  public abstract doHead(): Promise<Stats>;
+  public abstract doPatch(props: Props): Promise<void>;
+  public abstract toURL(urlType?: URLType): Promise<string>;
 }
 
 export interface MakeDirectoryOptions {
@@ -212,6 +220,24 @@ export abstract class Directory extends FileSystemObject {
     }
   }
 
+  public async list(): Promise<string[]> {
+    let list: string[] | null | undefined;
+    if (this.beforeList) {
+      list = await this.beforeList(this);
+    }
+    if (!list) {
+      list = await this.doList();
+    }
+    if (this.afterList) {
+      await this.afterList(this, list);
+    }
+    return list;
+  }
+
+  public async ls(): Promise<string[]> {
+    return this.list();
+  }
+
   /**
    * Create a directory.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
@@ -232,17 +258,7 @@ export abstract class Directory extends FileSystemObject {
    * Read a directory.
    */
   public async readdir(): Promise<string[]> {
-    let list: string[] | null | undefined;
-    if (this.beforeList) {
-      list = await this.beforeList(this);
-    }
-    if (!list) {
-      list = await this.doList();
-    }
-    if (this.afterList) {
-      await this.afterList(this, list);
-    }
-    return list;
+    return this.list();
   }
 
   public abstract doList(): Promise<string[]>;

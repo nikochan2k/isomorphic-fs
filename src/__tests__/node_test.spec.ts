@@ -25,7 +25,7 @@ beforeAll(async () => {
 test("readdir", async () => {
   const dir = await fs.getDirectory("/");
   try {
-    await dir.getStats();
+    await dir.stat();
     fail("Found directory: " + dir.path);
   } catch (e) {
     expect(e).toBeInstanceOf(NotFoundError);
@@ -38,7 +38,7 @@ test("readdir", async () => {
 test("add empty file", async () => {
   const file = await fs.getFile("/empty.txt");
   try {
-    await file.getStats();
+    await file.stat();
     fail("Found file: " + file.path);
   } catch (e) {
     expect(e).toBeInstanceOf(NotFoundError);
@@ -47,14 +47,14 @@ test("add empty file", async () => {
   const ws = await file.openWriteStream();
   await ws.write(buffer);
   await ws.close();
-  const stats = await file.getStats();
+  const stats = await file.stat();
   expect(stats.size).toBe(0);
 });
 
 test("add text file", async () => {
   const file = await fs.getFile("/test.txt");
   try {
-    await file.getStats();
+    await file.stat();
     fail("Found file: " + file.path);
   } catch (e) {
     expect(e).toBeInstanceOf(NotFoundError);
@@ -63,7 +63,7 @@ test("add text file", async () => {
   const ws = await file.openWriteStream();
   await ws.write(buffer);
   await ws.close();
-  const stats = await file.getStats();
+  const stats = await file.stat();
   expect(stats.size).toBe(4);
 });
 
@@ -122,13 +122,13 @@ test("mkdir test", async () => {
 
   const folder = await fs.getDirectory("/folder");
   try {
-    await folder.getStats();
+    await folder.stat();
     fail("Found folder: " + folder.path);
   } catch (e) {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   await folder.mkdir();
-  const stats = await folder.getStats();
+  const stats = await folder.stat();
   console.log(stats);
 
   dirs = await dir.readdir();

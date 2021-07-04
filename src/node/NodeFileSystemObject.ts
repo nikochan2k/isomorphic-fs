@@ -4,7 +4,7 @@ import {
   FileSystem,
   FileSystemObject,
   Props,
-  RmOptions,
+  DeleteOptions,
   Stats,
   URLType,
 } from "../core";
@@ -32,7 +32,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     }
   }
 
-  public doGetStats(): Promise<Stats> {
+  public doHead(): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(), (err, stats) => {
         if (err) {
@@ -55,7 +55,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doRm(options?: RmOptions): Promise<void> {
+  public doDelete(options?: DeleteOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       fs.rm(
         this.getFullPath(),
@@ -71,7 +71,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doSetProps(props: Props): Promise<void> {
+  public doPatch(props: Props): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (typeof props.accessed !== "number") {
         reject(
@@ -107,7 +107,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     return joinPathes(this.fs.repository, this.path);
   }
 
-  public async getURL(_urlType?: URLType): Promise<string> {
+  public async toURL(_urlType?: URLType): Promise<string> {
     return pathToFileURL(this.getFullPath()).href;
   }
 }
