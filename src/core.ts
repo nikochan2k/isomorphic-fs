@@ -131,7 +131,7 @@ export abstract class File extends FileSystemObject {
   }
 
   public async getHash(): Promise<string> {
-    const rs = this.openReadStream();
+    const rs = await this.openReadStream();
     try {
       const hash = createHash();
       let buffer: ArrayBuffer | Uint8Array;
@@ -145,16 +145,18 @@ export abstract class File extends FileSystemObject {
     }
   }
 
-  public openReadStream(options?: OpenOptions): ReadStream {
+  public openReadStream(options?: OpenOptions): Promise<ReadStream> {
     return this.doOpenReadStream(options);
   }
 
-  public openWriteStream(options?: OpenOptions): WriteStream {
+  public openWriteStream(options?: OpenOptions): Promise<WriteStream> {
     return this.doOpenWriteStream(options);
   }
 
-  public abstract doOpenReadStream(options?: OpenOptions): ReadStream;
-  public abstract doOpenWriteStream(options?: OpenOptions): WriteStream;
+  public abstract doOpenReadStream(options?: OpenOptions): Promise<ReadStream>;
+  public abstract doOpenWriteStream(
+    options?: OpenOptions
+  ): Promise<WriteStream>;
 }
 
 export enum SeekOrigin {

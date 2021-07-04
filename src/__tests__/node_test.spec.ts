@@ -44,7 +44,7 @@ test("add empty file", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   const buffer = toBuffer("");
-  const ws = file.openWriteStream();
+  const ws = await file.openWriteStream();
   await ws.write(buffer);
   await ws.close();
   const stats = await file.getStats();
@@ -60,7 +60,7 @@ test("add text file", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   const buffer = toBuffer("test");
-  const ws = file.openWriteStream();
+  const ws = await file.openWriteStream();
   await ws.write(buffer);
   await ws.close();
   const stats = await file.getStats();
@@ -69,7 +69,7 @@ test("add text file", async () => {
 
 test("read text file", async () => {
   const file = await fs.getFile("/test.txt");
-  const rs = file.openReadStream();
+  const rs = await file.openReadStream();
   const buffer = await rs.read();
   expect(buffer.byteLength).toBe(4);
   const text = toString(buffer);
@@ -79,11 +79,11 @@ test("read text file", async () => {
 test("continuous read and write", async () => {
   const file = await fs.getFile("/otani.txt");
 
-  const ws = file.openWriteStream();
+  const ws = await file.openWriteStream();
   await ws.write(toBuffer("大谷"));
   await ws.write(toBuffer("翔平"));
 
-  const rs = file.openReadStream();
+  const rs = await file.openReadStream();
   let buffer = await rs.read(6);
   let text = toString(buffer);
   expect(text).toBe("大谷");
@@ -100,6 +100,13 @@ test("continuous read and write", async () => {
   buffer = await rs.read();
   text = toString(buffer);
   expect(text).toBe("大谷翔平ホームラン");
+
+  await rs.seek(0, SeekOrigin.Begin);
+  await rs.read(6);
+  await rs.seek(6, SeekOrigin.Current);
+  buffer = await rs.read();
+  text = toString(buffer);
+  expect(text).toBe("ホームラン");
 
   await ws.close();
   await rs.close();

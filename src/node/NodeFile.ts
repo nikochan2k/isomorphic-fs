@@ -27,11 +27,11 @@ export class NodeFile extends File {
     return this.fso.doGetStats();
   }
 
-  public doOpenReadStream(options?: OpenOptions): ReadStream {
+  public async doOpenReadStream(options?: OpenOptions): Promise<ReadStream> {
     return new NodeReadStream(this.fso, options);
   }
 
-  public doOpenWriteStream(options?: OpenOptions): WriteStream {
+  public async doOpenWriteStream(options?: OpenOptions): Promise<WriteStream> {
     return new NodeWriteStream(this.fso, options);
   }
 
