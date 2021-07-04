@@ -3,6 +3,32 @@ import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
 import { getParentPath } from "./util/path";
 
+export interface BeforeInterceptor {
+  beforeCopy?: (fso: FileSystemObject) => Promise<void>;
+  beforeDelete?: (fso: FileSystemObject) => Promise<void>;
+  beforeGet?: (file: File, options?: OpenOptions) => ReadStream | null;
+  beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  beforeList?: (dir: Directory) => Promise<string[] | null>;
+  beforeMkcol?: (dir: Directory) => Promise<void>;
+  beforeMove?: (fso: FileSystemObject) => Promise<void>;
+  beforePatch?: (fso: FileSystemObject, props: Props) => Promise<void>;
+  beforePost?: (file: File, options?: OpenOptions) => WriteStream | null;
+  beforePut?: (file: File, options?: OpenOptions) => WriteStream | null;
+}
+
+export interface AfterInterceptor {
+  afterCopy?: (fso: FileSystemObject) => Promise<void>;
+  afterDelete?: (fso: FileSystemObject) => Promise<void>;
+  afterGet?: (file: File, rs: ReadStream) => Promise<void>;
+  afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
+  afterList?: (dir: Directory, list: string[]) => Promise<void>;
+  afterMkcol?: (dir: Directory) => Promise<void>;
+  afterMove?: (fso: FileSystemObject) => Promise<void>;
+  afterPatch?: (fso: FileSystemObject) => Promise<void>;
+  afterPost?: (file: File, ws: WriteStream) => Promise<void>;
+  afterPut?: (file: File, ws: WriteStream) => Promise<void>;
+}
+
 export interface Times {
   accessed?: number;
   created?: number;
@@ -17,8 +43,17 @@ export interface Props extends Times {
 export interface Stats extends Props {
   size?: number;
 }
+
+export interface FileSystemOptions {
+  beforeInterceptor?: BeforeInterceptor;
+  afterInterceptor?: AfterInterceptor;
+}
+
 export abstract class FileSystem {
-  constructor(public readonly repository: string) {}
+  constructor(
+    public readonly repository: string,
+    public readonly options: FileSystemOptions
+  ) {}
 
   /**
    * Get a directory.
@@ -36,39 +71,33 @@ export abstract class FileSystem {
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
-export interface BeforeInterceptor {
-  beforeCopy?: (fso: FileSystemObject) => Promise<void>;
-  beforeDelete?: (fso: FileSystemObject) => Promise<void>;
-  beforeGet?: (file: File, options?: OpenOptions) => ReadStream | null;
-  beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
-  beforeList?: (dir: Directory) => Promise<string[] | null>;
-  beforeMkcol?: (dir: Directory) => Promise<void>;
-  beforeMove?: (fso: FileSystemObject) => Promise<void>;
-  beforePatch?: (fso: FileSystemObject, props: Props) => Promise<void>;
-  beforePost?: (file: File, options?: OpenOptions) => WriteStream | null;
-  beforePut?: (file: File, options?: OpenOptions) => WriteStream | null;
-}
-export interface AfterInterceptor {
-  afterCopy?: (fso: FileSystemObject) => Promise<void>;
-  afterDelete?: (fso: FileSystemObject) => Promise<void>;
-  afterGet?: (file: File, rs: ReadStream) => Promise<void>;
-  afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
-  afterList?: (dir: Directory, list: string[]) => Promise<void>;
-  afterMkcol?: (dir: Directory) => Promise<void>;
-  afterMove?: (fso: FileSystemObject) => Promise<void>;
-  afterPatch?: (fso: FileSystemObject) => Promise<void>;
-  afterPost?: (file: File, ws: WriteStream) => Promise<void>;
-  afterPut?: (file: File, ws: WriteStream) => Promise<void>;
-}
 export abstract class FileSystemObject {
-  constructor(public readonly fs: FileSystem, public readonly path: string) {}
+  private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  private afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
+
+  constructor(public readonly fs: FileSystem, public readonly path: string) {
+    const bi = fs.options?.beforeInterceptor;
+    this.beforeHead = bi?.beforeHead;
+    const ai = fs.options?.afterInterceptor;
+    this.afterHead = ai?.afterHead;
+  }
 
   public async getParent(): Promise<string> {
     return getParentPath(this.path);
   }
 
-  public getStats(): Promise<Stats> {
-    return this.doGetStats();
+  public async getStats(): Promise<Stats> {
+    let stats: Stats | null | undefined;
+    if (this.beforeHead) {
+      stats = await this.beforeHead(this);
+    }
+    if (!stats) {
+      stats = await this.doGetStats();
+    }
+    if (this.afterHead) {
+      await this.afterHead(this, stats);
+    }
+    return stats;
   }
 
   /**
