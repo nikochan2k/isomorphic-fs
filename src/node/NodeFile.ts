@@ -16,23 +16,31 @@ import { NodeReadStream } from "./NodeReadStream";
 import { NodeWriteStream } from "./NodeWriteStream";
 
 export class NodeFile extends File {
-  private fso: NodeFileSystemObject;
+  private readonly fso: NodeFileSystemObject;
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public doDelete(options?: RmOptions): Promise<void> {
-    return this.fso.doDelete(options);
+  public doGetStats(): Promise<Stats> {
+    return this.fso.doGetStats();
   }
 
-  public doHead(): Promise<Stats> {
-    return this.fso.doHead();
+  public doOpenReadStream(options?: OpenOptions): ReadStream {
+    return new NodeReadStream(this.fso, options);
   }
 
-  public doPatch(props: Props): Promise<void> {
-    return this.fso.doPatch(props);
+  public doOpenWriteStream(options?: OpenOptions): WriteStream {
+    return new NodeWriteStream(this.fso, options);
+  }
+
+  public doRm(options?: RmOptions): Promise<void> {
+    return this.fso.doRm(options);
+  }
+
+  public doSetProps(props: Props): Promise<void> {
+    return this.fso.doSetProps(props);
   }
 
   public override getHash(): Promise<string> {
@@ -53,13 +61,5 @@ export class NodeFile extends File {
 
   public getURL(_urlType?: URLType): Promise<string> {
     return this.fso.getURL();
-  }
-
-  public doOpenReadStream(options?: OpenOptions): ReadStream {
-    return new NodeReadStream(this.fso, options);
-  }
-
-  public doOpenWriteStream(options?: OpenOptions): WriteStream {
-    return new NodeWriteStream(this.fso, options);
   }
 }

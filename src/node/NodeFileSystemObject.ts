@@ -32,23 +32,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     }
   }
 
-  public doDelete(options?: RmOptions): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      fs.rm(
-        this.getFullPath(),
-        { force: options?.force, recursive: options?.recursive },
-        (err) => {
-          if (err) {
-            reject(this.convertError(err, true));
-          } else {
-            resolve();
-          }
-        }
-      );
-    });
-  }
-
-  public doHead(): Promise<Stats> {
+  public doGetStats(): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(), (err, stats) => {
         if (err) {
@@ -71,7 +55,23 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doPatch(props: Props): Promise<void> {
+  public doRm(options?: RmOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rm(
+        this.getFullPath(),
+        { force: options?.force, recursive: options?.recursive },
+        (err) => {
+          if (err) {
+            reject(this.convertError(err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  public doSetProps(props: Props): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (typeof props.accessed !== "number") {
         reject(

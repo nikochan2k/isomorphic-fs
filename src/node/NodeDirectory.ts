@@ -12,23 +12,23 @@ import { joinPathes } from "../util/path";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeDirectory extends Directory {
-  private fso: NodeFileSystemObject;
+  private readonly fso: NodeFileSystemObject;
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public doDelete(options?: RmOptions): Promise<void> {
-    return this.fso.doDelete(options);
+  public doGetStats(): Promise<Stats> {
+    return this.fso.doGetStats();
   }
 
-  public doHead(): Promise<Stats> {
-    return this.fso.doHead();
+  public doRm(options?: RmOptions): Promise<void> {
+    return this.fso.doRm(options);
   }
 
-  public doPatch(props: Props): Promise<void> {
-    return this.fso.doPatch(props);
+  public doSetProps(props: Props): Promise<void> {
+    return this.fso.doSetProps(props);
   }
 
   public getURL(_urlType?: URLType): Promise<string> {

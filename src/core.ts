@@ -17,7 +17,7 @@ export interface Stats extends Times {
   size?: number;
 }
 export abstract class FileSystem {
-  constructor(public repository: string) {}
+  constructor(public readonly repository: string) {}
 
   /**
    * Get a directory.
@@ -36,30 +36,30 @@ export abstract class FileSystem {
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export abstract class FileSystemObject {
-  constructor(public fs: FileSystem, public path: string) {}
+  constructor(public readonly fs: FileSystem, public readonly path: string) {}
 
   public async getParent(): Promise<string> {
     return getParentPath(this.path);
   }
 
   public getStats(): Promise<Stats> {
-    return this.doHead();
+    return this.doGetStats();
   }
 
   /**
    * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
    */
   public rm(options?: RmOptions): Promise<void> {
-    return this.doDelete(options);
+    return this.doRm(options);
   }
 
   public setProps(props: Props): Promise<void> {
-    return this.doPatch(props);
+    return this.doSetProps(props);
   }
 
-  public abstract doDelete(options?: RmOptions): Promise<void>;
-  public abstract doHead(): Promise<Stats>;
-  public abstract doPatch(props: Props): Promise<void>;
+  public abstract doGetStats(): Promise<Stats>;
+  public abstract doRm(options?: RmOptions): Promise<void>;
+  public abstract doSetProps(props: Props): Promise<void>;
   public abstract getURL(urlType?: URLType): Promise<string>;
 }
 
@@ -165,7 +165,7 @@ export interface OpenOptions {
   bufferSize?: number;
 }
 export abstract class Stream {
-  protected bufferSize = 64 * 1024;
+  protected readonly bufferSize = 64 * 1024;
 
   constructor(protected path: string, options?: OpenOptions) {
     if (options?.bufferSize) {
