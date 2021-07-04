@@ -71,15 +71,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public getFullPath() {
-    return joinPathes(this.fs.repository, this.path);
-  }
-
-  public async getURL(_urlType?: URLType): Promise<string> {
-    return pathToFileURL(this.getFullPath()).href;
-  }
-
-  public setProps(props: Props): Promise<void> {
+  public doPatch(props: Props): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (typeof props.accessed !== "number") {
         reject(
@@ -109,5 +101,13 @@ export class NodeFileSystemObject extends FileSystemObject {
         }
       });
     });
+  }
+
+  public getFullPath() {
+    return joinPathes(this.fs.repository, this.path);
+  }
+
+  public async getURL(_urlType?: URLType): Promise<string> {
+    return pathToFileURL(this.getFullPath()).href;
   }
 }

@@ -51,10 +51,15 @@ export abstract class FileSystemObject {
     return this.doDelete(options);
   }
 
+  public setProps(props: Props): Promise<void> {
+    return this.doPatch(props);
+  }
+
   public abstract doDelete(options?: RmOptions): Promise<void>;
   public abstract doHead(): Promise<Stats>;
+  public abstract doPatch(props: Props): Promise<void>;
+
   public abstract getURL(urlType?: URLType): Promise<string>;
-  public abstract setProps(props: Props): Promise<void>;
 }
 
 export interface MakeDirectoryOptions {

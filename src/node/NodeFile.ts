@@ -31,6 +31,10 @@ export class NodeFile extends File {
     return this.fso.doHead();
   }
 
+  public doPatch(props: Props): Promise<void> {
+    return this.fso.doPatch(props);
+  }
+
   public getHash(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const hash = createHash("sha256");
@@ -57,9 +61,5 @@ export class NodeFile extends File {
 
   public openWriteStream(options?: OpenOptions): WriteStream {
     return new NodeWriteStream(this.fso, options);
-  }
-
-  public setProps(props: Props): Promise<void> {
-    return this.fso.setProps(props);
   }
 }

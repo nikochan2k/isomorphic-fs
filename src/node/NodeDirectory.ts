@@ -27,6 +27,10 @@ export class NodeDirectory extends Directory {
     return this.fso.doHead();
   }
 
+  public doPatch(props: Props): Promise<void> {
+    return this.fso.doPatch(props);
+  }
+
   public getURL(_urlType?: URLType): Promise<string> {
     return this.fso.getURL();
   }
@@ -54,9 +58,5 @@ export class NodeDirectory extends Directory {
         }
       });
     });
-  }
-
-  public setProps(props: Props): Promise<void> {
-    return this.fso.setProps(props);
   }
 }
