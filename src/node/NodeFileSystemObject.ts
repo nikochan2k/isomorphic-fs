@@ -42,11 +42,18 @@ export class NodeFileSystemObject extends FileSystemObject {
         if (err) {
           reject(this.convertError(err, false));
         } else {
-          resolve({
-            size: stats.size,
-            accessed: stats.atimeMs,
-            modified: stats.mtimeMs,
-          });
+          if (stats.isDirectory()) {
+            resolve({
+              accessed: stats.atimeMs,
+              modified: stats.mtimeMs,
+            });
+          } else {
+            resolve({
+              size: stats.size,
+              accessed: stats.atimeMs,
+              modified: stats.mtimeMs,
+            });
+          }
         }
       });
     });

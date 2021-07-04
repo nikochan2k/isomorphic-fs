@@ -77,7 +77,7 @@ test("read text file", async () => {
 });
 
 test("continuous read and write", async () => {
-  const file = await fs.openFile("/cont.txt");
+  const file = await fs.openFile("/otani.txt");
 
   const ws = file.openWriteStream();
   await ws.write(toBuffer("大谷"));
@@ -103,4 +103,31 @@ test("continuous read and write", async () => {
 
   await ws.close();
   await rs.close();
+});
+
+test("mkdir test", async () => {
+  const dir = await fs.openDirectory("/");
+  let dirs = await dir.readdir();
+  expect(dirs.length).toBe(3);
+  expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
+  expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
+  expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
+
+  const folder = await fs.openDirectory("/folder");
+  try {
+    await folder.getStats();
+    fail("Found folder: " + folder.path);
+  } catch (e) {
+    expect(e).toBeInstanceOf(NotFoundError);
+  }
+  await folder.mkdir();
+  const stats = await folder.getStats();
+  console.log(stats);
+
+  dirs = await dir.readdir();
+  expect(dirs.length).toBe(4);
+  expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
+  expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
+  expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
+  expect(0 <= dirs.indexOf("/folder")).toBe(true);
 });

@@ -8,6 +8,7 @@ import {
   Times,
   URLType,
 } from "../core";
+import { joinPathes } from "../util/path";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeDirectory extends Directory {
@@ -41,16 +42,11 @@ export class NodeDirectory extends Directory {
 
   public readdir(): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
-      fs.readdir(this.fso.getFullPath(), (err, fullPathes) => {
+      fs.readdir(this.fso.getFullPath(), (err, names) => {
         if (err) {
           reject(this.fso.convertError(err, false));
         } else {
-          const pathes: string[] = [];
-          const from = this.fs.repository.length;
-          for (const fullPath of fullPathes) {
-            pathes.push(fullPath.substr(from));
-          }
-          resolve(pathes);
+          resolve(names.map((name) => joinPathes(this.path, name)));
         }
       });
     });
