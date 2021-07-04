@@ -119,7 +119,7 @@ export abstract class ReadStream extends Stream {
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public abstract read(): Promise<ArrayBuffer | Uint8Array>;
+  public abstract read(size?: number): Promise<ArrayBuffer | Uint8Array>;
 }
 
 export abstract class WriteStream extends Stream {

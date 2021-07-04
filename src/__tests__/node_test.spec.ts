@@ -6,7 +6,7 @@ import { NotFoundError } from "../errors";
 import "../index";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
-import { toText } from "../node/text";
+import { toString } from "../node/text";
 import { DIR_SEPARATOR } from "../util/path";
 
 const tempDir = tmpdir();
@@ -72,7 +72,7 @@ test("read text file", async () => {
   const rs = file.openReadStream();
   const buffer = await rs.read();
   expect(buffer.byteLength).toBe(4);
-  const text = toText(buffer);
+  const text = toString(buffer);
   expect(text).toBe("test");
 });
 
@@ -84,6 +84,6 @@ test("continuous read and write", async () => {
   await ws.close();
   const rs = file.openReadStream();
   await rs.seek(6, SeekOrigin.Begin);
-  const text = toText(await rs.read());
+  const text = toString(await rs.read());
   expect(text).toBe("翔平");
 });

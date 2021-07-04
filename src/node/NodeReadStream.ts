@@ -16,7 +16,7 @@ export class NodeReadStream extends ReadStream {
     }
   }
 
-  public read(): Promise<ArrayBuffer | Uint8Array | Buffer> {
+  public read(size?: number): Promise<ArrayBuffer | Uint8Array | Buffer> {
     if (!this.readStream || this.readStream.destroyed) {
       this.readStream = fs.createReadStream(this.fso.getFullPath(), {
         flags: "r",
@@ -27,16 +27,20 @@ export class NodeReadStream extends ReadStream {
     const readStream = this.readStream;
     const promise = new Promise<ArrayBuffer | Uint8Array | Buffer>(
       (resolve, reject) => {
-        const onData = (chunk: Buffer) => {
-          resolve(chunk);
-          readStream.off("data", onData);
-        };
         const onError = (err: Error) => {
           reject(this.fso.convertError(err, false));
           readStream.off("error", onError);
         };
-        readStream.on("data", onData);
         readStream.on("error", onError);
+        const onReadable = () => {
+          let buffer = readStream.read(size);
+          if (buffer === null) {
+            buffer = readStream.read();
+          }
+          resolve(buffer);
+          readStream.off("readable", onReadable);
+        };
+        readStream.on("readable", onReadable);
       }
     );
     return promise;
