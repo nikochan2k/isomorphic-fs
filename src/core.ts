@@ -9,7 +9,10 @@ export interface BeforeInterceptor {
   beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
   beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
   beforeList?: (dir: Directory) => Promise<string[] | null>;
-  beforeMkcol?: (dir: Directory) => Promise<boolean>;
+  beforeMkcol?: (
+    dir: Directory,
+    options?: MakeDirectoryOptions
+  ) => Promise<boolean>;
   beforeMove?: (fso: FileSystemObject) => Promise<boolean>;
   beforePatch?: (fso: FileSystemObject, props: Props) => Promise<boolean>;
   beforePost?: (
@@ -76,6 +79,21 @@ export abstract class FileSystem {
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
+
+export interface RmOptions {
+  /**
+   * When `true`, exceptions will be ignored if `path` does not exist.
+   * @default false
+   */
+  force?: boolean;
+  /**
+   * If `true`, perform a recursive directory removal. In
+   * recursive mode, errors are not reported if `path` does not exist, and
+   * operations are retried on failure.
+   * @default false
+   */
+  recursive?: boolean;
+}
 
 export abstract class FileSystemObject {
   private afterDelete?: (fso: FileSystemObject) => Promise<void>;
@@ -164,32 +182,65 @@ export interface MakeDirectoryOptions {
   recursive?: boolean;
 }
 
-export interface RmOptions {
-  /**
-   * When `true`, exceptions will be ignored if `path` does not exist.
-   * @default false
-   */
-  force?: boolean;
-  /**
-   * If `true`, perform a recursive directory removal. In
-   * recursive mode, errors are not reported if `path` does not exist, and
-   * operations are retried on failure.
-   * @default false
-   */
-  recursive?: boolean;
-}
-
 export abstract class Directory extends FileSystemObject {
+  private afterList?: (dir: Directory, list: string[]) => Promise<void>;
+  private afterMkcol?: (dir: Directory) => Promise<void>;
+  private beforeList?: (dir: Directory) => Promise<string[] | null>;
+  private beforeMkcol?: (
+    dir: Directory,
+    options?: MakeDirectoryOptions
+  ) => Promise<boolean>;
+
+  constructor(fs: FileSystem, path: string) {
+    super(fs, path);
+    const bi = fs.options?.beforeInterceptor;
+    if (bi) {
+      this.beforeMkcol = bi.beforeMkcol;
+      this.beforeList = bi.beforeList;
+    }
+
+    const ai = fs.options?.afterInterceptor;
+    if (ai) {
+      this.afterMkcol = ai.afterMkcol;
+      this.afterList = ai.afterList;
+    }
+  }
+
   /**
    * Create a directory.
-   * @param path A path to a file. If a URL is provided, it must use the `file:` protocol.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
-  public abstract mkdir(options?: MakeDirectoryOptions): Promise<void>;
+  public async mkdir(options?: MakeDirectoryOptions): Promise<void> {
+    if (this.beforeMkcol) {
+      if (await this.beforeMkcol(this, options)) {
+        return;
+      }
+    }
+    await this.doMkdir(options);
+    if (this.afterMkcol) {
+      await this.afterMkcol(this);
+    }
+  }
+
   /**
    * Read a directory.
    */
-  public abstract readdir(): Promise<string[]>;
+  public async readdir(): Promise<string[]> {
+    let list: string[] | null | undefined;
+    if (this.beforeList) {
+      list = await this.beforeList(this);
+    }
+    if (!list) {
+      list = await this.doList();
+    }
+    if (this.afterList) {
+      await this.afterList(this, list);
+    }
+    return list;
+  }
+
+  public abstract doList(): Promise<string[]>;
+  public abstract doMkdir(options?: MakeDirectoryOptions): Promise<void>;
 }
 
 export abstract class File extends FileSystemObject {

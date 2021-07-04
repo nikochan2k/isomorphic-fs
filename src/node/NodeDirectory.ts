@@ -23,19 +23,19 @@ export class NodeDirectory extends Directory {
     return this.fso.doGetStats();
   }
 
-  public doRm(options?: RmOptions): Promise<void> {
-    return this.fso.doRm(options);
+  public doList(): Promise<string[]> {
+    return new Promise<string[]>((resolve, reject) => {
+      fs.readdir(this.fso.getFullPath(), (err, names) => {
+        if (err) {
+          reject(this.fso.convertError(err, false));
+        } else {
+          resolve(names.map((name) => joinPathes(this.path, name)));
+        }
+      });
+    });
   }
 
-  public doSetProps(props: Props): Promise<void> {
-    return this.fso.doSetProps(props);
-  }
-
-  public getURL(_urlType?: URLType): Promise<string> {
-    return this.fso.getURL();
-  }
-
-  public mkdir(options?: MakeDirectoryOptions): Promise<void> {
+  public doMkdir(options?: MakeDirectoryOptions): Promise<void> {
     const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
@@ -48,15 +48,15 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public readdir(): Promise<string[]> {
-    return new Promise<string[]>((resolve, reject) => {
-      fs.readdir(this.fso.getFullPath(), (err, names) => {
-        if (err) {
-          reject(this.fso.convertError(err, false));
-        } else {
-          resolve(names.map((name) => joinPathes(this.path, name)));
-        }
-      });
-    });
+  public doRm(options?: RmOptions): Promise<void> {
+    return this.fso.doRm(options);
+  }
+
+  public doSetProps(props: Props): Promise<void> {
+    return this.fso.doSetProps(props);
+  }
+
+  public getURL(_urlType?: URLType): Promise<string> {
+    return this.fso.getURL();
   }
 }
