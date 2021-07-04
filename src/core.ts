@@ -4,16 +4,22 @@ import { toHex } from "./util/misc";
 import { getParentPath } from "./util/path";
 
 export interface BeforeInterceptor {
-  beforeCopy?: (fso: FileSystemObject) => Promise<void>;
-  beforeDelete?: (fso: FileSystemObject) => Promise<void>;
-  beforeGet?: (file: File, options?: OpenOptions) => ReadStream | null;
+  beforeCopy?: (fso: FileSystemObject) => Promise<boolean>;
+  beforeDelete?: (fso: FileSystemObject) => Promise<boolean>;
+  beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
   beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
   beforeList?: (dir: Directory) => Promise<string[] | null>;
-  beforeMkcol?: (dir: Directory) => Promise<void>;
-  beforeMove?: (fso: FileSystemObject) => Promise<void>;
-  beforePatch?: (fso: FileSystemObject, props: Props) => Promise<void>;
-  beforePost?: (file: File, options?: OpenOptions) => WriteStream | null;
-  beforePut?: (file: File, options?: OpenOptions) => WriteStream | null;
+  beforeMkcol?: (dir: Directory) => Promise<boolean>;
+  beforeMove?: (fso: FileSystemObject) => Promise<boolean>;
+  beforePatch?: (fso: FileSystemObject, props: Props) => Promise<boolean>;
+  beforePost?: (
+    file: File,
+    options?: OpenOptions
+  ) => Promise<WriteStream | null>;
+  beforePut?: (
+    file: File,
+    options?: OpenOptions
+  ) => Promise<WriteStream | null>;
 }
 
 export interface AfterInterceptor {
@@ -45,8 +51,8 @@ export interface Stats extends Props {
 }
 
 export interface FileSystemOptions {
-  beforeInterceptor?: BeforeInterceptor;
   afterInterceptor?: AfterInterceptor;
+  beforeInterceptor?: BeforeInterceptor;
 }
 
 export abstract class FileSystem {
@@ -72,14 +78,30 @@ export abstract class FileSystem {
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export abstract class FileSystemObject {
-  private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  private afterDelete?: (fso: FileSystemObject) => Promise<void>;
   private afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
+  private afterPatch?: (fso: FileSystemObject) => Promise<void>;
+  private beforeDelete?: (fso: FileSystemObject) => Promise<boolean>;
+  private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  private beforePatch?: (
+    fso: FileSystemObject,
+    props: Props
+  ) => Promise<boolean>;
 
   constructor(public readonly fs: FileSystem, public readonly path: string) {
     const bi = fs.options?.beforeInterceptor;
-    this.beforeHead = bi?.beforeHead;
+    if (bi) {
+      this.beforeHead = bi.beforeHead;
+      this.beforeDelete = bi.beforeDelete;
+      this.beforePatch = bi.beforePatch;
+    }
+
     const ai = fs.options?.afterInterceptor;
-    this.afterHead = ai?.afterHead;
+    if (ai) {
+      this.afterHead = ai.afterHead;
+      this.afterDelete = ai.afterDelete;
+      this.afterPatch = ai.afterPatch;
+    }
   }
 
   public async getParent(): Promise<string> {
@@ -103,12 +125,28 @@ export abstract class FileSystemObject {
   /**
    * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
    */
-  public rm(options?: RmOptions): Promise<void> {
-    return this.doRm(options);
+  public async rm(options?: RmOptions): Promise<void> {
+    if (this.beforeDelete) {
+      if (await this.beforeDelete(this)) {
+        return;
+      }
+    }
+    await this.doRm(options);
+    if (this.afterDelete) {
+      await this.afterDelete(this);
+    }
   }
 
-  public setProps(props: Props): Promise<void> {
-    return this.doSetProps(props);
+  public async setProps(props: Props): Promise<void> {
+    if (this.beforePatch) {
+      if (await this.beforePatch(this, props)) {
+        return;
+      }
+    }
+    await this.doSetProps(props);
+    if (this.afterPatch) {
+      await this.afterPatch(this);
+    }
   }
 
   public abstract doGetStats(): Promise<Stats>;
