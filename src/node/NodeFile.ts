@@ -35,7 +35,7 @@ export class NodeFile extends File {
     return this.fso.doPatch(props);
   }
 
-  public getHash(): Promise<string> {
+  public override getHash(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const hash = createHash("sha256");
       const input = fs.createReadStream(this.fso.getFullPath());
@@ -55,11 +55,11 @@ export class NodeFile extends File {
     return this.fso.getURL();
   }
 
-  public openReadStream(options?: OpenOptions): ReadStream {
+  public doOpenReadStream(options?: OpenOptions): ReadStream {
     return new NodeReadStream(this.fso, options);
   }
 
-  public openWriteStream(options?: OpenOptions): WriteStream {
+  public doOpenWriteStream(options?: OpenOptions): WriteStream {
     return new NodeWriteStream(this.fso, options);
   }
 }

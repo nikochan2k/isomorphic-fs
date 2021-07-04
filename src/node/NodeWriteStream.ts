@@ -59,7 +59,7 @@ export class NodeWriteStream extends WriteStream {
     });
   }
 
-  public write(buffer: ArrayBuffer | Uint8Array): Promise<number> {
+  public write(buffer: ArrayBuffer | Uint8Array | Buffer): Promise<void> {
     if (!this.writeStream || this.writeStream.destroyed) {
       this.writeStream = fs.createWriteStream(this.fso.getFullPath(), {
         flags: "w",
@@ -68,13 +68,14 @@ export class NodeWriteStream extends WriteStream {
     }
 
     const writeStream = this.writeStream;
-    return new Promise<number>((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       writeStream.write(buffer, (err) => {
         if (err) {
           reject(this.fso.convertError(err, true));
           return;
         }
-        resolve(buffer.byteLength);
+        this.position += buffer.byteLength;
+        resolve();
       });
     });
   }

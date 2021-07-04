@@ -33,11 +33,16 @@ export class NodeReadStream extends ReadStream {
         };
         readStream.on("error", onError);
         const onReadable = () => {
-          let buffer = readStream.read(size);
+          let buffer: Buffer = size ? readStream.read(size) : null;
           if (buffer === null) {
             buffer = readStream.read();
           }
-          resolve(buffer);
+          if (buffer) {
+            this.position += buffer.byteLength;
+            resolve(buffer);
+          } else {
+            resolve(buffer);
+          }
           readStream.off("readable", onReadable);
         };
         readStream.on("readable", onReadable);

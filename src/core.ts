@@ -1,3 +1,5 @@
+import { createHash } from "sha256-uint8array";
+import { toUint8Array } from "./util/buffer";
 import { getParentPath } from "./util/path";
 
 export interface Times {
@@ -58,7 +60,6 @@ export abstract class FileSystemObject {
   public abstract doDelete(options?: RmOptions): Promise<void>;
   public abstract doHead(): Promise<Stats>;
   public abstract doPatch(props: Props): Promise<void>;
-
   public abstract getURL(urlType?: URLType): Promise<string>;
 }
 
@@ -99,14 +100,59 @@ export abstract class Directory extends FileSystemObject {
   public abstract readdir(): Promise<string[]>;
 }
 
+const LUT_HEX_4b = [
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+];
+const LUT_HEX_8b = new Array(0x100);
+for (let n = 0; n < 0x100; n++) {
+  LUT_HEX_8b[n] = `${LUT_HEX_4b[(n >>> 4) & 0xf]}${LUT_HEX_4b[n & 0xf]}`;
+}
 export abstract class File extends FileSystemObject {
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
   }
 
-  public abstract getHash(): Promise<string>;
-  public abstract openReadStream(options?: OpenOptions): ReadStream;
-  public abstract openWriteStream(options?: OpenOptions): WriteStream;
+  public async getHash(): Promise<string> {
+    const rs = this.openReadStream();
+    try {
+      const hash = createHash();
+      let buffer: ArrayBuffer | Uint8Array;
+      while ((buffer = await rs.read()) != null) {
+        hash.update(toUint8Array(buffer));
+      }
+
+      const digest = hash.digest();
+      return digest.reduce((result, i) => result + LUT_HEX_8b[i], "");
+    } finally {
+      rs.close();
+    }
+  }
+
+  public openReadStream(options?: OpenOptions): ReadStream {
+    return this.doOpenReadStream(options);
+  }
+
+  public openWriteStream(options?: OpenOptions): WriteStream {
+    return this.doOpenWriteStream(options);
+  }
+
+  public abstract doOpenReadStream(options?: OpenOptions): ReadStream;
+  public abstract doOpenWriteStream(options?: OpenOptions): WriteStream;
 }
 
 export enum SeekOrigin {
@@ -145,5 +191,5 @@ export abstract class WriteStream extends Stream {
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public abstract write(data: ArrayBuffer | Uint8Array): Promise<number>;
+  public abstract write(data: ArrayBuffer | Uint8Array): Promise<void>;
 }

@@ -1,9 +1,9 @@
+import "../index";
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
 import { FileSystem, SeekOrigin } from "../core";
 import { NotFoundError } from "../errors";
-import "../index";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
 import { toString } from "../node/text";

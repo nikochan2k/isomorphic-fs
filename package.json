@@ -54,6 +54,7 @@
   },
   "dependencies": {
     "base64-arraybuffer": "^0.2.0",
+    "sha256-uint8array": "^0.10.1",
     "text-encoding-shim": "^1.0.5",
     "tslib": "^2.3.0"
   },
