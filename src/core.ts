@@ -5,7 +5,10 @@ import { getParentPath } from "./util/path";
 
 export interface BeforeInterceptor {
   beforeCopy?: (fso: FileSystemObject) => Promise<boolean>;
-  beforeDelete?: (fso: FileSystemObject) => Promise<boolean>;
+  beforeDelete?: (
+    fso: FileSystemObject,
+    options?: RmOptions
+  ) => Promise<boolean>;
   beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
   beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
   beforeList?: (dir: Directory) => Promise<string[] | null>;
@@ -99,7 +102,10 @@ export abstract class FileSystemObject {
   private afterDelete?: (fso: FileSystemObject) => Promise<void>;
   private afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
   private afterPatch?: (fso: FileSystemObject) => Promise<void>;
-  private beforeDelete?: (fso: FileSystemObject) => Promise<boolean>;
+  private beforeDelete?: (
+    fso: FileSystemObject,
+    options?: RmOptions
+  ) => Promise<boolean>;
   private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
   private beforePatch?: (
     fso: FileSystemObject,
@@ -145,7 +151,7 @@ export abstract class FileSystemObject {
    */
   public async rm(options?: RmOptions): Promise<void> {
     if (this.beforeDelete) {
-      if (await this.beforeDelete(this)) {
+      if (await this.beforeDelete(this, options)) {
         return;
       }
     }
