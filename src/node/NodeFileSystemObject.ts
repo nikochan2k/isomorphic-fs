@@ -32,6 +32,38 @@ export class NodeFileSystemObject extends FileSystemObject {
     }
   }
 
+  public doCopy(toPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      fs.copyFile(
+        this.getFullPath(),
+        joinPathes(this.fs.repository, toPath),
+        (err) => {
+          if (err) {
+            reject(this.convertError(err, true));
+            return;
+          }
+          resolve();
+        }
+      );
+    });
+  }
+
+  public doDelete(options?: DeleteOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rm(
+        this.getFullPath(),
+        { force: options?.force, recursive: options?.recursive },
+        (err) => {
+          if (err) {
+            reject(this.convertError(err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
   public doHead(): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(), (err, stats) => {
@@ -55,17 +87,17 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doDelete(options?: DeleteOptions): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      fs.rm(
+  public doMove(toPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      fs.rename(
         this.getFullPath(),
-        { force: options?.force, recursive: options?.recursive },
+        joinPathes(this.fs.repository, toPath),
         (err) => {
           if (err) {
             reject(this.convertError(err, true));
-          } else {
-            resolve();
+            return;
           }
+          resolve();
         }
       );
     });

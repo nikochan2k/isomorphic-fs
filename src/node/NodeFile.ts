@@ -23,8 +23,20 @@ export class NodeFile extends File {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
+  public doCopy(toPath: string): Promise<void> {
+    return this.fso.doCopy(toPath);
+  }
+
+  public doDelete(options?: DeleteOptions): Promise<void> {
+    return this.fso.doDelete(options);
+  }
+
   public doHead(): Promise<Stats> {
     return this.fso.doHead();
+  }
+
+  public doMove(toPath: string): Promise<void> {
+    return this.fso.doMove(toPath);
   }
 
   public async doOpenReadStream(options?: OpenOptions): Promise<ReadStream> {
@@ -33,10 +45,6 @@ export class NodeFile extends File {
 
   public async doOpenWriteStream(options?: OpenOptions): Promise<WriteStream> {
     return new NodeWriteStream(this.fso, options);
-  }
-
-  public doDelete(options?: DeleteOptions): Promise<void> {
-    return this.fso.doDelete(options);
   }
 
   public doPatch(props: Props): Promise<void> {

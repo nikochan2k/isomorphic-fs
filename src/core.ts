@@ -5,7 +5,7 @@ import { toHex } from "./util/misc";
 import { getParentPath } from "./util/path";
 
 export interface BeforeInterceptor {
-  beforeCopy?: (fso: FileSystemObject) => Promise<boolean>;
+  beforeCopy?: (fso: FileSystemObject, toPath: string) => Promise<boolean>;
   beforeDelete?: (
     fso: FileSystemObject,
     options?: DeleteOptions
@@ -17,7 +17,7 @@ export interface BeforeInterceptor {
     dir: Directory,
     options?: MakeDirectoryOptions
   ) => Promise<boolean>;
-  beforeMove?: (fso: FileSystemObject) => Promise<boolean>;
+  beforeMove?: (fso: FileSystemObject, toPath: string) => Promise<boolean>;
   beforePatch?: (fso: FileSystemObject, props: Props) => Promise<boolean>;
   beforePost?: (
     file: File,
@@ -30,13 +30,13 @@ export interface BeforeInterceptor {
 }
 
 export interface AfterInterceptor {
-  afterCopy?: (fso: FileSystemObject) => Promise<void>;
+  afterCopy?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   afterDelete?: (fso: FileSystemObject) => Promise<void>;
   afterGet?: (file: File, rs: ReadStream) => Promise<void>;
   afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
   afterList?: (dir: Directory, list: string[]) => Promise<void>;
   afterMkcol?: (dir: Directory) => Promise<void>;
-  afterMove?: (fso: FileSystemObject) => Promise<void>;
+  afterMove?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   afterPatch?: (fso: FileSystemObject) => Promise<void>;
   afterPost?: (file: File, ws: WriteStream) => Promise<void>;
   afterPut?: (file: File, ws: WriteStream) => Promise<void>;
@@ -100,25 +100,37 @@ export interface DeleteOptions {
 }
 
 export abstract class FileSystemObject {
+  private afterCopy?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   private afterDelete?: (fso: FileSystemObject) => Promise<void>;
   private afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
+  private afterMove?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   private afterPatch?: (fso: FileSystemObject) => Promise<void>;
+  private beforeCopy?: (
+    fso: FileSystemObject,
+    toPath: string
+  ) => Promise<boolean>;
   private beforeDelete?: (
     fso: FileSystemObject,
     options?: DeleteOptions
   ) => Promise<boolean>;
   private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  private beforeMove?: (
+    fso: FileSystemObject,
+    toPath: string
+  ) => Promise<boolean>;
   private beforePatch?: (
     fso: FileSystemObject,
     props: Props
   ) => Promise<boolean>;
 
-  constructor(public readonly fs: FileSystem, public readonly path: string) {
+  constructor(public readonly fs: FileSystem, public path: string) {
     const bi = fs.options?.beforeInterceptor;
     if (bi) {
       this.beforeHead = bi.beforeHead;
       this.beforeDelete = bi.beforeDelete;
       this.beforePatch = bi.beforePatch;
+      this.beforeMove = bi.beforeMove;
+      this.beforeCopy = bi.beforeCopy;
     }
 
     const ai = fs.options?.afterInterceptor;
@@ -126,6 +138,8 @@ export abstract class FileSystemObject {
       this.afterHead = ai.afterHead;
       this.afterDelete = ai.afterDelete;
       this.afterPatch = ai.afterPatch;
+      this.afterMove = ai.afterMove;
+      this.afterCopy = ai.afterCopy;
     }
   }
 
@@ -159,6 +173,32 @@ export abstract class FileSystemObject {
     return stats;
   }
 
+  public async move(toPath: string): Promise<void> {
+    if (this.beforeMove) {
+      if (await this.beforeMove(this, toPath)) {
+        return;
+      }
+    }
+    await this.doMove(toPath);
+    this.path = toPath;
+    if (this.afterMove) {
+      await this.afterMove(this, toPath);
+    }
+  }
+
+  public async copy(toPath: string): Promise<void> {
+    if (this.beforeCopy) {
+      if (await this.beforeCopy(this, toPath)) {
+        return;
+      }
+    }
+    await this.doCopy(toPath);
+    this.path = toPath;
+    if (this.afterCopy) {
+      await this.afterCopy(this, toPath);
+    }
+  }
+
   public async patch(props: Props): Promise<void> {
     if (this.beforePatch) {
       if (await this.beforePatch(this, props)) {
@@ -184,6 +224,8 @@ export abstract class FileSystemObject {
 
   public abstract doDelete(options?: DeleteOptions): Promise<void>;
   public abstract doHead(): Promise<Stats>;
+  public abstract doCopy(toPath: string): Promise<void>;
+  public abstract doMove(toPath: string): Promise<void>;
   public abstract doPatch(props: Props): Promise<void>;
   public abstract toURL(urlType?: URLType): Promise<string>;
 }
@@ -249,7 +291,7 @@ export abstract class Directory extends FileSystemObject {
         return;
       }
     }
-    await this.doMkdir(options);
+    await this.doMkcol(options);
     if (this.afterMkcol) {
       await this.afterMkcol(this);
     }
@@ -263,7 +305,7 @@ export abstract class Directory extends FileSystemObject {
   }
 
   public abstract doList(): Promise<string[]>;
-  public abstract doMkdir(options?: MakeDirectoryOptions): Promise<void>;
+  public abstract doMkcol(options?: MakeDirectoryOptions): Promise<void>;
 }
 
 export abstract class File extends FileSystemObject {

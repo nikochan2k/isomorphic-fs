@@ -19,6 +19,14 @@ export class NodeDirectory extends Directory {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
+  public doCopy(toPath: string): Promise<void> {
+    return this.fso.doCopy(toPath);
+  }
+
+  public doDelete(options?: DeleteOptions): Promise<void> {
+    return this.fso.doDelete(options);
+  }
+
   public doHead(): Promise<Stats> {
     return this.fso.doHead();
   }
@@ -35,7 +43,7 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public doMkdir(options?: MakeDirectoryOptions): Promise<void> {
+  public doMkcol(options?: MakeDirectoryOptions): Promise<void> {
     const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
@@ -48,8 +56,8 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public doDelete(options?: DeleteOptions): Promise<void> {
-    return this.fso.doDelete(options);
+  public doMove(toPath: string): Promise<void> {
+    return this.fso.doMove(toPath);
   }
 
   public doPatch(props: Props): Promise<void> {
