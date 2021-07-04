@@ -78,12 +78,29 @@ test("read text file", async () => {
 
 test("continuous read and write", async () => {
   const file = await fs.openFile("/cont.txt");
+
   const ws = file.openWriteStream();
   await ws.write(toBuffer("大谷"));
   await ws.write(toBuffer("翔平"));
-  await ws.close();
+
   const rs = file.openReadStream();
+  let buffer = await rs.read(6);
+  let text = toString(buffer);
+  expect(text).toBe("大谷");
+
   await rs.seek(6, SeekOrigin.Begin);
-  const text = toString(await rs.read());
+  buffer = await rs.read();
+  text = toString(buffer);
   expect(text).toBe("翔平");
+
+  await ws.seek(0, SeekOrigin.End);
+  ws.write(toBuffer("ホームラン"));
+
+  await rs.seek(0, SeekOrigin.Begin);
+  buffer = await rs.read();
+  text = toString(buffer);
+  expect(text).toBe("大谷翔平ホームラン");
+
+  await ws.close();
+  await rs.close();
 });
