@@ -1,5 +1,6 @@
 import { createHash } from "sha256-uint8array";
 import { toUint8Array } from "./util/buffer";
+import { toHex } from "./util/misc";
 import { getParentPath } from "./util/path";
 
 export interface Times {
@@ -13,7 +14,7 @@ export interface Props extends Times {
   [name: string]: any;
 }
 
-export interface Stats extends Times {
+export interface Stats extends Props {
   size?: number;
 }
 export abstract class FileSystem {
@@ -35,6 +36,30 @@ export abstract class FileSystem {
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
+export interface BeforeInterceptor {
+  beforeCopy?: (fso: FileSystemObject) => Promise<void>;
+  beforeDelete?: (fso: FileSystemObject) => Promise<void>;
+  beforeGet?: (file: File, options?: OpenOptions) => ReadStream | null;
+  beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  beforeList?: (dir: Directory) => Promise<string[] | null>;
+  beforeMkcol?: (dir: Directory) => Promise<void>;
+  beforeMove?: (fso: FileSystemObject) => Promise<void>;
+  beforePatch?: (fso: FileSystemObject, props: Props) => Promise<void>;
+  beforePost?: (file: File, options?: OpenOptions) => WriteStream | null;
+  beforePut?: (file: File, options?: OpenOptions) => WriteStream | null;
+}
+export interface AfterInterceptor {
+  afterCopy?: (fso: FileSystemObject) => Promise<void>;
+  afterDelete?: (fso: FileSystemObject) => Promise<void>;
+  afterGet?: (file: File, rs: ReadStream) => Promise<void>;
+  afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
+  afterList?: (dir: Directory, list: string[]) => Promise<void>;
+  afterMkcol?: (dir: Directory) => Promise<void>;
+  afterMove?: (fso: FileSystemObject) => Promise<void>;
+  afterPatch?: (fso: FileSystemObject) => Promise<void>;
+  afterPost?: (file: File, ws: WriteStream) => Promise<void>;
+  afterPut?: (file: File, ws: WriteStream) => Promise<void>;
+}
 export abstract class FileSystemObject {
   constructor(public readonly fs: FileSystem, public readonly path: string) {}
 
@@ -100,28 +125,6 @@ export abstract class Directory extends FileSystemObject {
   public abstract readdir(): Promise<string[]>;
 }
 
-const LUT_HEX_4b = [
-  "0",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
-];
-const LUT_HEX_8b = new Array(0x100);
-for (let n = 0; n < 0x100; n++) {
-  LUT_HEX_8b[n] = `${LUT_HEX_4b[(n >>> 4) & 0xf]}${LUT_HEX_4b[n & 0xf]}`;
-}
 export abstract class File extends FileSystemObject {
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
@@ -136,8 +139,7 @@ export abstract class File extends FileSystemObject {
         hash.update(toUint8Array(buffer));
       }
 
-      const digest = hash.digest();
-      return digest.reduce((result, i) => result + LUT_HEX_8b[i], "");
+      return toHex(hash.digest());
     } finally {
       rs.close();
     }
