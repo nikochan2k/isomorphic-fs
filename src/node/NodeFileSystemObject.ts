@@ -3,9 +3,9 @@ import { pathToFileURL } from "url";
 import {
   FileSystem,
   FileSystemObject,
+  Props,
   RmOptions,
   Stats,
-  Times,
   URLType,
 } from "../core";
 import {
@@ -79,9 +79,9 @@ export class NodeFileSystemObject extends FileSystemObject {
     return pathToFileURL(this.getFullPath()).href;
   }
 
-  public setTimes(times: Times): Promise<void> {
+  public setProps(props: Props): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      if (typeof times.accessed !== "number") {
+      if (typeof props.accessed !== "number") {
         reject(
           new InvalidStateError(
             this.fs.repository,
@@ -91,7 +91,7 @@ export class NodeFileSystemObject extends FileSystemObject {
         );
         return;
       }
-      if (typeof times.modified !== "number") {
+      if (typeof props.modified !== "number") {
         reject(
           new InvalidStateError(
             this.fs.repository,
@@ -101,7 +101,7 @@ export class NodeFileSystemObject extends FileSystemObject {
         );
         return;
       }
-      fs.utimes(this.getFullPath(), times.accessed, times.modified, (err) => {
+      fs.utimes(this.getFullPath(), props.accessed, props.modified, (err) => {
         if (err) {
           reject(this.convertError(err, true));
         } else {

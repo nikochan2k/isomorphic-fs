@@ -7,6 +7,10 @@ export interface Times {
   modified?: number;
 }
 
+export interface Props extends Times {
+  [name: string]: any;
+}
+
 export interface Stats extends Times {
   size?: number;
 }
@@ -49,9 +53,8 @@ export abstract class FileSystemObject {
 
   public abstract doDelete(options?: RmOptions): Promise<void>;
   public abstract doHead(): Promise<Stats>;
-
   public abstract getURL(urlType?: URLType): Promise<string>;
-  public abstract setTimes(times: Times): Promise<void>;
+  public abstract setProps(props: Props): Promise<void>;
 }
 
 export interface MakeDirectoryOptions {

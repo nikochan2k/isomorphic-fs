@@ -3,9 +3,9 @@ import {
   Directory,
   FileSystem,
   MakeDirectoryOptions,
+  Props,
   RmOptions,
   Stats,
-  Times,
   URLType,
 } from "../core";
 import { joinPathes } from "../util/path";
@@ -56,7 +56,7 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public setTimes(times: Times): Promise<void> {
-    return this.fso.setTimes(times);
+  public setProps(props: Props): Promise<void> {
+    return this.fso.setProps(props);
   }
 }

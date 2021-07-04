@@ -4,10 +4,10 @@ import {
   File,
   FileSystem,
   OpenOptions,
+  Props,
   ReadStream,
   RmOptions,
   Stats,
-  Times,
   URLType,
   WriteStream,
 } from "../core";
@@ -59,7 +59,7 @@ export class NodeFile extends File {
     return new NodeWriteStream(this.fso, options);
   }
 
-  public setTimes(times: Times): Promise<void> {
-    return this.fso.setTimes(times);
+  public setProps(props: Props): Promise<void> {
+    return this.fso.setProps(props);
   }
 }
