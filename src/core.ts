@@ -65,7 +65,7 @@ export interface FileSystemOptions {
 export abstract class FileSystem {
   constructor(
     public readonly repository: string,
-    public readonly options: FileSystemOptions
+    public readonly options: FileSystemOptions = {}
   ) {}
 
   /**

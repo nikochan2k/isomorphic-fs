@@ -1,11 +1,11 @@
-import { Directory, File, FileSystem } from "../core";
+import { Directory, File, FileSystem, FileSystemOptions } from "../core";
 import { normalizePath } from "../util/path";
 import { NodeDirectory } from "./NodeDirectory";
 import { NodeFile } from "./NodeFile";
 
 export class NodeFileSystem extends FileSystem {
-  constructor(rootDir: string) {
-    super(normalizePath(rootDir));
+  constructor(rootDir: string, options?: FileSystemOptions) {
+    super(normalizePath(rootDir), options);
   }
 
   public async getDirectory(path: string): Promise<Directory> {
