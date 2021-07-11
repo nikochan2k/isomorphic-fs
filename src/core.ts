@@ -105,10 +105,10 @@ export abstract class FileSystem {
    * @param path A path to a file.
    * @param options
    */
-  public async getFile(path: string, options?: OpenOptions): Promise<File> {
+  public async getFile(path: string): Promise<File> {
     let fso: FileSystemObject | null;
     try {
-      fso = await this.getFileSystemObject(path, options);
+      fso = await this.getFileSystemObject(path);
     } catch (e) {
       if (e instanceof NotFoundError) {
         fso = null;
@@ -118,7 +118,7 @@ export abstract class FileSystem {
     }
 
     if (!fso) {
-      return this._createFile(path, options);
+      return this._createFile(path);
     }
 
     if (fso instanceof File) {
@@ -128,13 +128,10 @@ export abstract class FileSystem {
     throw new InvalidStateError(this.repository, path, `${path} is not a file`);
   }
 
-  public abstract getFileSystemObject(
-    path: string,
-    options?: OpenOptions
-  ): Promise<FileSystemObject>;
+  public abstract getFileSystemObject(path: string): Promise<FileSystemObject>;
 
   protected abstract _createDirectory(path: string): Directory;
-  protected abstract _createFile(path: string, options?: OpenOptions): File;
+  protected abstract _createFile(path: string): File;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";

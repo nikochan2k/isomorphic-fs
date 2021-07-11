@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { OpenOptions, SeekOrigin, WriteStream } from "../core";
 import { InvalidModificationError } from "../errors";
+import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeWriteStream extends WriteStream {
@@ -60,8 +61,9 @@ export class NodeWriteStream extends WriteStream {
   }
 
   public write(buffer: ArrayBuffer | Uint8Array | Buffer): Promise<void> {
+    const fso = this.fso;
     if (!this.writeStream || this.writeStream.destroyed) {
-      this.writeStream = fs.createWriteStream(this.fso.getFullPath(), {
+      this.writeStream = fs.createWriteStream(fso.getFullPath(), {
         flags: "w",
         highWaterMark: this.bufferSize,
       });
@@ -71,7 +73,7 @@ export class NodeWriteStream extends WriteStream {
     return new Promise<void>((resolve, reject) => {
       writeStream.write(buffer, (err) => {
         if (err) {
-          reject(this.fso.convertError(err, true));
+          reject(convertError(fso.fs, fso.path, err, true));
           return;
         }
         this.position += buffer.byteLength;

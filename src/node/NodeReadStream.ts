@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { OpenOptions, ReadStream, SeekOrigin } from "../core";
+import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeReadStream extends ReadStream {
@@ -17,8 +18,9 @@ export class NodeReadStream extends ReadStream {
   }
 
   public read(size?: number): Promise<ArrayBuffer | Uint8Array | Buffer> {
+    const fso = this.fso;
     if (!this.readStream || this.readStream.destroyed) {
-      this.readStream = fs.createReadStream(this.fso.getFullPath(), {
+      this.readStream = fs.createReadStream(fso.getFullPath(), {
         flags: "r",
         highWaterMark: this.bufferSize,
       });
@@ -28,7 +30,7 @@ export class NodeReadStream extends ReadStream {
     const promise = new Promise<ArrayBuffer | Uint8Array | Buffer>(
       (resolve, reject) => {
         const onError = (err: Error) => {
-          reject(this.fso.convertError(err, false));
+          reject(convertError(fso.fs, this.path, err, false));
           readStream.off("error", onError);
         };
         readStream.on("error", onError);
