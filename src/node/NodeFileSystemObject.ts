@@ -21,18 +21,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     super(fs, path);
   }
 
-  public convertError(err: NodeJS.ErrnoException, write: boolean) {
-    if (err.code === "ENOENT") {
-      return new NotFoundError(this.fs.repository, this.path, err);
-    }
-    if (write) {
-      return new InvalidModificationError(this.fs.repository, this.path, err);
-    } else {
-      return new NotReadableError(this.fs.repository, this.path, err);
-    }
-  }
-
-  public doCopy(toPath: string): Promise<void> {
+  public _copy(toPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       fs.copyFile(
         this.getFullPath(),
@@ -48,7 +37,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doDelete(options?: DeleteOptions): Promise<void> {
+  public _delete(options?: DeleteOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       fs.rm(
         this.getFullPath(),
@@ -64,7 +53,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doHead(): Promise<Stats> {
+  public _head(): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(), (err, stats) => {
         if (err) {
@@ -87,7 +76,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doMove(toPath: string): Promise<void> {
+  public _move(toPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
       fs.rename(
         this.getFullPath(),
@@ -103,7 +92,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public doPatch(props: Props): Promise<void> {
+  public _patch(props: Props): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (typeof props.accessed !== "number") {
         reject(
@@ -133,6 +122,17 @@ export class NodeFileSystemObject extends FileSystemObject {
         }
       });
     });
+  }
+
+  public convertError(err: NodeJS.ErrnoException, write: boolean) {
+    if (err.code === "ENOENT") {
+      return new NotFoundError(this.fs.repository, this.path, err);
+    }
+    if (write) {
+      return new InvalidModificationError(this.fs.repository, this.path, err);
+    } else {
+      return new NotReadableError(this.fs.repository, this.path, err);
+    }
   }
 
   public getFullPath() {

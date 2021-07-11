@@ -19,19 +19,19 @@ export class NodeDirectory extends Directory {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public doCopy(toPath: string): Promise<void> {
-    return this.fso.doCopy(toPath);
+  public _copy(toPath: string): Promise<void> {
+    return this.fso._copy(toPath);
   }
 
-  public doDelete(options?: DeleteOptions): Promise<void> {
-    return this.fso.doDelete(options);
+  public _delete(options?: DeleteOptions): Promise<void> {
+    return this.fso._delete(options);
   }
 
-  public doHead(): Promise<Stats> {
-    return this.fso.doHead();
+  public _head(): Promise<Stats> {
+    return this.fso._head();
   }
 
-  public doList(): Promise<string[]> {
+  public _list(): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
       fs.readdir(this.fso.getFullPath(), (err, names) => {
         if (err) {
@@ -43,7 +43,7 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public doMkcol(options?: MakeDirectoryOptions): Promise<void> {
+  public _mkcol(options?: MakeDirectoryOptions): Promise<void> {
     const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
@@ -56,12 +56,12 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public doMove(toPath: string): Promise<void> {
-    return this.fso.doMove(toPath);
+  public _move(toPath: string): Promise<void> {
+    return this.fso._move(toPath);
   }
 
-  public doPatch(props: Props): Promise<void> {
-    return this.fso.doPatch(props);
+  public _patch(props: Props): Promise<void> {
+    return this.fso._patch(props);
   }
 
   public toURL(_urlType?: URLType): Promise<string> {

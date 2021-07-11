@@ -143,13 +143,26 @@ export abstract class FileSystemObject {
     }
   }
 
+  public async copy(toPath: string): Promise<void> {
+    if (this.beforeCopy) {
+      if (await this.beforeCopy(this, toPath)) {
+        return;
+      }
+    }
+    await this._copy(toPath);
+    this.path = toPath;
+    if (this.afterCopy) {
+      await this.afterCopy(this, toPath);
+    }
+  }
+
   public async delete(options?: DeleteOptions): Promise<void> {
     if (this.beforeDelete) {
       if (await this.beforeDelete(this, options)) {
         return;
       }
     }
-    await this.doDelete(options);
+    await this._delete(options);
     if (this.afterDelete) {
       await this.afterDelete(this);
     }
@@ -165,7 +178,7 @@ export abstract class FileSystemObject {
       stats = await this.beforeHead(this);
     }
     if (!stats) {
-      stats = await this.doHead();
+      stats = await this._head();
     }
     if (this.afterHead) {
       await this.afterHead(this, stats);
@@ -179,23 +192,10 @@ export abstract class FileSystemObject {
         return;
       }
     }
-    await this.doMove(toPath);
+    await this._move(toPath);
     this.path = toPath;
     if (this.afterMove) {
       await this.afterMove(this, toPath);
-    }
-  }
-
-  public async copy(toPath: string): Promise<void> {
-    if (this.beforeCopy) {
-      if (await this.beforeCopy(this, toPath)) {
-        return;
-      }
-    }
-    await this.doCopy(toPath);
-    this.path = toPath;
-    if (this.afterCopy) {
-      await this.afterCopy(this, toPath);
     }
   }
 
@@ -205,7 +205,7 @@ export abstract class FileSystemObject {
         return;
       }
     }
-    await this.doPatch(props);
+    await this._patch(props);
     if (this.afterPatch) {
       await this.afterPatch(this);
     }
@@ -222,11 +222,11 @@ export abstract class FileSystemObject {
     return this.head();
   }
 
-  public abstract doDelete(options?: DeleteOptions): Promise<void>;
-  public abstract doHead(): Promise<Stats>;
-  public abstract doCopy(toPath: string): Promise<void>;
-  public abstract doMove(toPath: string): Promise<void>;
-  public abstract doPatch(props: Props): Promise<void>;
+  public abstract _copy(toPath: string): Promise<void>;
+  public abstract _delete(options?: DeleteOptions): Promise<void>;
+  public abstract _head(): Promise<Stats>;
+  public abstract _move(toPath: string): Promise<void>;
+  public abstract _patch(props: Props): Promise<void>;
   public abstract toURL(urlType?: URLType): Promise<string>;
 }
 
@@ -269,7 +269,7 @@ export abstract class Directory extends FileSystemObject {
       list = await this.beforeList(this);
     }
     if (!list) {
-      list = await this.doList();
+      list = await this._list();
     }
     if (this.afterList) {
       await this.afterList(this, list);
@@ -291,7 +291,7 @@ export abstract class Directory extends FileSystemObject {
         return;
       }
     }
-    await this.doMkcol(options);
+    await this._mkcol(options);
     if (this.afterMkcol) {
       await this.afterMkcol(this);
     }
@@ -304,8 +304,8 @@ export abstract class Directory extends FileSystemObject {
     return this.list();
   }
 
-  public abstract doList(): Promise<string[]>;
-  public abstract doMkcol(options?: MakeDirectoryOptions): Promise<void>;
+  public abstract _list(): Promise<string[]>;
+  public abstract _mkcol(options?: MakeDirectoryOptions): Promise<void>;
 }
 
 export abstract class File extends FileSystemObject {
@@ -363,7 +363,7 @@ export abstract class File extends FileSystemObject {
       rs = await this.beforeGet(this, options);
     }
     if (!rs) {
-      rs = await this.doOpenReadStream(options);
+      rs = await this._openReadStream(options);
     }
     if (this.afterGet) {
       await this.afterGet(this, rs);
@@ -391,7 +391,7 @@ export abstract class File extends FileSystemObject {
       }
     }
     if (!ws) {
-      ws = await this.doOpenWriteStream(options);
+      ws = await this._openWriteStream(options);
     }
     if (post && this.afterPost) {
       await this.afterPost(this, ws);
@@ -401,10 +401,8 @@ export abstract class File extends FileSystemObject {
     return ws;
   }
 
-  public abstract doOpenReadStream(options?: OpenOptions): Promise<ReadStream>;
-  public abstract doOpenWriteStream(
-    options?: OpenOptions
-  ): Promise<WriteStream>;
+  public abstract _openReadStream(options?: OpenOptions): Promise<ReadStream>;
+  public abstract _openWriteStream(options?: OpenOptions): Promise<WriteStream>;
 }
 
 export enum SeekOrigin {
