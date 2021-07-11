@@ -128,8 +128,7 @@ test("mkdir test", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   await folder.mkdir();
-  const stats = await folder.stat();
-  console.log(stats);
+  await folder.stat();
 
   dirs = await dir.readdir();
   expect(dirs.length).toBe(4);
@@ -137,4 +136,34 @@ test("mkdir test", async () => {
   expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
   expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
   expect(0 <= dirs.indexOf("/folder")).toBe(true);
+});
+
+test("create file in dir", async () => {
+  const file = await fs.getFile("/folder/sample.txt");
+  try {
+    await file.stat();
+    fail("Found file: " + file.path);
+  } catch (e) {
+    expect(e).toBeInstanceOf(NotFoundError);
+  }
+  const ws = await file.openWriteStream();
+  const outBuf = toBuffer("Sample");
+  const before = Date.now();
+  await ws.write(outBuf);
+  await ws.close();
+
+  const after = Date.now() + 1;
+  const stats = await file.stat();
+  const modified = stats.modified ?? 0;
+  expect(before <= modified && modified <= after).toBe(true);
+
+  const rs = await file.openReadStream();
+  const inBuf = await rs.read();
+  const text = toString(inBuf);
+  expect(text).toBe("Sample");
+  rs.close();
+
+  const dir = await fs.getDirectory("/folder/");
+  const list = await dir.list();
+  expect(0 <= list.indexOf("/folder/sample.txt")).toBe(true);
 });
