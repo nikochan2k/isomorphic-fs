@@ -1,11 +1,14 @@
 import { createHash } from "sha256-uint8array";
-import { NotFoundError } from "./errors";
+import {
+  InvalidModificationError,
+  InvalidStateError,
+  NotFoundError,
+} from "./errors";
 import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
-import { getParentPath } from "./util/path";
+import { getName, getParentPath, joinPaths } from "./util/path";
 
 export interface BeforeInterceptor {
-  beforeCopy?: (fso: FileSystemObject, toPath: string) => Promise<boolean>;
   beforeDelete?: (
     fso: FileSystemObject,
     options?: DeleteOptions
@@ -17,7 +20,6 @@ export interface BeforeInterceptor {
     dir: Directory,
     options?: MakeDirectoryOptions
   ) => Promise<boolean>;
-  beforeMove?: (fso: FileSystemObject, toPath: string) => Promise<boolean>;
   beforePatch?: (fso: FileSystemObject, props: Props) => Promise<boolean>;
   beforePost?: (
     file: File,
@@ -30,13 +32,11 @@ export interface BeforeInterceptor {
 }
 
 export interface AfterInterceptor {
-  afterCopy?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   afterDelete?: (fso: FileSystemObject) => Promise<void>;
   afterGet?: (file: File, rs: ReadStream) => Promise<void>;
   afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
   afterList?: (dir: Directory, list: string[]) => Promise<void>;
   afterMkcol?: (dir: Directory) => Promise<void>;
-  afterMove?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   afterPatch?: (fso: FileSystemObject) => Promise<void>;
   afterPost?: (file: File, ws: WriteStream) => Promise<void>;
   afterPut?: (file: File, ws: WriteStream) => Promise<void>;
@@ -73,13 +73,68 @@ export abstract class FileSystem {
    * @param path A path to a directory.
    * @param options
    */
-  public abstract getDirectory(path: string): Promise<Directory>;
+  public async getDirectory(path: string): Promise<Directory> {
+    let fso: FileSystemObject | null;
+    try {
+      fso = await this.getFileSystemObject(path);
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        fso = null;
+      } else {
+        throw e;
+      }
+    }
+
+    if (!fso) {
+      return this._createDirectory(path);
+    }
+
+    if (fso instanceof Directory) {
+      return fso as Directory;
+    }
+
+    throw new InvalidStateError(
+      this.repository,
+      path,
+      `${path} is not a directory`
+    );
+  }
+
   /**
    * Get a file.
    * @param path A path to a file.
    * @param options
    */
-  public abstract getFile(path: string, options?: OpenOptions): Promise<File>;
+  public async getFile(path: string, options?: OpenOptions): Promise<File> {
+    let fso: FileSystemObject | null;
+    try {
+      fso = await this.getFileSystemObject(path, options);
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        fso = null;
+      } else {
+        throw e;
+      }
+    }
+
+    if (!fso) {
+      return this._createFile(path, options);
+    }
+
+    if (fso instanceof File) {
+      return fso as File;
+    }
+
+    throw new InvalidStateError(this.repository, path, `${path} is not a file`);
+  }
+
+  public abstract getFileSystemObject(
+    path: string,
+    options?: OpenOptions
+  ): Promise<FileSystemObject>;
+
+  protected abstract _createDirectory(path: string): Directory;
+  protected abstract _createFile(path: string, options?: OpenOptions): File;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -99,25 +154,20 @@ export interface DeleteOptions {
   recursive?: boolean;
 }
 
+export interface XmitError {
+  error: Error;
+  from: FileSystemObject;
+  to: FileSystemObject;
+}
 export abstract class FileSystemObject {
-  private afterCopy?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   private afterDelete?: (fso: FileSystemObject) => Promise<void>;
   private afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
-  private afterMove?: (fso: FileSystemObject, toPath: string) => Promise<void>;
   private afterPatch?: (fso: FileSystemObject) => Promise<void>;
-  private beforeCopy?: (
-    fso: FileSystemObject,
-    toPath: string
-  ) => Promise<boolean>;
   private beforeDelete?: (
     fso: FileSystemObject,
     options?: DeleteOptions
   ) => Promise<boolean>;
   private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
-  private beforeMove?: (
-    fso: FileSystemObject,
-    toPath: string
-  ) => Promise<boolean>;
   private beforePatch?: (
     fso: FileSystemObject,
     props: Props
@@ -129,8 +179,6 @@ export abstract class FileSystemObject {
       this.beforeHead = bi.beforeHead;
       this.beforeDelete = bi.beforeDelete;
       this.beforePatch = bi.beforePatch;
-      this.beforeMove = bi.beforeMove;
-      this.beforeCopy = bi.beforeCopy;
     }
 
     const ai = fs.options?.afterInterceptor;
@@ -138,22 +186,13 @@ export abstract class FileSystemObject {
       this.afterHead = ai.afterHead;
       this.afterDelete = ai.afterDelete;
       this.afterPatch = ai.afterPatch;
-      this.afterMove = ai.afterMove;
-      this.afterCopy = ai.afterCopy;
     }
   }
 
-  public async copy(toPath: string): Promise<void> {
-    if (this.beforeCopy) {
-      if (await this.beforeCopy(this, toPath)) {
-        return;
-      }
-    }
-    await this._copy(toPath);
-    this.path = toPath;
-    if (this.afterCopy) {
-      await this.afterCopy(this, toPath);
-    }
+  public async copy(fso: FileSystemObject): Promise<XmitError[]> {
+    const copyErrors: XmitError[] = [];
+    await this._xmit(fso, false, copyErrors);
+    return copyErrors;
   }
 
   public async delete(options?: DeleteOptions): Promise<void> {
@@ -186,17 +225,10 @@ export abstract class FileSystemObject {
     return stats;
   }
 
-  public async move(toPath: string): Promise<void> {
-    if (this.beforeMove) {
-      if (await this.beforeMove(this, toPath)) {
-        return;
-      }
-    }
-    await this._move(toPath);
-    this.path = toPath;
-    if (this.afterMove) {
-      await this.afterMove(this, toPath);
-    }
+  public async move(fso: FileSystemObject): Promise<XmitError[]> {
+    const copyErrors: XmitError[] = [];
+    await this._xmit(fso, true, copyErrors);
+    return copyErrors;
   }
 
   public async patch(props: Props): Promise<void> {
@@ -222,11 +254,18 @@ export abstract class FileSystemObject {
     return this.head();
   }
 
-  public abstract _copy(toPath: string): Promise<void>;
+  public toString = (): string => {
+    return `${this.fs.repository}:${this.path}`;
+  };
+
   public abstract _delete(options?: DeleteOptions): Promise<void>;
   public abstract _head(): Promise<Stats>;
-  public abstract _move(toPath: string): Promise<void>;
   public abstract _patch(props: Props): Promise<void>;
+  public abstract _xmit(
+    fso: FileSystemObject,
+    move: boolean,
+    copyErrors: XmitError[]
+  ): Promise<void>;
   public abstract toURL(urlType?: URLType): Promise<string>;
 }
 
@@ -260,6 +299,45 @@ export abstract class Directory extends FileSystemObject {
     if (ai) {
       this.afterMkcol = ai.afterMkcol;
       this.afterList = ai.afterList;
+    }
+  }
+
+  public async _xmit(
+    fso: FileSystemObject,
+    move: boolean,
+    copyErrors: XmitError[]
+  ): Promise<void> {
+    await this.stat(); // check if this directory exists
+    if (fso instanceof File) {
+      throw new InvalidModificationError(
+        fso.fs.repository,
+        fso.path,
+        `Cannot copy a directory "${this}" to a file "${fso}"`
+      );
+    }
+
+    const toDir = fso as unknown as Directory;
+    await toDir.mkdir();
+
+    const children = await this.ls();
+    for (const child of children) {
+      const childFso = await this.fs.getFileSystemObject(child);
+      const name = getName(child);
+      const toFso = await this.fs.getFileSystemObject(
+        joinPaths(toDir.path, name)
+      );
+      try {
+        await childFso._xmit(toFso, move, copyErrors);
+        if (move) {
+          try {
+            await childFso.delete();
+          } catch (error) {
+            copyErrors.push({ from: childFso, to: toFso, error });
+          }
+        }
+      } catch (error) {
+        copyErrors.push({ from: childFso, to: toFso, error });
+      }
     }
   }
 
@@ -339,6 +417,44 @@ export abstract class File extends FileSystemObject {
       this.afterGet = ai.afterGet;
       this.afterPost = ai.afterPost;
       this.afterPut = ai.afterPut;
+    }
+  }
+
+  public async _xmit(
+    fso: FileSystemObject,
+    move: boolean,
+    copyErrors: XmitError[]
+  ): Promise<void> {
+    await this.stat(); // check if this directory exists
+    if (fso instanceof Directory) {
+      throw new InvalidModificationError(
+        fso.fs.repository,
+        fso.path,
+        `Cannot copy a file "${this}" to a directory "${fso}"`
+      );
+    }
+    const to = fso as File;
+
+    const rs = await this.openReadStream();
+    try {
+      const ws = await to.openWriteStream();
+      try {
+        let buffer: any;
+        while ((buffer = rs.read()) == null) {
+          ws.write(buffer);
+        }
+      } finally {
+        ws.close();
+      }
+    } finally {
+      rs.close();
+    }
+
+    if (move) {
+      try {
+      } catch (error) {
+        copyErrors.push({ from: this, to, error });
+      }
     }
   }
 

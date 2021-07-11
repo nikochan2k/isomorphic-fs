@@ -1,14 +1,15 @@
 import * as fs from "fs";
 import {
+  DeleteOptions,
   Directory,
   FileSystem,
   MakeDirectoryOptions,
   Props,
-  DeleteOptions,
   Stats,
   URLType,
 } from "../core";
-import { joinPathes } from "../util/path";
+import { joinPaths } from "../util/path";
+import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeDirectory extends Directory {
@@ -17,10 +18,6 @@ export class NodeDirectory extends Directory {
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
     this.fso = new NodeFileSystemObject(fs, path);
-  }
-
-  public _copy(toPath: string): Promise<void> {
-    return this.fso._copy(toPath);
   }
 
   public _delete(options?: DeleteOptions): Promise<void> {
@@ -35,9 +32,9 @@ export class NodeDirectory extends Directory {
     return new Promise<string[]>((resolve, reject) => {
       fs.readdir(this.fso.getFullPath(), (err, names) => {
         if (err) {
-          reject(this.fso.convertError(err, false));
+          reject(convertError(this.fs, this.path, err, false));
         } else {
-          resolve(names.map((name) => joinPathes(this.path, name)));
+          resolve(names.map((name) => joinPaths(this.path, name)));
         }
       });
     });
@@ -48,16 +45,12 @@ export class NodeDirectory extends Directory {
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
         if (err) {
-          reject(this.fso.convertError(err, true));
+          reject(convertError(this.fs, this.path, err, true));
         } else {
           resolve();
         }
       });
     });
-  }
-
-  public _move(toPath: string): Promise<void> {
-    return this.fso._move(toPath);
   }
 
   public _patch(props: Props): Promise<void> {

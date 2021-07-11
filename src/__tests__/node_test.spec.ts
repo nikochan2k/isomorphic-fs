@@ -31,8 +31,8 @@ test("readdir", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   await dir.mkdir();
-  const pathes = await dir.readdir();
-  expect(pathes.length).toBe(0);
+  const paths = await dir.readdir();
+  expect(paths.length).toBe(0);
 });
 
 test("add empty file", async () => {

@@ -37,7 +37,7 @@ export function getName(path: string): string {
   return parts[parts.length - 1] as string;
 }
 
-export function joinPathes(path1: string, path2: string) {
+export function joinPaths(path1: string, path2: string) {
   const parts1 = getPathParts(path1);
   const parts2 = getPathParts(path2);
   const parts = [...parts1, ...parts2];

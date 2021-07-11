@@ -1,40 +1,21 @@
 import * as fs from "fs";
 import { pathToFileURL } from "url";
 import {
+  DeleteOptions,
   FileSystem,
   FileSystemObject,
   Props,
-  DeleteOptions,
   Stats,
   URLType,
+  XmitError,
 } from "../core";
-import {
-  InvalidModificationError,
-  InvalidStateError,
-  NotFoundError,
-  NotReadableError,
-} from "../errors";
-import { joinPathes } from "../util/path";
+import { InvalidStateError } from "../errors";
+import { joinPaths } from "../util/path";
+import { convertError } from "./NodeFileSystem";
 
 export class NodeFileSystemObject extends FileSystemObject {
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-  }
-
-  public _copy(toPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      fs.copyFile(
-        this.getFullPath(),
-        joinPathes(this.fs.repository, toPath),
-        (err) => {
-          if (err) {
-            reject(this.convertError(err, true));
-            return;
-          }
-          resolve();
-        }
-      );
-    });
   }
 
   public _delete(options?: DeleteOptions): Promise<void> {
@@ -44,7 +25,7 @@ export class NodeFileSystemObject extends FileSystemObject {
         { force: options?.force, recursive: options?.recursive },
         (err) => {
           if (err) {
-            reject(this.convertError(err, true));
+            reject(convertError(this.fs, this.path, err, true));
           } else {
             resolve();
           }
@@ -57,7 +38,7 @@ export class NodeFileSystemObject extends FileSystemObject {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(), (err, stats) => {
         if (err) {
-          reject(this.convertError(err, false));
+          reject(convertError(this.fs, this.path, err, false));
         } else {
           if (stats.isDirectory()) {
             resolve({
@@ -73,22 +54,6 @@ export class NodeFileSystemObject extends FileSystemObject {
           }
         }
       });
-    });
-  }
-
-  public _move(toPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      fs.rename(
-        this.getFullPath(),
-        joinPathes(this.fs.repository, toPath),
-        (err) => {
-          if (err) {
-            reject(this.convertError(err, true));
-            return;
-          }
-          resolve();
-        }
-      );
     });
   }
 
@@ -116,7 +81,7 @@ export class NodeFileSystemObject extends FileSystemObject {
       }
       fs.utimes(this.getFullPath(), props.accessed, props.modified, (err) => {
         if (err) {
-          reject(this.convertError(err, true));
+          reject(convertError(this.fs, this.path, err, true));
         } else {
           resolve();
         }
@@ -124,20 +89,21 @@ export class NodeFileSystemObject extends FileSystemObject {
     });
   }
 
-  public convertError(err: NodeJS.ErrnoException, write: boolean) {
-    if (err.code === "ENOENT") {
-      return new NotFoundError(this.fs.repository, this.path, err);
-    }
-    if (write) {
-      return new InvalidModificationError(this.fs.repository, this.path, err);
-    } else {
-      return new NotReadableError(this.fs.repository, this.path, err);
-    }
+  public _xmit(
+    _fso: FileSystemObject,
+    _move: boolean,
+    _copyErrors: XmitError[]
+  ): Promise<void> {
+    throw new Error("Method not implemented.");
   }
 
   public getFullPath() {
-    return joinPathes(this.fs.repository, this.path);
+    return joinPaths(this.fs.repository, this.path);
   }
+
+  public override toString = (): string => {
+    return this.getFullPath();
+  };
 
   public async toURL(_urlType?: URLType): Promise<string> {
     return pathToFileURL(this.getFullPath()).href;

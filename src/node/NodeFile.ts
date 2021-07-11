@@ -11,6 +11,7 @@ import {
   URLType,
   WriteStream,
 } from "../core";
+import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 import { NodeReadStream } from "./NodeReadStream";
 import { NodeWriteStream } from "./NodeWriteStream";
@@ -23,20 +24,12 @@ export class NodeFile extends File {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public _copy(toPath: string): Promise<void> {
-    return this.fso._copy(toPath);
-  }
-
   public _delete(options?: DeleteOptions): Promise<void> {
     return this.fso._delete(options);
   }
 
   public _head(): Promise<Stats> {
     return this.fso._head();
-  }
-
-  public _move(toPath: string): Promise<void> {
-    return this.fso._move(toPath);
   }
 
   public async _openReadStream(options?: OpenOptions): Promise<ReadStream> {
@@ -62,7 +55,7 @@ export class NodeFile extends File {
         resolve(hash.digest("hex"));
       });
       input.on("error", (err) => {
-        reject(this.fso.convertError(err, false));
+        reject(convertError(this.fs, this.path, err, false));
       });
     });
   }
