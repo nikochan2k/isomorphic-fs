@@ -1,10 +1,3 @@
-import {
-  AbstractDirectory,
-  AbstractFile,
-  AbstractReadStream,
-  AbstractWriteStream,
-} from "./core";
-
 export interface Times {
   accessed?: number;
   created?: number;
@@ -86,7 +79,7 @@ export interface Hook {
   beforeGet?: (
     path: string,
     options: OpenOptions
-  ) => Promise<AbstractReadStream | null>;
+  ) => Promise<ReadStream | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
@@ -98,11 +91,11 @@ export interface Hook {
   beforePost?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<AbstractWriteStream | null>;
+  ) => Promise<WriteStream | null>;
   beforePut?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<AbstractWriteStream | null>;
+  ) => Promise<WriteStream | null>;
 }
 
 export interface XmitError {
@@ -112,6 +105,8 @@ export interface XmitError {
 }
 
 export interface FileSystem {
+  repository: string;
+  options: FileSystemOptions;
   copy(
     fromPath: string,
     toPath: string,
@@ -119,8 +114,8 @@ export interface FileSystem {
   ): Promise<XmitError[]>;
   del(path: string, options?: DeleteOptions): Promise<void>;
   delete(path: string, options?: DeleteOptions): Promise<void>;
-  getDirectory(path: string): Promise<AbstractDirectory>;
-  getFile(path: string): Promise<AbstractFile>;
+  getDirectory(path: string): Promise<Directory>;
+  getFile(path: string): Promise<File>;
   head(path: string, options?: HeadOptions): Promise<Stats>;
   move(
     fromPath: string,
@@ -134,6 +129,8 @@ export interface FileSystem {
 }
 
 export interface FileSystemObject {
+  fs: FileSystem;
+  path: string;
   copy(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
   del(options?: DeleteOptions): Promise<void>;
   delete(options?: DeleteOptions): Promise<void>;
@@ -146,18 +143,18 @@ export interface FileSystemObject {
   toURL(urlType?: URLType): Promise<string>;
 }
 
-export interface Directory {
-  list(options: ListOptions): Promise<string[]>;
-  ls(options: ListOptions): Promise<string[]>;
-  readdir(options: ListOptions): Promise<string[]>;
-  mkdir(options: MkcolOptions): Promise<void>;
-  mkcol(options: MkcolOptions): Promise<void>;
+export interface Directory extends FileSystemObject {
+  list(options?: ListOptions): Promise<string[]>;
+  ls(options?: ListOptions): Promise<string[]>;
+  readdir(options?: ListOptions): Promise<string[]>;
+  mkdir(options?: MkcolOptions): Promise<void>;
+  mkcol(options?: MkcolOptions): Promise<void>;
 }
 
-export interface File {
+export interface File extends FileSystemObject {
   hash(bufferSize?: number): Promise<string>;
-  openReadStream(options?: OpenOptions): Promise<AbstractReadStream>;
-  openWriteStream(options?: OpenWriteOptions): Promise<AbstractWriteStream>;
+  openReadStream(options?: OpenOptions): Promise<ReadStream>;
+  openWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
 }
 
 export enum SeekOrigin {

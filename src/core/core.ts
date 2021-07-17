@@ -141,13 +141,13 @@ export abstract class AbstractFileSystem implements FileSystem {
    * @param path A path to a directory.
    * @param options
    */
-  public abstract getDirectory(path: string): Promise<AbstractDirectory>;
+  public abstract getDirectory(path: string): Promise<Directory>;
   /**
    * Get a file.
    * @param path A path to a file.
    * @param options
    */
-  public abstract getFile(path: string): Promise<AbstractFile>;
+  public abstract getFile(path: string): Promise<File>;
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
@@ -170,7 +170,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   constructor(public readonly fs: AbstractFileSystem, public path: string) {}
 
   public async copy(
-    fso: AbstractFileSystemObject,
+    fso: FileSystemObject,
     options: XmitOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
@@ -191,7 +191,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   }
 
   public async move(
-    fso: AbstractFileSystemObject,
+    fso: FileSystemObject,
     options: XmitOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
@@ -207,7 +207,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
 
   public abstract _xmit(
-    fso: AbstractFileSystemObject,
+    fso: FileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
     options: XmitOptions
@@ -245,7 +245,7 @@ export abstract class AbstractDirectory
   }
 
   public async _xmit(
-    fso: AbstractFileSystemObject,
+    fso: FileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
     options: XmitOptions = {}
@@ -259,20 +259,20 @@ export abstract class AbstractDirectory
       );
     }
 
-    const toDir = fso as unknown as AbstractDirectory;
-    await toDir.mkcol();
+    const toDir = fso as Directory;
+    await toDir.mkcol({ ignoreHook: options.ignoreHook });
 
     const children = await this.list();
     for (const child of children) {
       const stats = await this.fs.head(child);
-      const fromFso = await (stats.size
+      const fromFso = (await (stats.size
         ? this.fs.getFile(child)
-        : this.fs.getDirectory(child));
+        : this.fs.getDirectory(child))) as unknown as AbstractFileSystemObject;
       const name = getName(child);
       const toPath = joinPaths(toDir.path, name);
-      const toFso = await (stats.size
+      const toFso = (await (stats.size
         ? this.fs.getFile(toPath)
-        : this.fs.getDirectory(toPath));
+        : this.fs.getDirectory(toPath))) as unknown as AbstractFileSystemObject;
       try {
         await fromFso._xmit(toFso, move, copyErrors, options);
         if (move) {
@@ -328,15 +328,15 @@ export abstract class AbstractFile
   private beforeGet?: (
     path: string,
     options: OpenOptions
-  ) => Promise<AbstractReadStream | null>;
+  ) => Promise<ReadStream | null>;
   private beforePost?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<AbstractWriteStream | null>;
+  ) => Promise<WriteStream | null>;
   private beforePut?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<AbstractWriteStream | null>;
+  ) => Promise<WriteStream | null>;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -416,10 +416,8 @@ export abstract class AbstractFile
     }
   }
 
-  public async openReadStream(
-    options: OpenOptions = {}
-  ): Promise<AbstractReadStream> {
-    let rs: AbstractReadStream | null | undefined;
+  public async openReadStream(options: OpenOptions = {}): Promise<ReadStream> {
+    let rs: ReadStream | null | undefined;
     if (!options.ignoreHook && this.beforeGet) {
       rs = await this.beforeGet(this.path, options);
     }
@@ -431,8 +429,8 @@ export abstract class AbstractFile
 
   public async openWriteStream(
     options: OpenWriteOptions = {}
-  ): Promise<AbstractWriteStream> {
-    let ws: AbstractWriteStream | null | undefined;
+  ): Promise<WriteStream> {
+    let ws: WriteStream | null | undefined;
     try {
       await this.stat();
       if (options.create === true) {
