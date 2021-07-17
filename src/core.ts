@@ -64,6 +64,10 @@ export abstract class FileSystem {
   ) => Promise<boolean>;
   private beforeHead?: (path: string) => Promise<Stats | null>;
 
+  public del = this.delete;
+  public rm = this.delete;
+  public stat = this.head;
+
   constructor(
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
@@ -86,13 +90,13 @@ export abstract class FileSystem {
     }
   }
 
-  public async stat(path: string): Promise<Stats> {
+  public async head(path: string): Promise<Stats> {
     let stats: Stats | null | undefined;
     if (this.beforeHead) {
       stats = await this.beforeHead(path);
     }
     if (!stats) {
-      stats = await this._stat(path);
+      stats = await this._head(path);
     }
     if (this.afterHead) {
       await this.afterHead(path, stats);
@@ -101,7 +105,7 @@ export abstract class FileSystem {
   }
 
   public abstract _delete(path: string, options?: DeleteOptions): Promise<void>;
-  public abstract _stat(path: string): Promise<Stats>;
+  public abstract _head(path: string): Promise<Stats>;
   /**
    * Get a directory.
    * @param path A path to a directory.
@@ -145,6 +149,10 @@ export abstract class FileSystemObject {
     props: Props
   ) => Promise<boolean>;
 
+  public del = this.delete;
+  public rm = this.delete;
+  public stat = this.head;
+
   constructor(public readonly fs: FileSystem, public path: string) {
     const bi = fs.options?.beforeInterceptor;
     if (bi) {
@@ -172,7 +180,7 @@ export abstract class FileSystemObject {
   }
 
   public head(): Promise<Stats> {
-    return this.stat();
+    return this.fs.head(this.path);
   }
 
   public async move(fso: FileSystemObject): Promise<XmitError[]> {
@@ -191,17 +199,6 @@ export abstract class FileSystemObject {
     if (this.afterPatch) {
       await this.afterPatch(this);
     }
-  }
-
-  /**
-   * Asynchronously removes files and directories (modeled on the standard POSIX `rm` utility).
-   */
-  public async rm(options?: DeleteOptions): Promise<void> {
-    return this.fs.delete(this.path, options);
-  }
-
-  public async stat(): Promise<Stats> {
-    return this.fs.stat(this.path);
   }
 
   public toString = (): string => {
@@ -269,7 +266,7 @@ export abstract class Directory extends FileSystemObject {
 
     const children = await this.ls();
     for (const child of children) {
-      const stats = await this.fs.stat(child);
+      const stats = await this.fs.head(child);
       const fromFso = stats.size
         ? await this.fs.getFile(child)
         : await this.fs.getDirectory(child);

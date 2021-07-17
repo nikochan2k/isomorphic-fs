@@ -53,7 +53,7 @@ export class NodeFileSystem extends FileSystem {
     });
   }
 
-  public _stat(path: string): Promise<Stats> {
+  public _head(path: string): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       const fullPath = joinPaths(this.repository, path);
       fs.stat(fullPath, (err, stats) => {
