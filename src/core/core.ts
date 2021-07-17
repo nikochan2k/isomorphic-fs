@@ -4,6 +4,7 @@ import { toHex } from "../util/misc";
 import { getName, getParentPath, joinPaths } from "../util/path";
 import {
   DeleteOptions,
+  Directory,
   FileSystem,
   FileSystemObject,
   FileSystemOptions,
@@ -135,7 +136,7 @@ export abstract class AbstractFileSystem implements FileSystem {
    * @param path A path to a directory.
    * @param options
    */
-  public abstract getDirectory(path: string): Promise<Directory>;
+  public abstract getDirectory(path: string): Promise<AbstractDirectory>;
   /**
    * Get a file.
    * @param path A path to a file.
@@ -208,7 +209,10 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   ): Promise<void>;
 }
 
-export abstract class Directory extends AbstractFileSystemObject {
+export abstract class AbstractDirectory
+  extends AbstractFileSystemObject
+  implements Directory
+{
   private afterList?: (path: string, list: string[]) => Promise<void>;
   private afterMkcol?: (path: string) => Promise<void>;
   private beforeList?: (
@@ -222,6 +226,7 @@ export abstract class Directory extends AbstractFileSystemObject {
 
   public ls = this.list;
   public readdir = this.list;
+  public mkdir = this.mkcol;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -240,7 +245,7 @@ export abstract class Directory extends AbstractFileSystemObject {
     copyErrors: XmitError[],
     options: XmitOptions = {}
   ): Promise<void> {
-    await this.stat(); // check if this directory exists
+    await this.head(); // check if this directory exists
     if (fso instanceof File) {
       throw new InvalidModificationError(
         fso.fs.repository,
@@ -249,10 +254,10 @@ export abstract class Directory extends AbstractFileSystemObject {
       );
     }
 
-    const toDir = fso as unknown as Directory;
-    await toDir.mkdir();
+    const toDir = fso as unknown as AbstractDirectory;
+    await toDir.mkcol();
 
-    const children = await this.ls();
+    const children = await this.list();
     for (const child of children) {
       const stats = await this.fs.head(child);
       const fromFso = await (stats.size
@@ -296,7 +301,7 @@ export abstract class Directory extends AbstractFileSystemObject {
    * Create a directory.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
-  public async mkdir(options: MkcolOptions = {}): Promise<void> {
+  public async mkcol(options: MkcolOptions = {}): Promise<void> {
     if (!options.ignoreHook && this.beforeMkcol) {
       if (await this.beforeMkcol(this.path, options)) {
         return;
@@ -343,7 +348,7 @@ export abstract class File extends AbstractFileSystemObject {
     options: XmitOptions = {}
   ): Promise<void> {
     await this.stat(); // check if this directory exists
-    if (fso instanceof Directory) {
+    if (fso instanceof AbstractDirectory) {
       throw new InvalidModificationError(
         fso.fs.repository,
         fso.path,

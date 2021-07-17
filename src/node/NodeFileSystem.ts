@@ -9,7 +9,7 @@ import {
   Stats,
   URLType,
 } from "../core/common";
-import { Directory, File, AbstractFileSystem } from "../core/core";
+import { AbstractDirectory, File, AbstractFileSystem } from "../core/core";
 import {
   InvalidModificationError,
   InvalidStateError,
@@ -113,7 +113,7 @@ export class NodeFileSystem extends AbstractFileSystem {
     });
   }
 
-  public async getDirectory(path: string): Promise<Directory> {
+  public async getDirectory(path: string): Promise<AbstractDirectory> {
     return new NodeDirectory(this, path);
   }
 

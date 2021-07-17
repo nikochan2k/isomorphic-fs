@@ -1,10 +1,10 @@
 import * as fs from "fs";
 import { ListOptions, MkcolOptions } from "../core/common";
-import { Directory, AbstractFileSystem } from "../core/core";
+import { AbstractDirectory, AbstractFileSystem } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
-export class NodeDirectory extends Directory {
+export class NodeDirectory extends AbstractDirectory {
   public override toString = this.getFullPath;
 
   constructor(fs: AbstractFileSystem, path: string) {
