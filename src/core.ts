@@ -7,7 +7,7 @@ import { getName, getParentPath, joinPaths } from "./util/path";
 export interface BeforeInterceptor {
   beforeDelete?: (path: string, options?: DeleteOptions) => Promise<boolean>;
   beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
-  beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
+  beforeHead?: (path: string) => Promise<Stats | null>;
   beforeList?: (dir: Directory) => Promise<string[] | null>;
   beforeMkcol?: (
     dir: Directory,
@@ -27,7 +27,7 @@ export interface BeforeInterceptor {
 export interface AfterInterceptor {
   afterDelete?: (path: string) => Promise<void>;
   afterGet?: (file: File, rs: ReadStream) => Promise<void>;
-  afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
+  afterHead?: (path: string, stats: Stats) => Promise<void>;
   afterList?: (dir: Directory, list: string[]) => Promise<void>;
   afterMkcol?: (dir: Directory) => Promise<void>;
   afterPatch?: (fso: FileSystemObject) => Promise<void>;
@@ -56,33 +56,24 @@ export interface FileSystemOptions {
 }
 
 export abstract class FileSystem {
+  private afterDelete?: (path: string) => Promise<void>;
+  private afterHead?: (path: string, stats: Stats) => Promise<void>;
   private beforeDelete?: (
     path: string,
     options?: DeleteOptions
   ) => Promise<boolean>;
-  private afterDelete?: (path: string) => Promise<void>;
+  private beforeHead?: (path: string) => Promise<Stats | null>;
 
   constructor(
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
   ) {
-    this.beforeDelete = options.beforeInterceptor?.beforeDelete;
+    const beforeInterceptor = options.beforeInterceptor;
+    this.beforeDelete = beforeInterceptor?.beforeDelete;
+    this.beforeHead = beforeInterceptor?.beforeHead;
     this.afterDelete = options.afterInterceptor?.afterDelete;
   }
 
-  /**
-   * Get a directory.
-   * @param path A path to a directory.
-   * @param options
-   */
-  public abstract getDirectory(path: string): Promise<Directory>;
-  /**
-   * Get a file.
-   * @param path A path to a file.
-   * @param options
-   */
-  public abstract getFile(path: string): Promise<File>;
-  public abstract stat(path: string): Promise<Stats>;
   public async delete(path: string, options?: DeleteOptions): Promise<void> {
     if (this.beforeDelete) {
       if (await this.beforeDelete(path, options)) {
@@ -95,7 +86,34 @@ export abstract class FileSystem {
     }
   }
 
+  public async stat(path: string): Promise<Stats> {
+    let stats: Stats | null | undefined;
+    if (this.beforeHead) {
+      stats = await this.beforeHead(path);
+    }
+    if (!stats) {
+      stats = await this._stat(path);
+    }
+    if (this.afterHead) {
+      await this.afterHead(path, stats);
+    }
+    return stats;
+  }
+
   public abstract _delete(path: string, options?: DeleteOptions): Promise<void>;
+  public abstract _stat(path: string): Promise<Stats>;
+  /**
+   * Get a directory.
+   * @param path A path to a directory.
+   * @param options
+   */
+  public abstract getDirectory(path: string): Promise<Directory>;
+  /**
+   * Get a file.
+   * @param path A path to a file.
+   * @param options
+   */
+  public abstract getFile(path: string): Promise<File>;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -121,9 +139,7 @@ export interface XmitError {
   to: FileSystemObject;
 }
 export abstract class FileSystemObject {
-  private afterHead?: (fso: FileSystemObject, stats: Stats) => Promise<void>;
   private afterPatch?: (fso: FileSystemObject) => Promise<void>;
-  private beforeHead?: (fso: FileSystemObject) => Promise<Stats | null>;
   private beforePatch?: (
     fso: FileSystemObject,
     props: Props
@@ -132,13 +148,11 @@ export abstract class FileSystemObject {
   constructor(public readonly fs: FileSystem, public path: string) {
     const bi = fs.options?.beforeInterceptor;
     if (bi) {
-      this.beforeHead = bi.beforeHead;
       this.beforePatch = bi.beforePatch;
     }
 
     const ai = fs.options?.afterInterceptor;
     if (ai) {
-      this.afterHead = ai.afterHead;
       this.afterPatch = ai.afterPatch;
     }
   }
@@ -147,6 +161,10 @@ export abstract class FileSystemObject {
     const copyErrors: XmitError[] = [];
     await this._xmit(fso, false, copyErrors);
     return copyErrors;
+  }
+
+  public async delete(options?: DeleteOptions): Promise<void> {
+    return this.fs.delete(this.path, options);
   }
 
   public async getParent(): Promise<string> {
@@ -182,22 +200,8 @@ export abstract class FileSystemObject {
     return this.fs.delete(this.path, options);
   }
 
-  public async delete(options?: DeleteOptions): Promise<void> {
-    return this.fs.delete(this.path, options);
-  }
-
   public async stat(): Promise<Stats> {
-    let stats: Stats | null | undefined;
-    if (this.beforeHead) {
-      stats = await this.beforeHead(this);
-    }
-    if (!stats) {
-      stats = await this.fs.stat(this.path);
-    }
-    if (this.afterHead) {
-      await this.afterHead(this, stats);
-    }
-    return stats;
+    return this.fs.stat(this.path);
   }
 
   public toString = (): string => {

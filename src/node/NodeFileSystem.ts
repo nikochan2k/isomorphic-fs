@@ -53,15 +53,7 @@ export class NodeFileSystem extends FileSystem {
     });
   }
 
-  public async getDirectory(path: string): Promise<Directory> {
-    return new NodeDirectory(this, path);
-  }
-
-  public async getFile(path: string): Promise<File> {
-    return new NodeFile(this, path);
-  }
-
-  public stat(path: string): Promise<Stats> {
+  public _stat(path: string): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       const fullPath = joinPaths(this.repository, path);
       fs.stat(fullPath, (err, stats) => {
@@ -83,6 +75,14 @@ export class NodeFileSystem extends FileSystem {
         }
       });
     });
+  }
+
+  public async getDirectory(path: string): Promise<Directory> {
+    return new NodeDirectory(this, path);
+  }
+
+  public async getFile(path: string): Promise<File> {
+    return new NodeFile(this, path);
   }
 
   protected getFullPath(path: string) {
