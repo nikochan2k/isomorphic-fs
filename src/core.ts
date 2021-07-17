@@ -6,28 +6,28 @@ import { getName, getParentPath, joinPaths } from "./util/path";
 
 export interface Interceptor {
   afterDelete?: (path: string) => Promise<void>;
-  afterGet?: (file: File, rs: ReadStream) => Promise<void>;
+  afterGet?: (path: string) => Promise<void>;
   afterHead?: (path: string, stats: Stats) => Promise<void>;
-  afterList?: (dir: Directory, list: string[]) => Promise<void>;
-  afterMkcol?: (dir: Directory) => Promise<void>;
+  afterList?: (path: string, list: string[]) => Promise<void>;
+  afterMkcol?: (path: string) => Promise<void>;
   afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (file: File, ws: WriteStream) => Promise<void>;
-  afterPut?: (file: File, ws: WriteStream) => Promise<void>;
+  afterPost?: (path: string) => Promise<void>;
+  afterPut?: (path: string) => Promise<void>;
   beforeDelete?: (path: string, options?: DeleteOptions) => Promise<boolean>;
-  beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
+  beforeGet?: (
+    path: string,
+    options?: OpenOptions
+  ) => Promise<ReadStream | null>;
   beforeHead?: (path: string) => Promise<Stats | null>;
-  beforeList?: (dir: Directory) => Promise<string[] | null>;
-  beforeMkcol?: (
-    dir: Directory,
-    options?: MakeDirectoryOptions
-  ) => Promise<boolean>;
+  beforeList?: (path: string) => Promise<string[] | null>;
+  beforeMkcol?: (path: string, options?: MkcolOptions) => Promise<boolean>;
   beforePatch?: (path: string, props: Props) => Promise<boolean>;
   beforePost?: (
-    file: File,
+    path: string,
     options?: OpenOptions
   ) => Promise<WriteStream | null>;
   beforePut?: (
-    file: File,
+    path: string,
     options?: OpenOptions
   ) => Promise<WriteStream | null>;
 }
@@ -203,7 +203,7 @@ export abstract class FileSystemObject {
   public abstract toURL(urlType?: URLType): Promise<string>;
 }
 
-export interface MakeDirectoryOptions {
+export interface MkcolOptions {
   /**
    * Indicates whether parent folders should be created.
    * If a folder was created, the path to the first created folder will be returned.
@@ -213,12 +213,12 @@ export interface MakeDirectoryOptions {
 }
 
 export abstract class Directory extends FileSystemObject {
-  private afterList?: (dir: Directory, list: string[]) => Promise<void>;
-  private afterMkcol?: (dir: Directory) => Promise<void>;
-  private beforeList?: (dir: Directory) => Promise<string[] | null>;
+  private afterList?: (path: string, list: string[]) => Promise<void>;
+  private afterMkcol?: (path: string) => Promise<void>;
+  private beforeList?: (path: string) => Promise<string[] | null>;
   private beforeMkcol?: (
-    dir: Directory,
-    options?: MakeDirectoryOptions
+    psth: string,
+    options?: MkcolOptions
   ) => Promise<boolean>;
 
   public ls = this.list;
@@ -226,16 +226,12 @@ export abstract class Directory extends FileSystemObject {
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    const bi = fs.options?.interceptor;
-    if (bi) {
-      this.beforeMkcol = bi.beforeMkcol;
-      this.beforeList = bi.beforeList;
-    }
-
-    const ai = fs.options?.interceptor;
-    if (ai) {
-      this.afterMkcol = ai.afterMkcol;
-      this.afterList = ai.afterList;
+    const interceptor = fs.options?.interceptor;
+    if (interceptor) {
+      this.beforeMkcol = interceptor.beforeMkcol;
+      this.beforeList = interceptor.beforeList;
+      this.afterMkcol = interceptor.afterMkcol;
+      this.afterList = interceptor.afterList;
     }
   }
 
@@ -285,13 +281,13 @@ export abstract class Directory extends FileSystemObject {
   public async list(): Promise<string[]> {
     let list: string[] | null | undefined;
     if (this.beforeList) {
-      list = await this.beforeList(this);
+      list = await this.beforeList(this.path);
     }
     if (!list) {
       list = await this._list();
     }
     if (this.afterList) {
-      await this.afterList(this, list);
+      await this.afterList(this.path, list);
     }
     return list;
   }
@@ -300,53 +296,49 @@ export abstract class Directory extends FileSystemObject {
    * Create a directory.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
-  public async mkdir(options?: MakeDirectoryOptions): Promise<void> {
+  public async mkdir(options?: MkcolOptions): Promise<void> {
     if (this.beforeMkcol) {
-      if (await this.beforeMkcol(this, options)) {
+      if (await this.beforeMkcol(this.path, options)) {
         return;
       }
     }
     await this._mkcol(options);
     if (this.afterMkcol) {
-      await this.afterMkcol(this);
+      await this.afterMkcol(this.path);
     }
   }
 
   public abstract _list(): Promise<string[]>;
-  public abstract _mkcol(options?: MakeDirectoryOptions): Promise<void>;
+  public abstract _mkcol(options?: MkcolOptions): Promise<void>;
 }
 
 export abstract class File extends FileSystemObject {
-  private afterGet?: (file: File, rs: ReadStream) => Promise<void>;
-  private afterPost?: (file: File, ws: WriteStream) => Promise<void>;
-  private afterPut?: (file: File, ws: WriteStream) => Promise<void>;
+  private afterGet?: (path: string) => Promise<void>;
+  private afterPost?: (path: string) => Promise<void>;
+  private afterPut?: (path: string) => Promise<void>;
   private beforeGet?: (
-    file: File,
+    path: string,
     options?: OpenOptions | undefined
   ) => Promise<ReadStream | null>;
   private beforePost?: (
-    file: File,
+    path: string,
     options?: OpenOptions | undefined
   ) => Promise<WriteStream | null>;
   private beforePut?: (
-    file: File,
+    path: string,
     options?: OpenOptions | undefined
   ) => Promise<WriteStream | null>;
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    const bi = fs.options?.interceptor;
-    if (bi) {
-      this.beforeGet = bi.beforeGet;
-      this.beforePost = bi.beforePost;
-      this.beforePut = bi.beforePut;
-    }
-
-    const ai = fs.options?.interceptor;
-    if (ai) {
-      this.afterGet = ai.afterGet;
-      this.afterPost = ai.afterPost;
-      this.afterPut = ai.afterPut;
+    const interceptor = fs.options?.interceptor;
+    if (interceptor) {
+      this.beforeGet = interceptor.beforeGet;
+      this.beforePost = interceptor.beforePost;
+      this.beforePut = interceptor.beforePut;
+      this.afterGet = interceptor.afterGet;
+      this.afterPost = interceptor.afterPost;
+      this.afterPut = interceptor.afterPut;
     }
   }
 
@@ -406,13 +398,13 @@ export abstract class File extends FileSystemObject {
   public async openReadStream(options?: OpenOptions): Promise<ReadStream> {
     let rs: ReadStream | null | undefined;
     if (this.beforeGet) {
-      rs = await this.beforeGet(this, options);
+      rs = await this.beforeGet(this.path, options);
     }
     if (!rs) {
       rs = await this._openReadStream(options);
     }
     if (this.afterGet) {
-      await this.afterGet(this, rs);
+      await this.afterGet(this.path);
     }
     return rs;
   }
@@ -423,13 +415,13 @@ export abstract class File extends FileSystemObject {
     try {
       await this.stat();
       if (this.beforePut) {
-        ws = await this.beforePut(this, options);
+        ws = await this.beforePut(this.path, options);
       }
       post = false;
     } catch (e) {
       if (e instanceof NotFoundError) {
         if (this.beforePost) {
-          ws = await this.beforePost(this, options);
+          ws = await this.beforePost(this.path, options);
         }
         post = true;
       } else {
@@ -440,9 +432,9 @@ export abstract class File extends FileSystemObject {
       ws = await this._openWriteStream(options);
     }
     if (post && this.afterPost) {
-      await this.afterPost(this, ws);
+      await this.afterPost(this.path);
     } else if (!post && this.afterPut) {
-      await this.afterPut(this, ws);
+      await this.afterPut(this.path);
     }
     return ws;
   }

@@ -1,11 +1,5 @@
 import * as fs from "fs";
-import {
-  Directory,
-  FileSystem,
-  MakeDirectoryOptions,
-  Props,
-  URLType,
-} from "../core";
+import { Directory, FileSystem, MkcolOptions, Props, URLType } from "../core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
@@ -30,7 +24,7 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public _mkcol(options?: MakeDirectoryOptions): Promise<void> {
+  public _mkcol(options?: MkcolOptions): Promise<void> {
     const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
