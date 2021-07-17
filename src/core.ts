@@ -168,9 +168,12 @@ export abstract class FileSystemObject {
 
   constructor(public readonly fs: FileSystem, public path: string) {}
 
-  public async copy(fso: FileSystemObject): Promise<XmitError[]> {
+  public async copy(
+    fso: FileSystemObject,
+    bufferSize?: number
+  ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, false, copyErrors);
+    await this._xmit(fso, false, copyErrors, bufferSize);
     return copyErrors;
   }
 
@@ -186,9 +189,12 @@ export abstract class FileSystemObject {
     return this.fs.head(this.path);
   }
 
-  public async move(fso: FileSystemObject): Promise<XmitError[]> {
+  public async move(
+    fso: FileSystemObject,
+    bufferSize?: number
+  ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, true, copyErrors);
+    await this._xmit(fso, true, copyErrors, bufferSize);
     return copyErrors;
   }
 
@@ -205,7 +211,8 @@ export abstract class FileSystemObject {
   public abstract _xmit(
     fso: FileSystemObject,
     move: boolean,
-    copyErrors: XmitError[]
+    copyErrors: XmitError[],
+    bufferSize?: number
   ): Promise<void>;
 }
 
@@ -244,7 +251,8 @@ export abstract class Directory extends FileSystemObject {
   public async _xmit(
     fso: FileSystemObject,
     move: boolean,
-    copyErrors: XmitError[]
+    copyErrors: XmitError[],
+    bufferSize?: number
   ): Promise<void> {
     await this.stat(); // check if this directory exists
     if (fso instanceof File) {
@@ -270,7 +278,7 @@ export abstract class Directory extends FileSystemObject {
         ? await this.fs.getFile(toPath)
         : await this.fs.getDirectory(toPath);
       try {
-        await fromFso._xmit(toFso, move, copyErrors);
+        await fromFso._xmit(toFso, move, copyErrors, bufferSize);
         if (move) {
           try {
             await fromFso.delete();
