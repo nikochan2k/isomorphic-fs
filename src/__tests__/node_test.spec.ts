@@ -181,3 +181,9 @@ test("copy directory", async () => {
   const toList = await to.ls();
   expect(0 <= toList.indexOf("/folder2/sample.txt")).toBe(true);
 });
+
+test("move file", async () => {});
+
+test("move directory", async () => {});
+
+test("copy large file", async () => {});

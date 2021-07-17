@@ -49,13 +49,13 @@ export class NodeReadStream extends AbstractReadStream {
           if (buffer) {
             this.position += buffer.byteLength;
             resolve(buffer);
-          } else {
-            resolve(buffer);
           }
           readStream.off("readable", onReadable);
         };
+        const onEnd = () => resolve(null);
         readStream.on("end", () => {
-          resolve(null);
+          onEnd();
+          readStream.off("end", onEnd);
         });
         readStream.on("readable", onReadable);
       }
