@@ -1,5 +1,9 @@
 import { createHash } from "sha256-uint8array";
-import { InvalidModificationError, NotFoundError } from "./errors";
+import {
+  InvalidModificationError,
+  NotFoundError,
+  PathExistsError,
+} from "./errors";
 import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
 import { getName, getParentPath, joinPaths } from "./util/path";
@@ -16,7 +20,7 @@ export interface Interceptor {
   beforeDelete?: (path: string, options?: DeleteOptions) => Promise<boolean>;
   beforeGet?: (
     path: string,
-    options?: OpenOptions
+    options: OpenOptions
   ) => Promise<ReadStream | null>;
   beforeHead?: (path: string) => Promise<Stats | null>;
   beforeList?: (path: string) => Promise<string[] | null>;
@@ -24,11 +28,11 @@ export interface Interceptor {
   beforePatch?: (path: string, props: Props) => Promise<boolean>;
   beforePost?: (
     path: string,
-    options?: OpenOptions
+    options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
   beforePut?: (
     path: string,
-    options?: OpenOptions
+    options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
 }
 
@@ -313,20 +317,17 @@ export abstract class Directory extends FileSystemObject {
 }
 
 export abstract class File extends FileSystemObject {
-  private afterGet?: (path: string) => Promise<void>;
-  private afterPost?: (path: string) => Promise<void>;
-  private afterPut?: (path: string) => Promise<void>;
   private beforeGet?: (
     path: string,
-    options?: OpenOptions | undefined
+    options: OpenOptions
   ) => Promise<ReadStream | null>;
   private beforePost?: (
     path: string,
-    options?: OpenOptions | undefined
+    options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
   private beforePut?: (
     path: string,
-    options?: OpenOptions | undefined
+    options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
 
   constructor(fs: FileSystem, path: string) {
@@ -336,16 +337,14 @@ export abstract class File extends FileSystemObject {
       this.beforeGet = interceptor.beforeGet;
       this.beforePost = interceptor.beforePost;
       this.beforePut = interceptor.beforePut;
-      this.afterGet = interceptor.afterGet;
-      this.afterPost = interceptor.afterPost;
-      this.afterPut = interceptor.afterPut;
     }
   }
 
   public async _xmit(
     fso: FileSystemObject,
     move: boolean,
-    copyErrors: XmitError[]
+    copyErrors: XmitError[],
+    bufferSize?: number
   ): Promise<void> {
     await this.stat(); // check if this directory exists
     if (fso instanceof Directory) {
@@ -357,9 +356,20 @@ export abstract class File extends FileSystemObject {
     }
     const to = fso as File;
 
-    const rs = await this.openReadStream();
+    const rs = await this.openReadStream({ bufferSize });
     try {
-      const ws = await to.openWriteStream();
+      let create: boolean;
+      try {
+        await to.stat();
+        create = false;
+      } catch (e) {
+        if (e instanceof NotFoundError) {
+          create = true;
+        } else {
+          throw e;
+        }
+      }
+      const ws = await to.openWriteStream({ create, bufferSize });
       try {
         let buffer: any;
         while ((buffer = rs.read()) == null) {
@@ -380,8 +390,8 @@ export abstract class File extends FileSystemObject {
     }
   }
 
-  public async hash(): Promise<string> {
-    const rs = await this.openReadStream();
+  public async hash(bufferSize?: number): Promise<string> {
+    const rs = await this.openReadStream({ bufferSize });
     try {
       const hash = createHash();
       let buffer: ArrayBuffer | Uint8Array;
@@ -395,7 +405,7 @@ export abstract class File extends FileSystemObject {
     }
   }
 
-  public async openReadStream(options?: OpenOptions): Promise<ReadStream> {
+  public async openReadStream(options: OpenOptions = {}): Promise<ReadStream> {
     let rs: ReadStream | null | undefined;
     if (this.beforeGet) {
       rs = await this.beforeGet(this.path, options);
@@ -403,27 +413,31 @@ export abstract class File extends FileSystemObject {
     if (!rs) {
       rs = await this._openReadStream(options);
     }
-    if (this.afterGet) {
-      await this.afterGet(this.path);
-    }
     return rs;
   }
 
-  public async openWriteStream(options?: OpenOptions): Promise<WriteStream> {
+  public async openWriteStream(
+    options: OpenWriteOptions = {}
+  ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
-    let post: boolean;
     try {
       await this.stat();
+      if (options.create === true) {
+        throw new PathExistsError(this.fs.repository, this.path);
+      }
+      options.create = false;
       if (this.beforePut) {
         ws = await this.beforePut(this.path, options);
       }
-      post = false;
     } catch (e) {
       if (e instanceof NotFoundError) {
+        if (options.create === false) {
+          throw e;
+        }
+        options.create = true;
         if (this.beforePost) {
           ws = await this.beforePost(this.path, options);
         }
-        post = true;
       } else {
         throw e;
       }
@@ -431,16 +445,11 @@ export abstract class File extends FileSystemObject {
     if (!ws) {
       ws = await this._openWriteStream(options);
     }
-    if (post && this.afterPost) {
-      await this.afterPost(this.path);
-    } else if (!post && this.afterPut) {
-      await this.afterPut(this.path);
-    }
     return ws;
   }
 
-  public abstract _openReadStream(options?: OpenOptions): Promise<ReadStream>;
-  public abstract _openWriteStream(options?: OpenOptions): Promise<WriteStream>;
+  public abstract _openReadStream(options: OpenOptions): Promise<ReadStream>;
+  public abstract _openWriteStream(options: OpenOptions): Promise<WriteStream>;
 }
 
 export enum SeekOrigin {
@@ -452,32 +461,96 @@ export enum SeekOrigin {
 export interface OpenOptions {
   bufferSize?: number;
 }
+
+export interface OpenWriteOptions extends OpenOptions {
+  create?: boolean;
+}
+
 export abstract class Stream {
   protected readonly bufferSize = 64 * 1024;
 
-  constructor(protected path: string, options?: OpenOptions) {
-    if (options?.bufferSize) {
+  constructor(protected fso: FileSystemObject, options: OpenOptions) {
+    if (options.bufferSize) {
       this.bufferSize = options.bufferSize;
     }
   }
 
-  public abstract close(): Promise<void>;
   public abstract seek(offset: number, origin: SeekOrigin): Promise<void>;
 }
 
 export abstract class ReadStream extends Stream {
+  private afterGet?: (path: string) => Promise<void>;
+
+  protected handled = false;
+
+  constructor(fso: FileSystemObject, options: OpenOptions) {
+    super(fso, options);
+    this.afterGet = fso.fs.options.interceptor?.afterGet;
+  }
+
+  public async close(): Promise<void> {
+    await this._close();
+    if (this.afterGet) {
+      this.afterGet(this.fso.path);
+    }
+  }
+
   /**
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public abstract read(size?: number): Promise<ArrayBuffer | Uint8Array>;
+  public async read(size?: number): Promise<ArrayBuffer | Uint8Array> {
+    const buffer = await this._read(size);
+    this.handled = true;
+    return buffer;
+  }
+
+  public abstract _close(): Promise<void>;
+  public abstract _read(size?: number): Promise<ArrayBuffer | Uint8Array>;
 }
 
 export abstract class WriteStream extends Stream {
-  public abstract setLength(len: number): Promise<void>;
+  private afterPost?: (path: string) => Promise<void>;
+  private afterPut?: (path: string) => Promise<void>;
+  private create: boolean;
+
+  protected handled = false;
+
+  constructor(fso: FileSystemObject, options: OpenWriteOptions) {
+    super(fso, options);
+    const interceptor = fso.fs.options.interceptor;
+    this.afterPost = interceptor?.afterPost;
+    this.afterPut = interceptor?.afterPut;
+    this.create = options.create as boolean;
+  }
+
+  public async close(): Promise<void> {
+    await this._close();
+    if (!this.handled) {
+      return;
+    }
+    if (this.afterPost && this.create) {
+      await this.afterPost(this.fso.path);
+    } else if (this.afterPut && !this.create) {
+      await this.afterPut(this.fso.path);
+    }
+  }
+
+  public async setLength(len: number): Promise<void> {
+    await this.setLength(len);
+    this.handled = true;
+  }
+
   /**
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public abstract write(data: ArrayBuffer | Uint8Array): Promise<void>;
+  public async write(buffer: ArrayBuffer | Uint8Array): Promise<void> {
+    await this._write(buffer);
+    this.handled = true;
+  }
+
+  public abstract _close(): Promise<void>;
+  public abstract _setLength(len: number): Promise<void>;
+  public abstract _write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
 }

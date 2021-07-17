@@ -3,7 +3,7 @@ import * as fs from "fs";
 import {
   File,
   FileSystem,
-  OpenOptions,
+  OpenWriteOptions,
   Props,
   ReadStream,
   URLType,
@@ -22,11 +22,13 @@ export class NodeFile extends File {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public async _openReadStream(options?: OpenOptions): Promise<ReadStream> {
+  public async _openReadStream(options: OpenWriteOptions): Promise<ReadStream> {
     return new NodeReadStream(this.fso, options);
   }
 
-  public async _openWriteStream(options?: OpenOptions): Promise<WriteStream> {
+  public async _openWriteStream(
+    options: OpenWriteOptions
+  ): Promise<WriteStream> {
     return new NodeWriteStream(this.fso, options);
   }
 

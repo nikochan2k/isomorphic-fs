@@ -1,6 +1,7 @@
 import * as fs from "fs";
-import { OpenOptions, SeekOrigin, WriteStream } from "../core";
+import { OpenWriteOptions, SeekOrigin, WriteStream } from "../core";
 import { InvalidModificationError } from "../errors";
+import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
@@ -8,15 +9,57 @@ export class NodeWriteStream extends WriteStream {
   private position = 0;
   private writeStream?: fs.WriteStream;
 
-  constructor(private fso: NodeFileSystemObject, options?: OpenOptions) {
-    super(fso.path, options);
+  constructor(fso: NodeFileSystemObject, options: OpenWriteOptions) {
+    super(fso, options);
   }
 
-  public async close(): Promise<void> {
+  public async _close(): Promise<void> {
     if (this.writeStream && !this.writeStream.destroyed) {
       this.writeStream.destroy();
       this.writeStream = undefined;
     }
+  }
+
+  public async _setLength(len: number): Promise<void> {
+    await this.close();
+
+    return new Promise<void>((resolve, reject) => {
+      const fso = this.fso;
+      fs.truncate(joinPaths(fso.fs.repository, fso.path), len, (err) => {
+        if (err) {
+          reject(
+            new InvalidModificationError(fso.fs.repository, fso.path, err)
+          );
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  public _write(buffer: ArrayBuffer | Uint8Array | Buffer): Promise<void> {
+    const fso = this.fso;
+    if (!this.writeStream || this.writeStream.destroyed) {
+      this.writeStream = fs.createWriteStream(
+        joinPaths(fso.fs.repository, fso.path),
+        {
+          flags: "w",
+          highWaterMark: this.bufferSize,
+        }
+      );
+    }
+
+    const writeStream = this.writeStream;
+    return new Promise<void>((resolve, reject) => {
+      writeStream.write(buffer, (err) => {
+        if (err) {
+          reject(convertError(fso.fs.repository, fso.path, err, true));
+          return;
+        }
+        this.position += buffer.byteLength;
+        resolve();
+      });
+    });
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
@@ -32,53 +75,14 @@ export class NodeWriteStream extends WriteStream {
       start = undefined;
     }
 
-    this.writeStream = fs.createWriteStream(this.fso.getFullPath(), {
-      flags,
-      highWaterMark: this.bufferSize,
-      start,
-    });
-    this.position = start || 0;
-  }
-
-  public async setLength(len: number): Promise<void> {
-    await this.close();
-
-    return new Promise<void>((resolve, reject) => {
-      fs.truncate(this.fso.getFullPath(), len, (err) => {
-        if (err) {
-          reject(
-            new InvalidModificationError(
-              this.fso.fs.repository,
-              this.fso.path,
-              err
-            )
-          );
-          return;
-        }
-        resolve();
-      });
-    });
-  }
-
-  public write(buffer: ArrayBuffer | Uint8Array | Buffer): Promise<void> {
-    const fso = this.fso;
-    if (!this.writeStream || this.writeStream.destroyed) {
-      this.writeStream = fs.createWriteStream(fso.getFullPath(), {
-        flags: "w",
+    this.writeStream = fs.createWriteStream(
+      joinPaths(this.fso.fs.repository, this.fso.path),
+      {
+        flags,
         highWaterMark: this.bufferSize,
-      });
-    }
-
-    const writeStream = this.writeStream;
-    return new Promise<void>((resolve, reject) => {
-      writeStream.write(buffer, (err) => {
-        if (err) {
-          reject(convertError(fso.fs.repository, fso.path, err, true));
-          return;
-        }
-        this.position += buffer.byteLength;
-        resolve();
-      });
-    });
+        start,
+      }
+    );
+    this.position = start || 0;
   }
 }

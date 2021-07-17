@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { OpenOptions, ReadStream, SeekOrigin } from "../core";
+import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
@@ -7,30 +8,33 @@ export class NodeReadStream extends ReadStream {
   private position = 0;
   private readStream?: fs.ReadStream;
 
-  constructor(private fso: NodeFileSystemObject, options?: OpenOptions) {
-    super(fso.path, options);
+  constructor(fso: NodeFileSystemObject, options: OpenOptions) {
+    super(fso, options);
   }
 
-  public async close(): Promise<void> {
+  public async _close(): Promise<void> {
     if (this.readStream && !this.readStream.destroyed) {
       this.readStream.destroy();
     }
   }
 
-  public read(size?: number): Promise<ArrayBuffer | Uint8Array | Buffer> {
+  public _read(size?: number): Promise<ArrayBuffer | Uint8Array | Buffer> {
     const fso = this.fso;
     if (!this.readStream || this.readStream.destroyed) {
-      this.readStream = fs.createReadStream(fso.getFullPath(), {
-        flags: "r",
-        highWaterMark: this.bufferSize,
-      });
+      this.readStream = fs.createReadStream(
+        joinPaths(fso.fs.repository, fso.path),
+        {
+          flags: "r",
+          highWaterMark: this.bufferSize,
+        }
+      );
     }
 
     const readStream = this.readStream;
     const promise = new Promise<ArrayBuffer | Uint8Array | Buffer>(
       (resolve, reject) => {
         const onError = (err: Error) => {
-          reject(convertError(fso.fs.repository, this.path, err, false));
+          reject(convertError(fso.fs.repository, fso.path, err, false));
           readStream.off("error", onError);
         };
         readStream.on("error", onError);
@@ -67,11 +71,14 @@ export class NodeReadStream extends ReadStream {
       start = undefined;
     }
 
-    this.readStream = fs.createReadStream(this.fso.getFullPath(), {
-      flags: "r",
-      highWaterMark: this.bufferSize,
-      start,
-    });
+    this.readStream = fs.createReadStream(
+      joinPaths(this.fso.fs.repository, this.fso.path),
+      {
+        flags: "r",
+        highWaterMark: this.bufferSize,
+        start,
+      }
+    );
     this.position = start || 0;
   }
 }
