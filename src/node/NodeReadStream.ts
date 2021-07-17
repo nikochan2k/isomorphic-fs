@@ -1,14 +1,13 @@
 import * as fs from "fs";
-import { OpenOptions, ReadStream, SeekOrigin } from "../core";
+import { FileSystemObject, OpenOptions, ReadStream, SeekOrigin } from "../core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
-import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeReadStream extends ReadStream {
   private position = 0;
   private readStream?: fs.ReadStream;
 
-  constructor(fso: NodeFileSystemObject, options: OpenOptions) {
+  constructor(fso: FileSystemObject, options: OpenOptions) {
     super(fso, options);
   }
 
