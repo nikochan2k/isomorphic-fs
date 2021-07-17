@@ -13,7 +13,7 @@ export interface BeforeInterceptor {
     dir: Directory,
     options?: MakeDirectoryOptions
   ) => Promise<boolean>;
-  beforePatch?: (fso: FileSystemObject, props: Props) => Promise<boolean>;
+  beforePatch?: (path: string, props: Props) => Promise<boolean>;
   beforePost?: (
     file: File,
     options?: OpenOptions
@@ -30,7 +30,7 @@ export interface AfterInterceptor {
   afterHead?: (path: string, stats: Stats) => Promise<void>;
   afterList?: (dir: Directory, list: string[]) => Promise<void>;
   afterMkcol?: (dir: Directory) => Promise<void>;
-  afterPatch?: (fso: FileSystemObject) => Promise<void>;
+  afterPatch?: (path: string) => Promise<void>;
   afterPost?: (file: File, ws: WriteStream) => Promise<void>;
   afterPut?: (file: File, ws: WriteStream) => Promise<void>;
 }
@@ -58,11 +58,13 @@ export interface FileSystemOptions {
 export abstract class FileSystem {
   private afterDelete?: (path: string) => Promise<void>;
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
+  private afterPatch?: (path: string) => Promise<void>;
   private beforeDelete?: (
     path: string,
     options?: DeleteOptions
   ) => Promise<boolean>;
   private beforeHead?: (path: string) => Promise<Stats | null>;
+  private beforePatch?: (path: string, props: Props) => Promise<boolean>;
 
   public del = this.delete;
   public rm = this.delete;
@@ -75,7 +77,11 @@ export abstract class FileSystem {
     const beforeInterceptor = options.beforeInterceptor;
     this.beforeDelete = beforeInterceptor?.beforeDelete;
     this.beforeHead = beforeInterceptor?.beforeHead;
-    this.afterDelete = options.afterInterceptor?.afterDelete;
+    this.beforePatch = beforeInterceptor?.beforePatch;
+    const afterInterceptor = options.afterInterceptor;
+    this.afterDelete = afterInterceptor?.afterDelete;
+    this.afterHead = afterInterceptor?.afterHead;
+    this.afterPatch = afterInterceptor?.afterPatch;
   }
 
   public async delete(path: string, options?: DeleteOptions): Promise<void> {
@@ -104,8 +110,21 @@ export abstract class FileSystem {
     return stats;
   }
 
+  public async patch(path: string, props: Props): Promise<void> {
+    if (this.beforePatch) {
+      if (await this.beforePatch(path, props)) {
+        return;
+      }
+    }
+    await this._patch(path, props);
+    if (this.afterPatch) {
+      await this.afterPatch(path);
+    }
+  }
+
   public abstract _delete(path: string, options?: DeleteOptions): Promise<void>;
   public abstract _head(path: string): Promise<Stats>;
+  public abstract _patch(path: string, props: Props): Promise<void>;
   /**
    * Get a directory.
    * @param path A path to a directory.
@@ -143,27 +162,11 @@ export interface XmitError {
   to: FileSystemObject;
 }
 export abstract class FileSystemObject {
-  private afterPatch?: (fso: FileSystemObject) => Promise<void>;
-  private beforePatch?: (
-    fso: FileSystemObject,
-    props: Props
-  ) => Promise<boolean>;
-
   public del = this.delete;
   public rm = this.delete;
   public stat = this.head;
 
-  constructor(public readonly fs: FileSystem, public path: string) {
-    const bi = fs.options?.beforeInterceptor;
-    if (bi) {
-      this.beforePatch = bi.beforePatch;
-    }
-
-    const ai = fs.options?.afterInterceptor;
-    if (ai) {
-      this.afterPatch = ai.afterPatch;
-    }
-  }
+  constructor(public readonly fs: FileSystem, public path: string) {}
 
   public async copy(fso: FileSystemObject): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
@@ -189,23 +192,14 @@ export abstract class FileSystemObject {
     return copyErrors;
   }
 
-  public async patch(props: Props): Promise<void> {
-    if (this.beforePatch) {
-      if (await this.beforePatch(this, props)) {
-        return;
-      }
-    }
-    await this._patch(props);
-    if (this.afterPatch) {
-      await this.afterPatch(this);
-    }
+  public patch(props: Props): Promise<void> {
+    return this.fs.patch(this.path, props);
   }
 
   public toString = (): string => {
     return `${this.fs.repository}:${this.path}`;
   };
 
-  public abstract _patch(props: Props): Promise<void>;
   public abstract _xmit(
     fso: FileSystemObject,
     move: boolean,

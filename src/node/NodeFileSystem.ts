@@ -5,10 +5,12 @@ import {
   File,
   FileSystem,
   FileSystemOptions,
+  Props,
   Stats,
 } from "../core";
 import {
   InvalidModificationError,
+  InvalidStateError,
   NotFoundError,
   NotReadableError,
 } from "../errors";
@@ -55,10 +57,9 @@ export class NodeFileSystem extends FileSystem {
 
   public _head(path: string): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
-      const fullPath = joinPaths(this.repository, path);
-      fs.stat(fullPath, (err, stats) => {
+      fs.stat(this.getFullPath(path), (err, stats) => {
         if (err) {
-          reject(convertError(this.repository, fullPath, err, false));
+          reject(convertError(this.repository, path, err, false));
         } else {
           if (stats.isDirectory()) {
             resolve({
@@ -74,6 +75,35 @@ export class NodeFileSystem extends FileSystem {
           }
         }
       });
+    });
+  }
+
+  public _patch(path: string, props: Props): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      if (typeof props.accessed !== "number") {
+        reject(
+          new InvalidStateError(this.repository, path, "No accessed time")
+        );
+        return;
+      }
+      if (typeof props.modified !== "number") {
+        reject(
+          new InvalidStateError(this.repository, path, "No modified time")
+        );
+        return;
+      }
+      fs.utimes(
+        this.getFullPath(path),
+        props.accessed,
+        props.modified,
+        (err) => {
+          if (err) {
+            reject(convertError(this.repository, path, err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
     });
   }
 
