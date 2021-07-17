@@ -13,7 +13,9 @@ import { AbstractFileSystem } from "./AbstractFileSystem";
 import { getParentPath } from "../util/path";
 
 export abstract class AbstractFileSystemObject implements FileSystemObject {
+  public cp = this.copy;
   public del = this.delete;
+  public mv = this.move;
   public rm = this.delete;
   public stat = this.head;
 
