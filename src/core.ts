@@ -221,6 +221,9 @@ export abstract class Directory extends FileSystemObject {
     options?: MakeDirectoryOptions
   ) => Promise<boolean>;
 
+  public ls = this.list;
+  public readdir = this.list;
+
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
     const bi = fs.options?.interceptor;
@@ -293,10 +296,6 @@ export abstract class Directory extends FileSystemObject {
     return list;
   }
 
-  public async ls(): Promise<string[]> {
-    return this.list();
-  }
-
   /**
    * Create a directory.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
@@ -311,13 +310,6 @@ export abstract class Directory extends FileSystemObject {
     if (this.afterMkcol) {
       await this.afterMkcol(this);
     }
-  }
-
-  /**
-   * Read a directory.
-   */
-  public async readdir(): Promise<string[]> {
-    return this.list();
   }
 
   public abstract _list(): Promise<string[]>;
