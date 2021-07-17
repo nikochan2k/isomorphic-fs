@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { Directory, FileSystem, MkcolOptions } from "../core";
+import { Directory, FileSystem, ListOptions, MkcolOptions } from "../core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
@@ -15,7 +15,7 @@ export class NodeDirectory extends Directory {
     this.fso = new NodeFileSystemObject(fs, path);
   }
 
-  public _list(): Promise<string[]> {
+  public _list(_options: ListOptions): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
       fs.readdir(this.fso.getFullPath(), (err, names) => {
         if (err) {
@@ -27,7 +27,7 @@ export class NodeDirectory extends Directory {
     });
   }
 
-  public _mkcol(options?: MkcolOptions): Promise<void> {
+  public _mkcol(options: MkcolOptions): Promise<void> {
     const recursive = options?.recursive || true;
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {

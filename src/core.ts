@@ -17,14 +17,14 @@ export interface Interceptor {
   afterPatch?: (path: string) => Promise<void>;
   afterPost?: (path: string) => Promise<void>;
   afterPut?: (path: string) => Promise<void>;
-  beforeDelete?: (path: string, options?: DeleteOptions) => Promise<boolean>;
+  beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
   beforeGet?: (
     path: string,
     options: OpenOptions
   ) => Promise<ReadStream | null>;
-  beforeHead?: (path: string, options?: HeadOptions) => Promise<Stats | null>;
-  beforeList?: (path: string) => Promise<string[] | null>;
-  beforeMkcol?: (path: string, options?: MkcolOptions) => Promise<boolean>;
+  beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
+  beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
+  beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
   beforePatch?: (
     path: string,
     props: Props,
@@ -66,6 +66,15 @@ export interface XmitOptions extends Options {
   bufferSize?: number;
 }
 
+export interface MkcolOptions extends Options {
+  /**
+   * Indicates whether parent folders should be created.
+   * If a folder was created, the path to the first created folder will be returned.
+   * @default false
+   */
+  recursive?: boolean;
+}
+
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface DeleteOptions extends Options {
@@ -86,6 +95,8 @@ export interface DeleteOptions extends Options {
 export interface HeadOptions extends Options {}
 
 export interface PatchOptions extends Options {}
+
+export interface ListOptions extends Options {}
 
 export interface XmitError {
   error: Error;
@@ -278,22 +289,16 @@ export abstract class FileSystemObject {
   ): Promise<void>;
 }
 
-export interface MkcolOptions {
-  /**
-   * Indicates whether parent folders should be created.
-   * If a folder was created, the path to the first created folder will be returned.
-   * @default false
-   */
-  recursive?: boolean;
-}
-
 export abstract class Directory extends FileSystemObject {
   private afterList?: (path: string, list: string[]) => Promise<void>;
   private afterMkcol?: (path: string) => Promise<void>;
-  private beforeList?: (path: string) => Promise<string[] | null>;
+  private beforeList?: (
+    path: string,
+    options: ListOptions
+  ) => Promise<string[] | null>;
   private beforeMkcol?: (
     psth: string,
-    options?: MkcolOptions
+    options: MkcolOptions
   ) => Promise<boolean>;
 
   public ls = this.list;
@@ -354,15 +359,15 @@ export abstract class Directory extends FileSystemObject {
     }
   }
 
-  public async list(): Promise<string[]> {
+  public async list(options: ListOptions = {}): Promise<string[]> {
     let list: string[] | null | undefined;
-    if (this.beforeList) {
-      list = await this.beforeList(this.path);
+    if (!options.ignoreInterceptor && this.beforeList) {
+      list = await this.beforeList(this.path, options);
     }
     if (!list) {
-      list = await this._list();
+      list = await this._list(options);
     }
-    if (this.afterList) {
+    if (!options.ignoreInterceptor && this.afterList) {
       await this.afterList(this.path, list);
     }
     return list;
@@ -372,20 +377,20 @@ export abstract class Directory extends FileSystemObject {
    * Create a directory.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
-  public async mkdir(options?: MkcolOptions): Promise<void> {
-    if (this.beforeMkcol) {
+  public async mkdir(options: MkcolOptions = {}): Promise<void> {
+    if (!options.ignoreInterceptor && this.beforeMkcol) {
       if (await this.beforeMkcol(this.path, options)) {
         return;
       }
     }
     await this._mkcol(options);
-    if (this.afterMkcol) {
+    if (!options.ignoreInterceptor && this.afterMkcol) {
       await this.afterMkcol(this.path);
     }
   }
 
-  public abstract _list(): Promise<string[]>;
-  public abstract _mkcol(options?: MkcolOptions): Promise<void>;
+  public abstract _list(options: ListOptions): Promise<string[]>;
+  public abstract _mkcol(options: MkcolOptions): Promise<void>;
 }
 
 export abstract class File extends FileSystemObject {
