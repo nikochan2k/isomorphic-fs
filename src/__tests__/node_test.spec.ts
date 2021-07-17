@@ -1,9 +1,9 @@
+import "../index";
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
 import { FileSystem, SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
-import "../index";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
 import { toString } from "../node/text";
@@ -166,4 +166,18 @@ test("create file in dir", async () => {
   const dir = await fs.getDirectory("/folder/");
   const list = await dir.list();
   expect(0 <= list.indexOf("/folder/sample.txt")).toBe(true);
+});
+
+test("copy directory", async () => {
+  const from = await fs.getDirectory("/folder");
+  const to = await fs.getDirectory("/folder2");
+  const errors = await from.copy(to);
+  expect(errors.length).toBe(0);
+  const stats = await to.stat();
+  expect(stats.size).toBeUndefined();
+  const root = await fs.getDirectory("/");
+  const list = await root.ls();
+  expect(0 <= list.indexOf("/folder2")).toBe(true);
+  const toList = await to.ls();
+  expect(0 <= toList.indexOf("/folder2/sample.txt")).toBe(true);
 });

@@ -29,12 +29,14 @@ export abstract class AbstractReadStream
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async read(size?: number): Promise<ArrayBuffer | Uint8Array> {
+  public async read(size?: number): Promise<ArrayBuffer | Uint8Array | null> {
     const buffer = await this._read(size);
     this.handled = true;
     return buffer;
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _read(size?: number): Promise<ArrayBuffer | Uint8Array>;
+  public abstract _read(
+    size?: number
+  ): Promise<ArrayBuffer | Uint8Array | null>;
 }

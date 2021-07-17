@@ -19,7 +19,9 @@ export class NodeReadStream extends AbstractReadStream {
     }
   }
 
-  public _read(size?: number): Promise<ArrayBuffer | Uint8Array | Buffer> {
+  public _read(
+    size?: number
+  ): Promise<ArrayBuffer | Uint8Array | Buffer | null> {
     const fso = this.fso;
     if (!this.readStream || this.readStream.destroyed) {
       this.readStream = fs.createReadStream(
@@ -32,7 +34,7 @@ export class NodeReadStream extends AbstractReadStream {
     }
 
     const readStream = this.readStream;
-    const promise = new Promise<ArrayBuffer | Uint8Array | Buffer>(
+    return new Promise<ArrayBuffer | Uint8Array | Buffer | null>(
       (resolve, reject) => {
         const onError = (err: Error) => {
           reject(convertError(fso.fs.repository, fso.path, err, false));
@@ -52,10 +54,12 @@ export class NodeReadStream extends AbstractReadStream {
           }
           readStream.off("readable", onReadable);
         };
+        readStream.on("end", () => {
+          resolve(null);
+        });
         readStream.on("readable", onReadable);
       }
     );
-    return promise;
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {

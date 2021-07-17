@@ -131,15 +131,15 @@ export interface FileSystem {
 export interface FileSystemObject {
   fs: FileSystem;
   path: string;
-  copy(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
-  cp(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
+  copy(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
+  cp(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
   del(options?: DeleteOptions): Promise<void>;
   delete(options?: DeleteOptions): Promise<void>;
   getParent(): Promise<string>;
   head(options?: DeleteOptions): Promise<Stats>;
-  move(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
-  mv(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
-  patch(props: Props, options: PatchOptions): Promise<void>;
+  move(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
+  mv(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
+  patch(props: Props, options?: PatchOptions): Promise<void>;
   rm(options?: DeleteOptions): Promise<void>;
   stat(options?: DeleteOptions): Promise<Stats>;
   toURL(urlType?: URLType): Promise<string>;
@@ -170,7 +170,7 @@ export interface Stream {
 }
 
 export interface ReadStream extends Stream {
-  read(size?: number): Promise<ArrayBuffer | Uint8Array>;
+  read(size?: number): Promise<ArrayBuffer | Uint8Array | null>;
 }
 export interface WriteStream extends Stream {
   setLength(len: number): Promise<void>;

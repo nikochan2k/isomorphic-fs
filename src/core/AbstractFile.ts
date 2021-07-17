@@ -83,14 +83,14 @@ export abstract class AbstractFile
       });
       try {
         let buffer: any;
-        while ((buffer = rs.read()) == null) {
-          ws.write(buffer);
+        while ((buffer = await rs.read()) != null) {
+          await ws.write(buffer);
         }
       } finally {
-        ws.close();
+        await ws.close();
       }
     } finally {
-      rs.close();
+      await rs.close();
     }
 
     if (move) {
@@ -105,7 +105,7 @@ export abstract class AbstractFile
     const rs = await this.openReadStream({ bufferSize });
     try {
       const hash = createHash();
-      let buffer: ArrayBuffer | Uint8Array;
+      let buffer: ArrayBuffer | Uint8Array | null;
       while ((buffer = await rs.read()) != null) {
         hash.update(toUint8Array(buffer));
       }
