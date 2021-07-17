@@ -474,6 +474,7 @@ export interface OpenOptions {
 
 export interface OpenWriteOptions extends OpenOptions {
   create?: boolean;
+  append?: boolean;
 }
 
 export abstract class Stream {
@@ -522,16 +523,14 @@ export abstract class ReadStream extends Stream {
 export abstract class WriteStream extends Stream {
   private afterPost?: (path: string) => Promise<void>;
   private afterPut?: (path: string) => Promise<void>;
-  private create: boolean;
 
   protected handled = false;
 
-  constructor(fso: FileSystemObject, options: OpenWriteOptions) {
+  constructor(fso: FileSystemObject, protected options: OpenWriteOptions) {
     super(fso, options);
     const interceptor = fso.fs.options.interceptor;
     this.afterPost = interceptor?.afterPost;
     this.afterPut = interceptor?.afterPut;
-    this.create = options.create as boolean;
   }
 
   public async close(): Promise<void> {
@@ -539,9 +538,9 @@ export abstract class WriteStream extends Stream {
     if (!this.handled) {
       return;
     }
-    if (this.afterPost && this.create) {
+    if (this.afterPost && this.options.create) {
       await this.afterPost(this.fso.path);
-    } else if (this.afterPut && !this.create) {
+    } else if (this.afterPut && !this.options.create) {
       await this.afterPut(this.fso.path);
     }
   }

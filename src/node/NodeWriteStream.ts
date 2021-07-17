@@ -43,7 +43,7 @@ export class NodeWriteStream extends WriteStream {
       this.writeStream = fs.createWriteStream(
         joinPaths(fso.fs.repository, fso.path),
         {
-          flags: "w",
+          flags: this.options.append ? "a" : "w",
           highWaterMark: this.bufferSize,
         }
       );
@@ -69,10 +69,14 @@ export class NodeWriteStream extends WriteStream {
     let start: number | undefined;
     if (origin === SeekOrigin.Begin) {
       start = offset;
+      this.position = start;
     } else if (origin === SeekOrigin.Current) {
       start = this.position + offset;
+      this.position = start;
     } else {
       start = undefined;
+      const stats = await this.fso.stat();
+      this.position = stats.size as number;
     }
 
     this.writeStream = fs.createWriteStream(
@@ -83,6 +87,5 @@ export class NodeWriteStream extends WriteStream {
         start,
       }
     );
-    this.position = start || 0;
   }
 }
