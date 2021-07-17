@@ -55,6 +55,11 @@ export interface FileSystemOptions {
   interceptor?: Interceptor;
 }
 
+export interface XmitOptions {
+  bufferSize?: number;
+  ignoreInterceptor?: boolean;
+}
+
 export abstract class FileSystem {
   private afterDelete?: (path: string) => Promise<void>;
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -83,9 +88,13 @@ export abstract class FileSystem {
     this.afterPatch = interceptor?.afterPatch;
   }
 
-  public async copy(fromPath: string, toPath: string, bufferSize?: number) {
+  public async copy(
+    fromPath: string,
+    toPath: string,
+    options: XmitOptions = {}
+  ) {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
-    await from.copy(to, bufferSize);
+    await from.copy(to, options);
   }
 
   public async delete(path: string, options?: DeleteOptions): Promise<void> {
@@ -114,9 +123,13 @@ export abstract class FileSystem {
     return stats;
   }
 
-  public async move(fromPath: string, toPath: string, bufferSize?: number) {
+  public async move(
+    fromPath: string,
+    toPath: string,
+    options: XmitOptions = {}
+  ) {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
-    await from.move(to, bufferSize);
+    await from.move(to, options);
   }
 
   public async patch(path: string, props: Props): Promise<void> {
@@ -191,10 +204,10 @@ export abstract class FileSystemObject {
 
   public async copy(
     fso: FileSystemObject,
-    bufferSize?: number
+    options: XmitOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, false, copyErrors, { bufferSize });
+    await this._xmit(fso, false, copyErrors, options);
     return copyErrors;
   }
 
@@ -212,10 +225,10 @@ export abstract class FileSystemObject {
 
   public async move(
     fso: FileSystemObject,
-    bufferSize?: number
+    options: XmitOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, true, copyErrors, { bufferSize });
+    await this._xmit(fso, true, copyErrors, options);
     return copyErrors;
   }
 
@@ -244,11 +257,6 @@ export interface MkcolOptions {
    * @default false
    */
   recursive?: boolean;
-}
-
-export interface XmitOptions {
-  bufferSize?: number;
-  ignoreInterceptor?: boolean;
 }
 
 export abstract class Directory extends FileSystemObject {
