@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { pathToFileURL } from "url";
 import {
   DeleteOptions,
   Directory,
@@ -7,6 +8,7 @@ import {
   FileSystemOptions,
   Props,
   Stats,
+  URLType,
 } from "../core";
 import {
   InvalidModificationError,
@@ -113,6 +115,10 @@ export class NodeFileSystem extends FileSystem {
 
   public async getFile(path: string): Promise<File> {
     return new NodeFile(this, path);
+  }
+
+  public async toURL(path: string, _urlType?: URLType): Promise<string> {
+    return pathToFileURL(this.getFullPath(path)).href;
   }
 
   protected getFullPath(path: string) {

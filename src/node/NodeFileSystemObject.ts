@@ -1,17 +1,12 @@
 import * as fs from "fs";
-import { pathToFileURL } from "url";
-import {
-  FileSystem,
-  FileSystemObject,
-  Props,
-  URLType,
-  XmitError,
-} from "../core";
+import { FileSystem, FileSystemObject, Props, XmitError } from "../core";
 import { InvalidStateError } from "../errors";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeFileSystemObject extends FileSystemObject {
+  public override toString = this.getFullPath;
+
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
   }
@@ -58,13 +53,5 @@ export class NodeFileSystemObject extends FileSystemObject {
 
   public getFullPath() {
     return joinPaths(this.fs.repository, this.path);
-  }
-
-  public override toString = (): string => {
-    return this.getFullPath();
-  };
-
-  public async toURL(_urlType?: URLType): Promise<string> {
-    return pathToFileURL(this.getFullPath()).href;
   }
 }

@@ -136,6 +136,7 @@ export abstract class FileSystem {
    * @param options
    */
   public abstract getFile(path: string): Promise<File>;
+  public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -199,12 +200,13 @@ export abstract class FileSystemObject {
     return `${this.fs.repository}:${this.path}`;
   };
 
+  public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
+
   public abstract _xmit(
     fso: FileSystemObject,
     move: boolean,
     copyErrors: XmitError[]
   ): Promise<void>;
-  public abstract toURL(urlType?: URLType): Promise<string>;
 }
 
 export interface MkcolOptions {

@@ -4,9 +4,7 @@ import {
   File,
   FileSystem,
   OpenWriteOptions,
-  Props,
   ReadStream,
-  URLType,
   WriteStream,
 } from "../core";
 import { convertError } from "./NodeFileSystem";
@@ -16,6 +14,9 @@ import { NodeWriteStream } from "./NodeWriteStream";
 
 export class NodeFile extends File {
   private readonly fso: NodeFileSystemObject;
+  public override toString = () => {
+    return this.fso.toString();
+  };
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
@@ -32,10 +33,6 @@ export class NodeFile extends File {
     return new NodeWriteStream(this.fso, options);
   }
 
-  public _patch(props: Props): Promise<void> {
-    return this.fso._patch(props);
-  }
-
   public override hash(): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const hash = createHash("sha256");
@@ -50,9 +47,5 @@ export class NodeFile extends File {
         reject(convertError(this.fs.repository, this.path, err, false));
       });
     });
-  }
-
-  public toURL(_urlType?: URLType): Promise<string> {
-    return this.fso.toURL();
   }
 }

@@ -1,11 +1,14 @@
 import * as fs from "fs";
-import { Directory, FileSystem, MkcolOptions, Props, URLType } from "../core";
+import { Directory, FileSystem, MkcolOptions } from "../core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeFileSystemObject } from "./NodeFileSystemObject";
 
 export class NodeDirectory extends Directory {
   private readonly fso: NodeFileSystemObject;
+  public override toString = () => {
+    return this.fso.toString();
+  };
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
@@ -35,13 +38,5 @@ export class NodeDirectory extends Directory {
         }
       });
     });
-  }
-
-  public _patch(props: Props): Promise<void> {
-    return this.fso._patch(props);
-  }
-
-  public toURL(_urlType?: URLType): Promise<string> {
-    return this.fso.toURL();
   }
 }
