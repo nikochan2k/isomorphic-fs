@@ -1,4 +1,9 @@
-import { AbstractDirectory, File, ReadStream, WriteStream } from "./core";
+import {
+  AbstractDirectory,
+  AbstractFile,
+  ReadStream,
+  WriteStream,
+} from "./core";
 
 export interface Times {
   accessed?: number;
@@ -115,7 +120,7 @@ export interface FileSystem {
   del(path: string, options?: DeleteOptions): Promise<void>;
   delete(path: string, options?: DeleteOptions): Promise<void>;
   getDirectory(path: string): Promise<AbstractDirectory>;
-  getFile(path: string): Promise<File>;
+  getFile(path: string): Promise<AbstractFile>;
   head(path: string, options?: HeadOptions): Promise<Stats>;
   move(
     fromPath: string,
@@ -147,4 +152,10 @@ export interface Directory {
   readdir(options: ListOptions): Promise<string[]>;
   mkdir(options: MkcolOptions): Promise<void>;
   mkcol(options: MkcolOptions): Promise<void>;
+}
+
+export interface File {
+  hash(bufferSize?: number): Promise<string>;
+  openReadStream(options?: OpenOptions): Promise<ReadStream>;
+  openWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
 }

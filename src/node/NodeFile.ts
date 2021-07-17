@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import * as fs from "fs";
 import { OpenWriteOptions } from "../core/common";
 import {
-  File,
+  AbstractFile,
   AbstractFileSystem,
   ReadStream,
   WriteStream,
@@ -12,7 +12,7 @@ import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";
 import { NodeWriteStream } from "./NodeWriteStream";
 
-export class NodeFile extends File {
+export class NodeFile extends AbstractFile {
   public override toString = this.getFullPath;
 
   constructor(fs: AbstractFileSystem, path: string) {

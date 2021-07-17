@@ -5,6 +5,7 @@ import { getName, getParentPath, joinPaths } from "../util/path";
 import {
   DeleteOptions,
   Directory,
+  File,
   FileSystem,
   FileSystemObject,
   FileSystemOptions,
@@ -142,7 +143,7 @@ export abstract class AbstractFileSystem implements FileSystem {
    * @param path A path to a file.
    * @param options
    */
-  public abstract getFile(path: string): Promise<File>;
+  public abstract getFile(path: string): Promise<AbstractFile>;
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
@@ -246,7 +247,7 @@ export abstract class AbstractDirectory
     options: XmitOptions = {}
   ): Promise<void> {
     await this.head(); // check if this directory exists
-    if (fso instanceof File) {
+    if (fso instanceof AbstractFile) {
       throw new InvalidModificationError(
         fso.fs.repository,
         fso.path,
@@ -316,8 +317,10 @@ export abstract class AbstractDirectory
   public abstract _list(options: ListOptions): Promise<string[]>;
   public abstract _mkcol(options: MkcolOptions): Promise<void>;
 }
-
-export abstract class File extends AbstractFileSystemObject {
+export abstract class AbstractFile
+  extends AbstractFileSystemObject
+  implements File
+{
   private beforeGet?: (
     path: string,
     options: OpenOptions
@@ -355,7 +358,7 @@ export abstract class File extends AbstractFileSystemObject {
         `Cannot copy a file "${this}" to a directory "${fso}"`
       );
     }
-    const to = fso as File;
+    const to = fso as AbstractFile;
 
     const rs = await this.openReadStream({ bufferSize: options.bufferSize });
     try {
