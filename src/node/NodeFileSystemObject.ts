@@ -5,7 +5,6 @@ import {
   FileSystem,
   FileSystemObject,
   Props,
-  Stats,
   URLType,
   XmitError,
 } from "../core";
@@ -25,35 +24,12 @@ export class NodeFileSystemObject extends FileSystemObject {
         { force: options?.force, recursive: options?.recursive },
         (err) => {
           if (err) {
-            reject(convertError(this.fs, this.path, err, true));
+            reject(convertError(this.fs.repository, this.path, err, true));
           } else {
             resolve();
           }
         }
       );
-    });
-  }
-
-  public _head(): Promise<Stats> {
-    return new Promise<Stats>((resolve, reject) => {
-      fs.stat(this.getFullPath(), (err, stats) => {
-        if (err) {
-          reject(convertError(this.fs, this.path, err, false));
-        } else {
-          if (stats.isDirectory()) {
-            resolve({
-              accessed: stats.atimeMs,
-              modified: stats.mtimeMs,
-            });
-          } else {
-            resolve({
-              size: stats.size,
-              accessed: stats.atimeMs,
-              modified: stats.mtimeMs,
-            });
-          }
-        }
-      });
     });
   }
 
@@ -81,7 +57,7 @@ export class NodeFileSystemObject extends FileSystemObject {
       }
       fs.utimes(this.getFullPath(), props.accessed, props.modified, (err) => {
         if (err) {
-          reject(convertError(this.fs, this.path, err, true));
+          reject(convertError(this.fs.repository, this.path, err, true));
         } else {
           resolve();
         }

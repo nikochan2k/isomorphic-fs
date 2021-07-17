@@ -73,7 +73,7 @@ export class NodeWriteStream extends WriteStream {
     return new Promise<void>((resolve, reject) => {
       writeStream.write(buffer, (err) => {
         if (err) {
-          reject(convertError(fso.fs, fso.path, err, true));
+          reject(convertError(fso.fs.repository, fso.path, err, true));
           return;
         }
         this.position += buffer.byteLength;

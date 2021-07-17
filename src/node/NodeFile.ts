@@ -7,7 +7,6 @@ import {
   Props,
   ReadStream,
   DeleteOptions,
-  Stats,
   URLType,
   WriteStream,
 } from "../core";
@@ -26,10 +25,6 @@ export class NodeFile extends File {
 
   public _delete(options?: DeleteOptions): Promise<void> {
     return this.fso._delete(options);
-  }
-
-  public _head(): Promise<Stats> {
-    return this.fso._head();
   }
 
   public async _openReadStream(options?: OpenOptions): Promise<ReadStream> {
@@ -55,7 +50,7 @@ export class NodeFile extends File {
         resolve(hash.digest("hex"));
       });
       input.on("error", (err) => {
-        reject(convertError(this.fs, this.path, err, false));
+        reject(convertError(this.fs.repository, this.path, err, false));
       });
     });
   }

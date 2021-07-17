@@ -1,12 +1,5 @@
-import { stat } from "fs";
-import {
-  Directory,
-  File,
-  FileSystem,
-  FileSystemObject,
-  FileSystemOptions,
-  OpenOptions,
-} from "../core";
+import * as fs from "fs";
+import { Directory, File, FileSystem, FileSystemOptions, Stats } from "../core";
 import {
   InvalidModificationError,
   NotFoundError,
@@ -17,48 +10,54 @@ import { NodeDirectory } from "./NodeDirectory";
 import { NodeFile } from "./NodeFile";
 
 export function convertError(
-  fs: FileSystem,
+  repository: string,
   path: string,
   err: NodeJS.ErrnoException,
   write: boolean
 ) {
   if (err.code === "ENOENT") {
-    return new NotFoundError(fs.repository, path, err);
+    return new NotFoundError(repository, path, err);
   }
   if (write) {
-    return new InvalidModificationError(fs.repository, path, err);
+    return new InvalidModificationError(repository, path, err);
   } else {
-    return new NotReadableError(fs.repository, path, err);
+    return new NotReadableError(repository, path, err);
   }
 }
 
 export class NodeFileSystem extends FileSystem {
-  public getFileSystemObject(
-    path: string,
-    _options?: OpenOptions
-  ): Promise<FileSystemObject> {
-    const fullPath = joinPaths(this.repository, path);
-    return new Promise<FileSystemObject>((resolve, reject) => {
-      stat(fullPath, (err, stats) => {
+  public stat(path: string): Promise<Stats> {
+    return new Promise<Stats>((resolve, reject) => {
+      const fullPath = joinPaths(this.repository, path);
+      fs.stat(fullPath, (err, stats) => {
         if (err) {
-          reject(convertError(this, path, err, false));
+          reject(convertError(this.repository, fullPath, err, false));
         } else {
           if (stats.isDirectory()) {
-            resolve(new NodeDirectory(this, path));
+            resolve({
+              accessed: stats.atimeMs,
+              modified: stats.mtimeMs,
+            });
           } else {
-            resolve(new NodeFile(this, path));
+            resolve({
+              size: stats.size,
+              accessed: stats.atimeMs,
+              modified: stats.mtimeMs,
+            });
           }
         }
       });
     });
   }
-  protected _createDirectory(path: string): Directory {
-    return new NodeDirectory(this, path);
-  }
-  protected _createFile(path: string, _options?: OpenOptions): File {
-    return new NodeFile(this, path);
-  }
   constructor(rootDir: string, options?: FileSystemOptions) {
     super(normalizePath(rootDir), options);
+  }
+
+  public async getDirectory(path: string): Promise<Directory> {
+    return new NodeDirectory(this, path);
+  }
+
+  public async getFile(path: string): Promise<File> {
+    return new NodeFile(this, path);
   }
 }

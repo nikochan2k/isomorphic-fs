@@ -30,7 +30,7 @@ export class NodeReadStream extends ReadStream {
     const promise = new Promise<ArrayBuffer | Uint8Array | Buffer>(
       (resolve, reject) => {
         const onError = (err: Error) => {
-          reject(convertError(fso.fs, this.path, err, false));
+          reject(convertError(fso.fs.repository, this.path, err, false));
           readStream.off("error", onError);
         };
         readStream.on("error", onError);

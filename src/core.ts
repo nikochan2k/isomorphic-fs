@@ -1,9 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import {
-  InvalidModificationError,
-  InvalidStateError,
-  NotFoundError,
-} from "./errors";
+import { InvalidModificationError, NotFoundError } from "./errors";
 import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
 import { getName, getParentPath, joinPaths } from "./util/path";
@@ -73,65 +69,14 @@ export abstract class FileSystem {
    * @param path A path to a directory.
    * @param options
    */
-  public async getDirectory(path: string): Promise<Directory> {
-    let fso: FileSystemObject | null;
-    try {
-      fso = await this.getFileSystemObject(path);
-    } catch (e) {
-      if (e instanceof NotFoundError) {
-        fso = null;
-      } else {
-        throw e;
-      }
-    }
-
-    if (!fso) {
-      return this._createDirectory(path);
-    }
-
-    if (fso instanceof Directory) {
-      return fso as Directory;
-    }
-
-    throw new InvalidStateError(
-      this.repository,
-      path,
-      `${path} is not a directory`
-    );
-  }
-
+  public abstract getDirectory(path: string): Promise<Directory>;
   /**
    * Get a file.
    * @param path A path to a file.
    * @param options
    */
-  public async getFile(path: string): Promise<File> {
-    let fso: FileSystemObject | null;
-    try {
-      fso = await this.getFileSystemObject(path);
-    } catch (e) {
-      if (e instanceof NotFoundError) {
-        fso = null;
-      } else {
-        throw e;
-      }
-    }
-
-    if (!fso) {
-      return this._createFile(path);
-    }
-
-    if (fso instanceof File) {
-      return fso as File;
-    }
-
-    throw new InvalidStateError(this.repository, path, `${path} is not a file`);
-  }
-
-  public abstract getFileSystemObject(path: string): Promise<FileSystemObject>;
-
-  protected abstract _createDirectory(path: string): Directory;
-  protected abstract _createFile(path: string): File;
+  public abstract getFile(path: string): Promise<File>;
+  public abstract stat(path: string): Promise<Stats>;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -208,18 +153,8 @@ export abstract class FileSystemObject {
     return getParentPath(this.path);
   }
 
-  public async head(): Promise<Stats> {
-    let stats: Stats | null | undefined;
-    if (this.beforeHead) {
-      stats = await this.beforeHead(this);
-    }
-    if (!stats) {
-      stats = await this._head();
-    }
-    if (this.afterHead) {
-      await this.afterHead(this, stats);
-    }
-    return stats;
+  public head(): Promise<Stats> {
+    return this.stat();
   }
 
   public async move(fso: FileSystemObject): Promise<XmitError[]> {
@@ -247,8 +182,18 @@ export abstract class FileSystemObject {
     return this.delete(options);
   }
 
-  public stat(): Promise<Stats> {
-    return this.head();
+  public async stat(): Promise<Stats> {
+    let stats: Stats | null | undefined;
+    if (this.beforeHead) {
+      stats = await this.beforeHead(this);
+    }
+    if (!stats) {
+      stats = await this.fs.stat(this.path);
+    }
+    if (this.afterHead) {
+      await this.afterHead(this, stats);
+    }
+    return stats;
   }
 
   public toString = (): string => {
@@ -256,7 +201,6 @@ export abstract class FileSystemObject {
   };
 
   public abstract _delete(options?: DeleteOptions): Promise<void>;
-  public abstract _head(): Promise<Stats>;
   public abstract _patch(props: Props): Promise<void>;
   public abstract _xmit(
     fso: FileSystemObject,
@@ -318,22 +262,26 @@ export abstract class Directory extends FileSystemObject {
 
     const children = await this.ls();
     for (const child of children) {
-      const childFso = await this.fs.getFileSystemObject(child);
+      const stats = await this.fs.stat(child);
+      const fromFso = stats.size
+        ? await this.fs.getFile(child)
+        : await this.fs.getDirectory(child);
       const name = getName(child);
-      const toFso = await this.fs.getFileSystemObject(
-        joinPaths(toDir.path, name)
-      );
+      const toPath = joinPaths(toDir.path, name);
+      const toFso = stats.size
+        ? await this.fs.getFile(toPath)
+        : await this.fs.getDirectory(toPath);
       try {
-        await childFso._xmit(toFso, move, copyErrors);
+        await fromFso._xmit(toFso, move, copyErrors);
         if (move) {
           try {
-            await childFso.delete();
+            await fromFso.delete();
           } catch (error) {
-            copyErrors.push({ from: childFso, to: toFso, error });
+            copyErrors.push({ from: fromFso, to: toFso, error });
           }
         }
       } catch (error) {
-        copyErrors.push({ from: childFso, to: toFso, error });
+        copyErrors.push({ from: fromFso, to: toFso, error });
       }
     }
   }
@@ -488,7 +436,7 @@ export abstract class File extends FileSystemObject {
     let ws: WriteStream | null | undefined;
     let post: boolean;
     try {
-      await this.head();
+      await this.stat();
       if (this.beforePut) {
         ws = await this.beforePut(this, options);
       }

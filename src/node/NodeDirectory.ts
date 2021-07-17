@@ -5,7 +5,6 @@ import {
   FileSystem,
   MakeDirectoryOptions,
   Props,
-  Stats,
   URLType,
 } from "../core";
 import { joinPaths } from "../util/path";
@@ -24,15 +23,11 @@ export class NodeDirectory extends Directory {
     return this.fso._delete(options);
   }
 
-  public _head(): Promise<Stats> {
-    return this.fso._head();
-  }
-
   public _list(): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
       fs.readdir(this.fso.getFullPath(), (err, names) => {
         if (err) {
-          reject(convertError(this.fs, this.path, err, false));
+          reject(convertError(this.fs.repository, this.path, err, false));
         } else {
           resolve(names.map((name) => joinPaths(this.path, name)));
         }
@@ -45,7 +40,7 @@ export class NodeDirectory extends Directory {
     return new Promise<void>((resolve, reject) => {
       fs.mkdir(this.fso.getFullPath(), { recursive }, (err) => {
         if (err) {
-          reject(convertError(this.fs, this.path, err, true));
+          reject(convertError(this.fs.repository, this.path, err, true));
         } else {
           resolve();
         }
