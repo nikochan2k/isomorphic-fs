@@ -1,6 +1,6 @@
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractStream } from "./AbstractStream";
-import { OpenWriteOptions, WriteStream } from "./common";
+import { OpenWriteOptions, WriteStream } from "./core";
 
 export abstract class AbstractWriteStream
   extends AbstractStream

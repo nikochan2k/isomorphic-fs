@@ -5,7 +5,7 @@ import {
   MkcolOptions,
   XmitError,
   XmitOptions,
-} from "./common";
+} from "./core";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import { getName, joinPaths } from "../util/path";

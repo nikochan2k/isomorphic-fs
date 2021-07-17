@@ -8,7 +8,7 @@ import {
   URLType,
   XmitError,
   XmitOptions,
-} from "./common";
+} from "./core";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import { getParentPath } from "../util/path";
 

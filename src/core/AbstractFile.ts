@@ -14,7 +14,7 @@ import {
   WriteStream,
   XmitError,
   XmitOptions,
-} from "./common";
+} from "./core";
 import {
   InvalidModificationError,
   NotFoundError,

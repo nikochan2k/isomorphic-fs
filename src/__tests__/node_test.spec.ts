@@ -1,7 +1,7 @@
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
-import { FileSystem, SeekOrigin } from "../core/common";
+import { FileSystem, SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
 import "../index";
 import { toBuffer } from "../node/buffer";

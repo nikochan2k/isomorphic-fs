@@ -11,7 +11,7 @@ import {
   XmitError,
   XmitOptions,
   File,
-} from "./common";
+} from "./core";
 
 export abstract class AbstractFileSystem implements FileSystem {
   private afterDelete?: (path: string) => Promise<void>;

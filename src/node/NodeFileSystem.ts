@@ -11,7 +11,7 @@ import {
   Props,
   Stats,
   URLType,
-} from "../core/common";
+} from "../core/core";
 import {
   InvalidModificationError,
   InvalidStateError,

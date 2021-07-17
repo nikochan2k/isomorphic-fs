@@ -1,5 +1,5 @@
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
-import { OpenOptions, SeekOrigin, Stream } from "./common";
+import { OpenOptions, SeekOrigin, Stream } from "./core";
 
 export abstract class AbstractStream implements Stream {
   protected readonly bufferSize = 64 * 1024;

@@ -1,6 +1,6 @@
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractStream } from "./AbstractStream";
-import { OpenOptions, ReadStream } from "./common";
+import { OpenOptions, ReadStream } from "./core";
 
 export abstract class AbstractReadStream
   extends AbstractStream

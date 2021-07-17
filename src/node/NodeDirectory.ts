@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { AbstractDirectory } from "../core/AbstractDirectory";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
-import { ListOptions, MkcolOptions } from "../core/common";
+import { ListOptions, MkcolOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
