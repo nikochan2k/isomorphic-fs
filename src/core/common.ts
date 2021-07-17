@@ -1,4 +1,4 @@
-import { ReadStream, WriteStream } from "./core";
+import { Directory, File, ReadStream, WriteStream } from "./core";
 
 export interface Times {
   accessed?: number;
@@ -98,4 +98,45 @@ export interface Hook {
     path: string,
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
+}
+
+export interface XmitError {
+  error: Error;
+  from: FileSystemObject;
+  to: FileSystemObject;
+}
+
+export interface FileSystem {
+  copy(
+    fromPath: string,
+    toPath: string,
+    options?: XmitOptions
+  ): Promise<XmitError[]>;
+  del(path: string, options?: DeleteOptions): Promise<void>;
+  delete(path: string, options?: DeleteOptions): Promise<void>;
+  getDirectory(path: string): Promise<Directory>;
+  getFile(path: string): Promise<File>;
+  head(path: string, options?: HeadOptions): Promise<Stats>;
+  move(
+    fromPath: string,
+    toPath: string,
+    options?: XmitOptions
+  ): Promise<XmitError[]>;
+  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
+  rm(path: string, options?: DeleteOptions): Promise<void>;
+  stat(path: string, options?: HeadOptions): Promise<Stats>;
+  toURL(path: string, urlType?: URLType): Promise<string>;
+}
+
+export interface FileSystemObject {
+  copy(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
+  del(options?: DeleteOptions): Promise<void>;
+  delete(options?: DeleteOptions): Promise<void>;
+  getParent(): Promise<string>;
+  head(options?: DeleteOptions): Promise<Stats>;
+  move(fso: FileSystemObject, options: XmitOptions): Promise<XmitError[]>;
+  patch(props: Props, options: PatchOptions): Promise<void>;
+  rm(options?: DeleteOptions): Promise<void>;
+  stat(options?: DeleteOptions): Promise<Stats>;
+  toURL(urlType?: URLType): Promise<string>;
 }

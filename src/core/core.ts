@@ -1,14 +1,11 @@
 import { createHash } from "sha256-uint8array";
-import {
-  InvalidModificationError,
-  NotFoundError,
-  PathExistsError,
-} from "./errors";
 import { toUint8Array } from "../util/buffer";
 import { toHex } from "../util/misc";
 import { getName, getParentPath, joinPaths } from "../util/path";
 import {
   DeleteOptions,
+  FileSystem,
+  FileSystemObject,
   FileSystemOptions,
   HeadOptions,
   ListOptions,
@@ -19,36 +16,15 @@ import {
   Props,
   Stats,
   URLType,
+  XmitError,
   XmitOptions,
 } from "./common";
+import {
+  InvalidModificationError,
+  NotFoundError,
+  PathExistsError,
+} from "./errors";
 
-export interface XmitError {
-  error: Error;
-  from: AbstractFileSystemObject;
-  to: AbstractFileSystemObject;
-}
-
-export interface FileSystem {
-  copy(
-    fromPath: string,
-    toPath: string,
-    options?: XmitOptions
-  ): Promise<XmitError[]>;
-  del(path: string, options?: DeleteOptions): Promise<void>;
-  delete(path: string, options?: DeleteOptions): Promise<void>;
-  getDirectory(path: string): Promise<Directory>;
-  getFile(path: string): Promise<File>;
-  head(path: string, options?: HeadOptions): Promise<Stats>;
-  move(
-    fromPath: string,
-    toPath: string,
-    options?: XmitOptions
-  ): Promise<XmitError[]>;
-  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  rm(path: string, options?: DeleteOptions): Promise<void>;
-  stat(path: string, options?: HeadOptions): Promise<Stats>;
-  toURL(path: string, urlType?: URLType): Promise<string>;
-}
 export abstract class AbstractFileSystem implements FileSystem {
   private afterDelete?: (path: string) => Promise<void>;
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -178,25 +154,6 @@ export abstract class AbstractFileSystem implements FileSystem {
       : this.getDirectory(toPath));
     return { from, to };
   }
-}
-
-export interface FileSystemObject {
-  copy(
-    fso: AbstractFileSystemObject,
-    options: XmitOptions
-  ): Promise<XmitError[]>;
-  del(options?: DeleteOptions): Promise<void>;
-  delete(options?: DeleteOptions): Promise<void>;
-  getParent(): Promise<string>;
-  head(options?: DeleteOptions): Promise<Stats>;
-  move(
-    fso: AbstractFileSystemObject,
-    options: XmitOptions
-  ): Promise<XmitError[]>;
-  patch(props: Props, options: PatchOptions): Promise<void>;
-  rm(options?: DeleteOptions): Promise<void>;
-  stat(options?: DeleteOptions): Promise<Stats>;
-  toURL(urlType?: URLType): Promise<string>;
 }
 
 export abstract class AbstractFileSystemObject implements FileSystemObject {

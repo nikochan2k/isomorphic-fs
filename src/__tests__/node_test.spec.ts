@@ -2,12 +2,13 @@ import "../index";
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
-import { FileSystem, SeekOrigin } from "../core/core";
+import { SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
 import { toBuffer } from "../node/buffer";
 import { NodeFileSystem } from "../node/NodeFileSystem";
 import { toString } from "../node/text";
 import { DIR_SEPARATOR } from "../util/path";
+import { FileSystem } from "../core/common";
 
 const tempDir = tmpdir();
 let rootDir = `${tempDir}${DIR_SEPARATOR}isomorphic-fs-test`;
