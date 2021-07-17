@@ -6,7 +6,6 @@ import {
   OpenOptions,
   Props,
   ReadStream,
-  DeleteOptions,
   URLType,
   WriteStream,
 } from "../core";
@@ -21,10 +20,6 @@ export class NodeFile extends File {
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
     this.fso = new NodeFileSystemObject(fs, path);
-  }
-
-  public _delete(options?: DeleteOptions): Promise<void> {
-    return this.fso._delete(options);
   }
 
   public async _openReadStream(options?: OpenOptions): Promise<ReadStream> {

@@ -1,5 +1,12 @@
 import * as fs from "fs";
-import { Directory, File, FileSystem, FileSystemOptions, Stats } from "../core";
+import {
+  DeleteOptions,
+  Directory,
+  File,
+  FileSystem,
+  FileSystemOptions,
+  Stats,
+} from "../core";
 import {
   InvalidModificationError,
   NotFoundError,
@@ -26,6 +33,34 @@ export function convertError(
 }
 
 export class NodeFileSystem extends FileSystem {
+  constructor(rootDir: string, options?: FileSystemOptions) {
+    super(normalizePath(rootDir), options);
+  }
+
+  public _delete(path: string, options?: DeleteOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rm(
+        this.getFullPath(path),
+        { force: options?.force, recursive: options?.recursive },
+        (err) => {
+          if (err) {
+            reject(convertError(this.repository, path, err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
+  }
+
+  public async getDirectory(path: string): Promise<Directory> {
+    return new NodeDirectory(this, path);
+  }
+
+  public async getFile(path: string): Promise<File> {
+    return new NodeFile(this, path);
+  }
+
   public stat(path: string): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       const fullPath = joinPaths(this.repository, path);
@@ -49,15 +84,8 @@ export class NodeFileSystem extends FileSystem {
       });
     });
   }
-  constructor(rootDir: string, options?: FileSystemOptions) {
-    super(normalizePath(rootDir), options);
-  }
 
-  public async getDirectory(path: string): Promise<Directory> {
-    return new NodeDirectory(this, path);
-  }
-
-  public async getFile(path: string): Promise<File> {
-    return new NodeFile(this, path);
+  protected getFullPath(path: string) {
+    return joinPaths(this.repository, path);
   }
 }

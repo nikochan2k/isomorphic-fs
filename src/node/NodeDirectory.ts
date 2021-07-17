@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import {
-  DeleteOptions,
   Directory,
   FileSystem,
   MakeDirectoryOptions,
@@ -17,10 +16,6 @@ export class NodeDirectory extends Directory {
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
     this.fso = new NodeFileSystemObject(fs, path);
-  }
-
-  public _delete(options?: DeleteOptions): Promise<void> {
-    return this.fso._delete(options);
   }
 
   public _list(): Promise<string[]> {
