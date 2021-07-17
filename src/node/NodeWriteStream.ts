@@ -1,10 +1,6 @@
 import * as fs from "fs";
-import {
-  FileSystemObject,
-  OpenWriteOptions,
-  SeekOrigin,
-  WriteStream,
-} from "../core/core";
+import { OpenWriteOptions } from "../core/common";
+import { FileSystemObject, SeekOrigin, WriteStream } from "../core/core";
 import { InvalidModificationError } from "../core/errors";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";

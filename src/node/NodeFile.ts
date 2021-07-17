@@ -1,12 +1,7 @@
 import { createHash } from "crypto";
 import * as fs from "fs";
-import {
-  File,
-  FileSystem,
-  OpenWriteOptions,
-  ReadStream,
-  WriteStream,
-} from "../core/core";
+import { OpenWriteOptions } from "../core/common";
+import { File, FileSystem, ReadStream, WriteStream } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";

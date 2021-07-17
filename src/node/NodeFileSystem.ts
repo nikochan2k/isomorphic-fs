@@ -2,16 +2,14 @@ import * as fs from "fs";
 import { pathToFileURL } from "url";
 import {
   DeleteOptions,
-  Directory,
-  File,
-  FileSystem,
   FileSystemOptions,
   HeadOptions,
   PatchOptions,
   Props,
   Stats,
   URLType,
-} from "../core/core";
+} from "../core/common";
+import { Directory, File, FileSystem } from "../core/core";
 import {
   InvalidModificationError,
   InvalidStateError,
