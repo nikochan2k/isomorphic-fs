@@ -487,7 +487,7 @@ export abstract class File extends FileSystemObject {
 
   public async openReadStream(options: OpenOptions = {}): Promise<ReadStream> {
     let rs: ReadStream | null | undefined;
-    if (this.beforeGet) {
+    if (!options.ignoreHook && this.beforeGet) {
       rs = await this.beforeGet(this.path, options);
     }
     if (!rs) {
@@ -506,7 +506,7 @@ export abstract class File extends FileSystemObject {
         throw new PathExistsError(this.fs.repository, this.path);
       }
       options.create = false;
-      if (this.beforePut) {
+      if (!options.ignoreHook && this.beforePut) {
         ws = await this.beforePut(this.path, options);
       }
     } catch (e) {
@@ -515,7 +515,7 @@ export abstract class File extends FileSystemObject {
           throw e;
         }
         options.create = true;
-        if (this.beforePost) {
+        if (!options.ignoreHook && this.beforePost) {
           ws = await this.beforePost(this.path, options);
         }
       } else {
@@ -538,7 +538,7 @@ export enum SeekOrigin {
   End,
 }
 
-export interface OpenOptions {
+export interface OpenOptions extends Options {
   bufferSize?: number;
 }
 
@@ -564,14 +564,14 @@ export abstract class ReadStream extends Stream {
 
   protected handled = false;
 
-  constructor(fso: FileSystemObject, options: OpenOptions) {
+  constructor(fso: FileSystemObject, protected readonly options: OpenOptions) {
     super(fso, options);
     this.afterGet = fso.fs.options.hook?.afterGet;
   }
 
   public async close(): Promise<void> {
     await this._close();
-    if (this.afterGet) {
+    if (!this.options.ignoreHook && this.afterGet) {
       this.afterGet(this.fso.path);
     }
   }
@@ -596,7 +596,10 @@ export abstract class WriteStream extends Stream {
 
   protected handled = false;
 
-  constructor(fso: FileSystemObject, protected options: OpenWriteOptions) {
+  constructor(
+    fso: FileSystemObject,
+    protected readonly options: OpenWriteOptions
+  ) {
     super(fso, options);
     const hook = fso.fs.options.hook;
     this.afterPost = hook?.afterPost;
@@ -608,9 +611,13 @@ export abstract class WriteStream extends Stream {
     if (!this.handled) {
       return;
     }
-    if (this.afterPost && this.options.create) {
+    if (!this.options.ignoreHook && this.afterPost && this.options.create) {
       await this.afterPost(this.fso.path);
-    } else if (this.afterPut && !this.options.create) {
+    } else if (
+      !this.options.ignoreHook &&
+      this.afterPut &&
+      !this.options.create
+    ) {
       await this.afterPut(this.fso.path);
     }
   }
