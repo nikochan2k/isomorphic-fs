@@ -4,7 +4,15 @@ import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
 import { getName, getParentPath, joinPaths } from "./util/path";
 
-export interface BeforeInterceptor {
+export interface Interceptor {
+  afterDelete?: (path: string) => Promise<void>;
+  afterGet?: (file: File, rs: ReadStream) => Promise<void>;
+  afterHead?: (path: string, stats: Stats) => Promise<void>;
+  afterList?: (dir: Directory, list: string[]) => Promise<void>;
+  afterMkcol?: (dir: Directory) => Promise<void>;
+  afterPatch?: (path: string) => Promise<void>;
+  afterPost?: (file: File, ws: WriteStream) => Promise<void>;
+  afterPut?: (file: File, ws: WriteStream) => Promise<void>;
   beforeDelete?: (path: string, options?: DeleteOptions) => Promise<boolean>;
   beforeGet?: (file: File, options?: OpenOptions) => Promise<ReadStream | null>;
   beforeHead?: (path: string) => Promise<Stats | null>;
@@ -24,17 +32,6 @@ export interface BeforeInterceptor {
   ) => Promise<WriteStream | null>;
 }
 
-export interface AfterInterceptor {
-  afterDelete?: (path: string) => Promise<void>;
-  afterGet?: (file: File, rs: ReadStream) => Promise<void>;
-  afterHead?: (path: string, stats: Stats) => Promise<void>;
-  afterList?: (dir: Directory, list: string[]) => Promise<void>;
-  afterMkcol?: (dir: Directory) => Promise<void>;
-  afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (file: File, ws: WriteStream) => Promise<void>;
-  afterPut?: (file: File, ws: WriteStream) => Promise<void>;
-}
-
 export interface Times {
   accessed?: number;
   created?: number;
@@ -51,8 +48,7 @@ export interface Stats extends Props {
 }
 
 export interface FileSystemOptions {
-  afterInterceptor?: AfterInterceptor;
-  beforeInterceptor?: BeforeInterceptor;
+  interceptor?: Interceptor;
 }
 
 export abstract class FileSystem {
@@ -74,14 +70,13 @@ export abstract class FileSystem {
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
   ) {
-    const beforeInterceptor = options.beforeInterceptor;
-    this.beforeDelete = beforeInterceptor?.beforeDelete;
-    this.beforeHead = beforeInterceptor?.beforeHead;
-    this.beforePatch = beforeInterceptor?.beforePatch;
-    const afterInterceptor = options.afterInterceptor;
-    this.afterDelete = afterInterceptor?.afterDelete;
-    this.afterHead = afterInterceptor?.afterHead;
-    this.afterPatch = afterInterceptor?.afterPatch;
+    const interceptor = options.interceptor;
+    this.beforeDelete = interceptor?.beforeDelete;
+    this.beforeHead = interceptor?.beforeHead;
+    this.beforePatch = interceptor?.beforePatch;
+    this.afterDelete = interceptor?.afterDelete;
+    this.afterHead = interceptor?.afterHead;
+    this.afterPatch = interceptor?.afterPatch;
   }
 
   public async delete(path: string, options?: DeleteOptions): Promise<void> {
@@ -228,13 +223,13 @@ export abstract class Directory extends FileSystemObject {
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    const bi = fs.options?.beforeInterceptor;
+    const bi = fs.options?.interceptor;
     if (bi) {
       this.beforeMkcol = bi.beforeMkcol;
       this.beforeList = bi.beforeList;
     }
 
-    const ai = fs.options?.afterInterceptor;
+    const ai = fs.options?.interceptor;
     if (ai) {
       this.afterMkcol = ai.afterMkcol;
       this.afterList = ai.afterList;
@@ -348,14 +343,14 @@ export abstract class File extends FileSystemObject {
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    const bi = fs.options?.beforeInterceptor;
+    const bi = fs.options?.interceptor;
     if (bi) {
       this.beforeGet = bi.beforeGet;
       this.beforePost = bi.beforePost;
       this.beforePut = bi.beforePut;
     }
 
-    const ai = fs.options?.afterInterceptor;
+    const ai = fs.options?.interceptor;
     if (ai) {
       this.afterGet = ai.afterGet;
       this.afterPost = ai.afterPost;
