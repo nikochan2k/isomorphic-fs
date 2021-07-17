@@ -6,6 +6,8 @@ import {
   File,
   FileSystem,
   FileSystemOptions,
+  HeadOptions,
+  PatchOptions,
   Props,
   Stats,
   URLType,
@@ -41,11 +43,11 @@ export class NodeFileSystem extends FileSystem {
     super(normalizePath(rootDir), options);
   }
 
-  public _delete(path: string, options?: DeleteOptions): Promise<void> {
+  public _delete(path: string, options: DeleteOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       fs.rm(
         this.getFullPath(path),
-        { force: options?.force, recursive: options?.recursive },
+        { force: options.force, recursive: options.recursive },
         (err) => {
           if (err) {
             reject(convertError(this.repository, path, err, true));
@@ -57,7 +59,7 @@ export class NodeFileSystem extends FileSystem {
     });
   }
 
-  public _head(path: string): Promise<Stats> {
+  public _head(path: string, _options: HeadOptions): Promise<Stats> {
     return new Promise<Stats>((resolve, reject) => {
       fs.stat(this.getFullPath(path), (err, stats) => {
         if (err) {
@@ -80,7 +82,11 @@ export class NodeFileSystem extends FileSystem {
     });
   }
 
-  public _patch(path: string, props: Props): Promise<void> {
+  public _patch(
+    path: string,
+    props: Props,
+    _options: PatchOptions
+  ): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       if (typeof props.accessed !== "number") {
         reject(

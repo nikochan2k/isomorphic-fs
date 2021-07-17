@@ -25,7 +25,11 @@ export interface Interceptor {
   beforeHead?: (path: string, options?: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options?: MkcolOptions) => Promise<boolean>;
-  beforePatch?: (path: string, props: Props) => Promise<boolean>;
+  beforePatch?: (
+    path: string,
+    props: Props,
+    options: PatchOptions
+  ) => Promise<boolean>;
   beforePost?: (
     path: string,
     options: OpenWriteOptions
@@ -81,6 +85,8 @@ export interface DeleteOptions extends Options {
 
 export interface HeadOptions extends Options {}
 
+export interface PatchOptions extends Options {}
+
 export interface XmitError {
   error: Error;
   from: FileSystemObject;
@@ -98,7 +104,11 @@ export abstract class FileSystem {
     path: string,
     options: HeadOptions
   ) => Promise<Stats | null>;
-  private beforePatch?: (path: string, props: Props) => Promise<boolean>;
+  private beforePatch?: (
+    path: string,
+    props: Props,
+    options: PatchOptions
+  ) => Promise<boolean>;
 
   public del = this.delete;
   public rm = this.delete;
@@ -130,26 +140,26 @@ export abstract class FileSystem {
     path: string,
     options: DeleteOptions = {}
   ): Promise<void> {
-    if (this.beforeDelete) {
+    if (!options.ignoreInterceptor && this.beforeDelete) {
       if (await this.beforeDelete(path, options)) {
         return;
       }
     }
     await this._delete(path, options);
-    if (this.afterDelete) {
+    if (!options.ignoreInterceptor && this.afterDelete) {
       await this.afterDelete(path);
     }
   }
 
   public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
     let stats: Stats | null | undefined;
-    if (this.beforeHead) {
+    if (!options.ignoreInterceptor && this.beforeHead) {
       stats = await this.beforeHead(path, options);
     }
     if (!stats) {
       stats = await this._head(path, options);
     }
-    if (this.afterHead) {
+    if (!options.ignoreInterceptor && this.afterHead) {
       await this.afterHead(path, stats);
     }
     return stats;
@@ -164,13 +174,17 @@ export abstract class FileSystem {
     await from.move(to, options);
   }
 
-  public async patch(path: string, props: Props): Promise<void> {
+  public async patch(
+    path: string,
+    props: Props,
+    options: PatchOptions = {}
+  ): Promise<void> {
     if (this.beforePatch) {
-      if (await this.beforePatch(path, props)) {
+      if (await this.beforePatch(path, props, options)) {
         return;
       }
     }
-    await this._patch(path, props);
+    await this._patch(path, props, options);
     if (this.afterPatch) {
       await this.afterPatch(path);
     }
@@ -178,7 +192,11 @@ export abstract class FileSystem {
 
   public abstract _delete(path: string, options: DeleteOptions): Promise<void>;
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
-  public abstract _patch(path: string, props: Props): Promise<void>;
+  public abstract _patch(
+    path: string,
+    props: Props,
+    options: PatchOptions
+  ): Promise<void>;
   /**
    * Get a directory.
    * @param path A path to a directory.
