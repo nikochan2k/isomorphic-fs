@@ -1,7 +1,7 @@
 import {
   AbstractDirectory,
   AbstractFile,
-  ReadStream,
+  AbstractReadStream,
   WriteStream,
 } from "./core";
 
@@ -86,7 +86,7 @@ export interface Hook {
   beforeGet?: (
     path: string,
     options: OpenOptions
-  ) => Promise<ReadStream | null>;
+  ) => Promise<AbstractReadStream | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
@@ -156,6 +156,20 @@ export interface Directory {
 
 export interface File {
   hash(bufferSize?: number): Promise<string>;
-  openReadStream(options?: OpenOptions): Promise<ReadStream>;
+  openReadStream(options?: OpenOptions): Promise<AbstractReadStream>;
   openWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
+}
+
+export enum SeekOrigin {
+  Begin,
+  Current,
+  End,
+}
+export interface Stream {
+  seek(offset: number, origin: SeekOrigin): Promise<void>;
+  close(): Promise<void>;
+}
+
+export interface ReadStream extends Stream {
+  read(size?: number): Promise<ArrayBuffer | Uint8Array>;
 }

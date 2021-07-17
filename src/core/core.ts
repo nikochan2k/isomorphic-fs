@@ -16,10 +16,13 @@ import {
   OpenWriteOptions,
   PatchOptions,
   Props,
+  SeekOrigin,
   Stats,
+  Stream,
   URLType,
   XmitError,
   XmitOptions,
+  ReadStream,
 } from "./common";
 import {
   InvalidModificationError,
@@ -226,8 +229,8 @@ export abstract class AbstractDirectory
   ) => Promise<boolean>;
 
   public ls = this.list;
-  public readdir = this.list;
   public mkdir = this.mkcol;
+  public readdir = this.list;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -324,7 +327,7 @@ export abstract class AbstractFile
   private beforeGet?: (
     path: string,
     options: OpenOptions
-  ) => Promise<ReadStream | null>;
+  ) => Promise<AbstractReadStream | null>;
   private beforePost?: (
     path: string,
     options: OpenWriteOptions
@@ -412,8 +415,10 @@ export abstract class AbstractFile
     }
   }
 
-  public async openReadStream(options: OpenOptions = {}): Promise<ReadStream> {
-    let rs: ReadStream | null | undefined;
+  public async openReadStream(
+    options: OpenOptions = {}
+  ): Promise<AbstractReadStream> {
+    let rs: AbstractReadStream | null | undefined;
     if (!options.ignoreHook && this.beforeGet) {
       rs = await this.beforeGet(this.path, options);
     }
@@ -455,17 +460,13 @@ export abstract class AbstractFile
     return ws;
   }
 
-  public abstract _openReadStream(options: OpenOptions): Promise<ReadStream>;
+  public abstract _openReadStream(
+    options: OpenOptions
+  ): Promise<AbstractReadStream>;
   public abstract _openWriteStream(options: OpenOptions): Promise<WriteStream>;
 }
 
-export enum SeekOrigin {
-  Begin,
-  Current,
-  End,
-}
-
-export abstract class Stream {
+export abstract class AbstractStream implements Stream {
   protected readonly bufferSize = 64 * 1024;
 
   constructor(protected fso: AbstractFileSystemObject, options: OpenOptions) {
@@ -474,10 +475,14 @@ export abstract class Stream {
     }
   }
 
+  public abstract close(): Promise<void>;
   public abstract seek(offset: number, origin: SeekOrigin): Promise<void>;
 }
 
-export abstract class ReadStream extends Stream {
+export abstract class AbstractReadStream
+  extends AbstractStream
+  implements ReadStream
+{
   private afterGet?: (path: string) => Promise<void>;
 
   protected handled = false;
@@ -511,7 +516,7 @@ export abstract class ReadStream extends Stream {
   public abstract _read(size?: number): Promise<ArrayBuffer | Uint8Array>;
 }
 
-export abstract class WriteStream extends Stream {
+export abstract class WriteStream extends AbstractStream {
   private afterPost?: (path: string) => Promise<void>;
   private afterPut?: (path: string) => Promise<void>;
 

@@ -1,10 +1,10 @@
 import * as fs from "fs";
-import { OpenOptions } from "../core/common";
-import { AbstractFileSystemObject, ReadStream, SeekOrigin } from "../core/core";
+import { OpenOptions, SeekOrigin } from "../core/common";
+import { AbstractFileSystemObject, AbstractReadStream } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
-export class NodeReadStream extends ReadStream {
+export class NodeReadStream extends AbstractReadStream {
   private position = 0;
   private readStream?: fs.ReadStream;
 

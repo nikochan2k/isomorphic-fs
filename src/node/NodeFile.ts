@@ -4,7 +4,7 @@ import { OpenWriteOptions } from "../core/common";
 import {
   AbstractFile,
   AbstractFileSystem,
-  ReadStream,
+  AbstractReadStream,
   WriteStream,
 } from "../core/core";
 import { joinPaths } from "../util/path";
@@ -19,7 +19,9 @@ export class NodeFile extends AbstractFile {
     super(fs, path);
   }
 
-  public async _openReadStream(options: OpenWriteOptions): Promise<ReadStream> {
+  public async _openReadStream(
+    options: OpenWriteOptions
+  ): Promise<AbstractReadStream> {
     return new NodeReadStream(this, options);
   }
 
