@@ -22,7 +22,7 @@ export interface Interceptor {
     path: string,
     options: OpenOptions
   ) => Promise<ReadStream | null>;
-  beforeHead?: (path: string) => Promise<Stats | null>;
+  beforeHead?: (path: string, options?: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options?: MkcolOptions) => Promise<boolean>;
   beforePatch?: (path: string, props: Props) => Promise<boolean>;
@@ -55,20 +55,49 @@ export interface FileSystemOptions {
   interceptor?: Interceptor;
 }
 
-export interface XmitOptions {
-  bufferSize?: number;
+export interface Options {
   ignoreInterceptor?: boolean;
 }
+export interface XmitOptions extends Options {
+  bufferSize?: number;
+}
 
+export type URLType = "GET" | "POST" | "PUT" | "DELETE";
+
+export interface DeleteOptions extends Options {
+  /**
+   * When `true`, exceptions will be ignored if `path` does not exist.
+   * @default false
+   */
+  force?: boolean;
+  /**
+   * If `true`, perform a recursive directory removal. In
+   * recursive mode, errors are not reported if `path` does not exist, and
+   * operations are retried on failure.
+   * @default false
+   */
+  recursive?: boolean;
+}
+
+export interface HeadOptions extends Options {}
+
+export interface XmitError {
+  error: Error;
+  from: FileSystemObject;
+  to: FileSystemObject;
+}
 export abstract class FileSystem {
   private afterDelete?: (path: string) => Promise<void>;
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
   private afterPatch?: (path: string) => Promise<void>;
   private beforeDelete?: (
     path: string,
-    options?: DeleteOptions
+    options: DeleteOptions
   ) => Promise<boolean>;
-  private beforeHead?: (path: string) => Promise<Stats | null>;
+  private beforeHead?: (
+    path: string,
+    options: HeadOptions
+  ) => Promise<Stats | null>;
   private beforePatch?: (path: string, props: Props) => Promise<boolean>;
 
   public del = this.delete;
@@ -97,7 +126,10 @@ export abstract class FileSystem {
     await from.copy(to, options);
   }
 
-  public async delete(path: string, options?: DeleteOptions): Promise<void> {
+  public async delete(
+    path: string,
+    options: DeleteOptions = {}
+  ): Promise<void> {
     if (this.beforeDelete) {
       if (await this.beforeDelete(path, options)) {
         return;
@@ -109,13 +141,13 @@ export abstract class FileSystem {
     }
   }
 
-  public async head(path: string): Promise<Stats> {
+  public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
     let stats: Stats | null | undefined;
     if (this.beforeHead) {
-      stats = await this.beforeHead(path);
+      stats = await this.beforeHead(path, options);
     }
     if (!stats) {
-      stats = await this._head(path);
+      stats = await this._head(path, options);
     }
     if (this.afterHead) {
       await this.afterHead(path, stats);
@@ -144,8 +176,8 @@ export abstract class FileSystem {
     }
   }
 
-  public abstract _delete(path: string, options?: DeleteOptions): Promise<void>;
-  public abstract _head(path: string): Promise<Stats>;
+  public abstract _delete(path: string, options: DeleteOptions): Promise<void>;
+  public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _patch(path: string, props: Props): Promise<void>;
   /**
    * Get a directory.
@@ -173,28 +205,6 @@ export abstract class FileSystem {
   }
 }
 
-export type URLType = "GET" | "POST" | "PUT" | "DELETE";
-
-export interface DeleteOptions {
-  /**
-   * When `true`, exceptions will be ignored if `path` does not exist.
-   * @default false
-   */
-  force?: boolean;
-  /**
-   * If `true`, perform a recursive directory removal. In
-   * recursive mode, errors are not reported if `path` does not exist, and
-   * operations are retried on failure.
-   * @default false
-   */
-  recursive?: boolean;
-}
-
-export interface XmitError {
-  error: Error;
-  from: FileSystemObject;
-  to: FileSystemObject;
-}
 export abstract class FileSystemObject {
   public del = this.delete;
   public rm = this.delete;
