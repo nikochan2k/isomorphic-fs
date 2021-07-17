@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import { OpenWriteOptions, SeekOrigin } from "../core/common";
-import { AbstractFileSystemObject, WriteStream } from "../core/core";
+import { AbstractFileSystemObject, AbstractWriteStream } from "../core/core";
 import { InvalidModificationError } from "../core/errors";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
-export class NodeWriteStream extends WriteStream {
+export class NodeWriteStream extends AbstractWriteStream {
   private position = 0;
   private writeStream?: fs.WriteStream;
 

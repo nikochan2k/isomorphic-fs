@@ -23,6 +23,7 @@ import {
   XmitError,
   XmitOptions,
   ReadStream,
+  WriteStream,
 } from "./common";
 import {
   InvalidModificationError,
@@ -331,11 +332,11 @@ export abstract class AbstractFile
   private beforePost?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+  ) => Promise<AbstractWriteStream | null>;
   private beforePut?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+  ) => Promise<AbstractWriteStream | null>;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -430,8 +431,8 @@ export abstract class AbstractFile
 
   public async openWriteStream(
     options: OpenWriteOptions = {}
-  ): Promise<WriteStream> {
-    let ws: WriteStream | null | undefined;
+  ): Promise<AbstractWriteStream> {
+    let ws: AbstractWriteStream | null | undefined;
     try {
       await this.stat();
       if (options.create === true) {
@@ -463,7 +464,9 @@ export abstract class AbstractFile
   public abstract _openReadStream(
     options: OpenOptions
   ): Promise<AbstractReadStream>;
-  public abstract _openWriteStream(options: OpenOptions): Promise<WriteStream>;
+  public abstract _openWriteStream(
+    options: OpenOptions
+  ): Promise<AbstractWriteStream>;
 }
 
 export abstract class AbstractStream implements Stream {
@@ -516,7 +519,10 @@ export abstract class AbstractReadStream
   public abstract _read(size?: number): Promise<ArrayBuffer | Uint8Array>;
 }
 
-export abstract class WriteStream extends AbstractStream {
+export abstract class AbstractWriteStream
+  extends AbstractStream
+  implements WriteStream
+{
   private afterPost?: (path: string) => Promise<void>;
   private afterPut?: (path: string) => Promise<void>;
 

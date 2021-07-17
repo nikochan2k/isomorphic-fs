@@ -5,7 +5,7 @@ import {
   AbstractFile,
   AbstractFileSystem,
   AbstractReadStream,
-  WriteStream,
+  AbstractWriteStream,
 } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
@@ -27,7 +27,7 @@ export class NodeFile extends AbstractFile {
 
   public async _openWriteStream(
     options: OpenWriteOptions
-  ): Promise<WriteStream> {
+  ): Promise<AbstractWriteStream> {
     return new NodeWriteStream(this, options);
   }
 

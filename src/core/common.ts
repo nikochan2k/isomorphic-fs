@@ -2,7 +2,7 @@ import {
   AbstractDirectory,
   AbstractFile,
   AbstractReadStream,
-  WriteStream,
+  AbstractWriteStream,
 } from "./core";
 
 export interface Times {
@@ -98,11 +98,11 @@ export interface Hook {
   beforePost?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+  ) => Promise<AbstractWriteStream | null>;
   beforePut?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+  ) => Promise<AbstractWriteStream | null>;
 }
 
 export interface XmitError {
@@ -157,7 +157,7 @@ export interface Directory {
 export interface File {
   hash(bufferSize?: number): Promise<string>;
   openReadStream(options?: OpenOptions): Promise<AbstractReadStream>;
-  openWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
+  openWriteStream(options?: OpenWriteOptions): Promise<AbstractWriteStream>;
 }
 
 export enum SeekOrigin {
@@ -172,4 +172,8 @@ export interface Stream {
 
 export interface ReadStream extends Stream {
   read(size?: number): Promise<ArrayBuffer | Uint8Array>;
+}
+export interface WriteStream extends Stream {
+  setLength(len: number): Promise<void>;
+  write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
 }
