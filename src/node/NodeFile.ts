@@ -1,7 +1,12 @@
 import { createHash } from "crypto";
 import * as fs from "fs";
 import { OpenWriteOptions } from "../core/common";
-import { File, FileSystem, ReadStream, WriteStream } from "../core/core";
+import {
+  File,
+  AbstractFileSystem,
+  ReadStream,
+  WriteStream,
+} from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";
@@ -10,7 +15,7 @@ import { NodeWriteStream } from "./NodeWriteStream";
 export class NodeFile extends File {
   public override toString = this.getFullPath;
 
-  constructor(fs: FileSystem, path: string) {
+  constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
   }
 

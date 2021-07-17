@@ -1,13 +1,13 @@
 import * as fs from "fs";
 import { ListOptions, MkcolOptions } from "../core/common";
-import { Directory, FileSystem } from "../core/core";
+import { Directory, AbstractFileSystem } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeDirectory extends Directory {
   public override toString = this.getFullPath;
 
-  constructor(fs: FileSystem, path: string) {
+  constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
   }
 

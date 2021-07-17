@@ -24,10 +24,32 @@ import {
 
 export interface XmitError {
   error: Error;
-  from: FileSystemObject;
-  to: FileSystemObject;
+  from: AbstractFileSystemObject;
+  to: AbstractFileSystemObject;
 }
-export abstract class FileSystem {
+
+export interface FileSystem {
+  copy(
+    fromPath: string,
+    toPath: string,
+    options?: XmitOptions
+  ): Promise<XmitError[]>;
+  del(path: string, options?: DeleteOptions): Promise<void>;
+  delete(path: string, options?: DeleteOptions): Promise<void>;
+  getDirectory(path: string): Promise<Directory>;
+  getFile(path: string): Promise<File>;
+  head(path: string, options?: HeadOptions): Promise<Stats>;
+  move(
+    fromPath: string,
+    toPath: string,
+    options?: XmitOptions
+  ): Promise<XmitError[]>;
+  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
+  rm(path: string, options?: DeleteOptions): Promise<void>;
+  stat(path: string, options?: HeadOptions): Promise<Stats>;
+  toURL(path: string, urlType?: URLType): Promise<string>;
+}
+export abstract class AbstractFileSystem implements FileSystem {
   private afterDelete?: (path: string) => Promise<void>;
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
   private afterPatch?: (path: string) => Promise<void>;
@@ -66,9 +88,9 @@ export abstract class FileSystem {
     fromPath: string,
     toPath: string,
     options: XmitOptions = {}
-  ) {
+  ): Promise<XmitError[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
-    await from.copy(to, options);
+    return from.copy(to, options);
   }
 
   public async delete(
@@ -104,9 +126,9 @@ export abstract class FileSystem {
     fromPath: string,
     toPath: string,
     options: XmitOptions = {}
-  ) {
+  ): Promise<XmitError[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
-    await from.move(to, options);
+    return from.move(to, options);
   }
 
   public async patch(
@@ -158,15 +180,34 @@ export abstract class FileSystem {
   }
 }
 
-export abstract class FileSystemObject {
+export interface FileSystemObject {
+  copy(
+    fso: AbstractFileSystemObject,
+    options: XmitOptions
+  ): Promise<XmitError[]>;
+  del(options?: DeleteOptions): Promise<void>;
+  delete(options?: DeleteOptions): Promise<void>;
+  getParent(): Promise<string>;
+  head(options?: DeleteOptions): Promise<Stats>;
+  move(
+    fso: AbstractFileSystemObject,
+    options: XmitOptions
+  ): Promise<XmitError[]>;
+  patch(props: Props, options: PatchOptions): Promise<void>;
+  rm(options?: DeleteOptions): Promise<void>;
+  stat(options?: DeleteOptions): Promise<Stats>;
+  toURL(urlType?: URLType): Promise<string>;
+}
+
+export abstract class AbstractFileSystemObject implements FileSystemObject {
   public del = this.delete;
   public rm = this.delete;
   public stat = this.head;
 
-  constructor(public readonly fs: FileSystem, public path: string) {}
+  constructor(public readonly fs: AbstractFileSystem, public path: string) {}
 
   public async copy(
-    fso: FileSystemObject,
+    fso: AbstractFileSystemObject,
     options: XmitOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
@@ -174,7 +215,7 @@ export abstract class FileSystemObject {
     return copyErrors;
   }
 
-  public async delete(options?: DeleteOptions): Promise<void> {
+  public async delete(options: DeleteOptions = {}): Promise<void> {
     return this.fs.delete(this.path, options);
   }
 
@@ -182,12 +223,12 @@ export abstract class FileSystemObject {
     return getParentPath(this.path);
   }
 
-  public head(): Promise<Stats> {
-    return this.fs.head(this.path);
+  public head(options: HeadOptions = {}): Promise<Stats> {
+    return this.fs.head(this.path, options);
   }
 
   public async move(
-    fso: FileSystemObject,
+    fso: AbstractFileSystemObject,
     options: XmitOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
@@ -195,25 +236,22 @@ export abstract class FileSystemObject {
     return copyErrors;
   }
 
-  public patch(props: Props): Promise<void> {
-    return this.fs.patch(this.path, props);
-  }
+  public patch = (props: Props, options: PatchOptions = {}) =>
+    this.fs.patch(this.path, props, options);
 
-  public toString = (): string => {
-    return `${this.fs.repository}:${this.path}`;
-  };
+  public toString = () => `${this.fs.repository}:${this.path}`;
 
   public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
 
   public abstract _xmit(
-    fso: FileSystemObject,
+    fso: AbstractFileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void>;
 }
 
-export abstract class Directory extends FileSystemObject {
+export abstract class Directory extends AbstractFileSystemObject {
   private afterList?: (path: string, list: string[]) => Promise<void>;
   private afterMkcol?: (path: string) => Promise<void>;
   private beforeList?: (
@@ -228,7 +266,7 @@ export abstract class Directory extends FileSystemObject {
   public ls = this.list;
   public readdir = this.list;
 
-  constructor(fs: FileSystem, path: string) {
+  constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
     const hook = fs.options?.hook;
     if (hook) {
@@ -240,7 +278,7 @@ export abstract class Directory extends FileSystemObject {
   }
 
   public async _xmit(
-    fso: FileSystemObject,
+    fso: AbstractFileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
     options: XmitOptions = {}
@@ -317,7 +355,7 @@ export abstract class Directory extends FileSystemObject {
   public abstract _mkcol(options: MkcolOptions): Promise<void>;
 }
 
-export abstract class File extends FileSystemObject {
+export abstract class File extends AbstractFileSystemObject {
   private beforeGet?: (
     path: string,
     options: OpenOptions
@@ -331,7 +369,7 @@ export abstract class File extends FileSystemObject {
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
 
-  constructor(fs: FileSystem, path: string) {
+  constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
     const hook = fs.options?.hook;
     if (hook) {
@@ -342,7 +380,7 @@ export abstract class File extends FileSystemObject {
   }
 
   public async _xmit(
-    fso: FileSystemObject,
+    fso: AbstractFileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
     options: XmitOptions = {}
@@ -465,7 +503,7 @@ export enum SeekOrigin {
 export abstract class Stream {
   protected readonly bufferSize = 64 * 1024;
 
-  constructor(protected fso: FileSystemObject, options: OpenOptions) {
+  constructor(protected fso: AbstractFileSystemObject, options: OpenOptions) {
     if (options.bufferSize) {
       this.bufferSize = options.bufferSize;
     }
@@ -479,7 +517,10 @@ export abstract class ReadStream extends Stream {
 
   protected handled = false;
 
-  constructor(fso: FileSystemObject, protected readonly options: OpenOptions) {
+  constructor(
+    fso: AbstractFileSystemObject,
+    protected readonly options: OpenOptions
+  ) {
     super(fso, options);
     this.afterGet = fso.fs.options.hook?.afterGet;
   }
@@ -512,7 +553,7 @@ export abstract class WriteStream extends Stream {
   protected handled = false;
 
   constructor(
-    fso: FileSystemObject,
+    fso: AbstractFileSystemObject,
     protected readonly options: OpenWriteOptions
   ) {
     super(fso, options);

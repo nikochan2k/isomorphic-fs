@@ -9,7 +9,7 @@ import {
   Stats,
   URLType,
 } from "../core/common";
-import { Directory, File, FileSystem } from "../core/core";
+import { Directory, File, AbstractFileSystem } from "../core/core";
 import {
   InvalidModificationError,
   InvalidStateError,
@@ -36,7 +36,7 @@ export function convertError(
   }
 }
 
-export class NodeFileSystem extends FileSystem {
+export class NodeFileSystem extends AbstractFileSystem {
   constructor(rootDir: string, options?: FileSystemOptions) {
     super(normalizePath(rootDir), options);
   }

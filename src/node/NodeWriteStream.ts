@@ -1,6 +1,10 @@
 import * as fs from "fs";
 import { OpenWriteOptions } from "../core/common";
-import { FileSystemObject, SeekOrigin, WriteStream } from "../core/core";
+import {
+  AbstractFileSystemObject,
+  SeekOrigin,
+  WriteStream,
+} from "../core/core";
 import { InvalidModificationError } from "../core/errors";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
@@ -9,7 +13,7 @@ export class NodeWriteStream extends WriteStream {
   private position = 0;
   private writeStream?: fs.WriteStream;
 
-  constructor(fso: FileSystemObject, options: OpenWriteOptions) {
+  constructor(fso: AbstractFileSystemObject, options: OpenWriteOptions) {
     super(fso, options);
   }
 
