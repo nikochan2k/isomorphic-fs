@@ -1,6 +1,7 @@
 import * as fs from "fs";
+import { AbstractFileSystemObject } from "../core/AbstractFileSystemObject";
+import { AbstractReadStream } from "../core/AbstractReadStream";
 import { OpenOptions, SeekOrigin } from "../core/common";
-import { AbstractFileSystemObject, AbstractReadStream } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 

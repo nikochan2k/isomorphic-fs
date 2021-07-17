@@ -1,12 +1,10 @@
 import { createHash } from "crypto";
 import * as fs from "fs";
+import { AbstractFile } from "../core/AbstractFile";
+import { AbstractFileSystem } from "../core/AbstractFileSystem";
+import { AbstractReadStream } from "../core/AbstractReadStream";
+import { AbstractWriteStream } from "../core/AbstractWriteStream";
 import { OpenWriteOptions } from "../core/common";
-import {
-  AbstractFile,
-  AbstractFileSystem,
-  AbstractReadStream,
-  AbstractWriteStream,
-} from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";

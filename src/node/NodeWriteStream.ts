@@ -1,6 +1,7 @@
 import * as fs from "fs";
+import { AbstractFileSystemObject } from "../core/AbstractFileSystemObject";
+import { AbstractWriteStream } from "../core/AbstractWriteStream";
 import { OpenWriteOptions, SeekOrigin } from "../core/common";
-import { AbstractFileSystemObject, AbstractWriteStream } from "../core/core";
 import { InvalidModificationError } from "../core/errors";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
