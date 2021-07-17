@@ -4,9 +4,9 @@ import {
   NotFoundError,
   PathExistsError,
 } from "./errors";
-import { toUint8Array } from "./util/buffer";
-import { toHex } from "./util/misc";
-import { getName, getParentPath, joinPaths } from "./util/path";
+import { toUint8Array } from "../util/buffer";
+import { toHex } from "../util/misc";
+import { getName, getParentPath, joinPaths } from "../util/path";
 
 export interface Hook {
   afterDelete?: (path: string) => Promise<void>;

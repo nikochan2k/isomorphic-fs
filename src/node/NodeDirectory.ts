@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { Directory, FileSystem, ListOptions, MkcolOptions } from "../core";
+import { Directory, FileSystem, ListOptions, MkcolOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 

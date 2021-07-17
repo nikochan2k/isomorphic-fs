@@ -4,8 +4,8 @@ import {
   OpenWriteOptions,
   SeekOrigin,
   WriteStream,
-} from "../core";
-import { InvalidModificationError } from "../errors";
+} from "../core/core";
+import { InvalidModificationError } from "../core/errors";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 

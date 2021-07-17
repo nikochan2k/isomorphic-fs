@@ -11,13 +11,13 @@ import {
   Props,
   Stats,
   URLType,
-} from "../core";
+} from "../core/core";
 import {
   InvalidModificationError,
   InvalidStateError,
   NotFoundError,
   NotReadableError,
-} from "../errors";
+} from "../core/errors";
 import { joinPaths, normalizePath } from "../util/path";
 import { NodeDirectory } from "./NodeDirectory";
 import { NodeFile } from "./NodeFile";

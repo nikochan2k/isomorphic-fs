@@ -1,5 +1,10 @@
 import * as fs from "fs";
-import { FileSystemObject, OpenOptions, ReadStream, SeekOrigin } from "../core";
+import {
+  FileSystemObject,
+  OpenOptions,
+  ReadStream,
+  SeekOrigin,
+} from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 

@@ -6,7 +6,7 @@ import {
   OpenWriteOptions,
   ReadStream,
   WriteStream,
-} from "../core";
+} from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";
