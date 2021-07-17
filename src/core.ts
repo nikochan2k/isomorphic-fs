@@ -83,6 +83,11 @@ export abstract class FileSystem {
     this.afterPatch = interceptor?.afterPatch;
   }
 
+  public async copy(fromPath: string, toPath: string, bufferSize?: number) {
+    const { from, to } = await this._prepareXmit(fromPath, toPath);
+    await from.copy(to, bufferSize);
+  }
+
   public async delete(path: string, options?: DeleteOptions): Promise<void> {
     if (this.beforeDelete) {
       if (await this.beforeDelete(path, options)) {
@@ -107,6 +112,11 @@ export abstract class FileSystem {
       await this.afterHead(path, stats);
     }
     return stats;
+  }
+
+  public async move(fromPath: string, toPath: string, bufferSize?: number) {
+    const { from, to } = await this._prepareXmit(fromPath, toPath);
+    await from.move(to, bufferSize);
   }
 
   public async patch(path: string, props: Props): Promise<void> {
@@ -137,6 +147,17 @@ export abstract class FileSystem {
    */
   public abstract getFile(path: string): Promise<File>;
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
+
+  private async _prepareXmit(fromPath: string, toPath: string) {
+    const stats = await this.stat(fromPath);
+    const from = await (stats.size
+      ? this.getFile(fromPath)
+      : this.getDirectory(fromPath));
+    const to = await (stats.size
+      ? this.getFile(toPath)
+      : this.getDirectory(toPath));
+    return { from, to };
+  }
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -173,7 +194,7 @@ export abstract class FileSystemObject {
     bufferSize?: number
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, false, copyErrors, bufferSize);
+    await this._xmit(fso, false, copyErrors, { bufferSize });
     return copyErrors;
   }
 
@@ -194,7 +215,7 @@ export abstract class FileSystemObject {
     bufferSize?: number
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, true, copyErrors, bufferSize);
+    await this._xmit(fso, true, copyErrors, { bufferSize });
     return copyErrors;
   }
 
@@ -212,7 +233,7 @@ export abstract class FileSystemObject {
     fso: FileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
-    bufferSize?: number
+    options: XmitOptions
   ): Promise<void>;
 }
 
@@ -223,6 +244,11 @@ export interface MkcolOptions {
    * @default false
    */
   recursive?: boolean;
+}
+
+export interface XmitOptions {
+  bufferSize?: number;
+  ignoreInterceptor?: boolean;
 }
 
 export abstract class Directory extends FileSystemObject {
@@ -252,7 +278,7 @@ export abstract class Directory extends FileSystemObject {
     fso: FileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
-    bufferSize?: number
+    options: XmitOptions = {}
   ): Promise<void> {
     await this.stat(); // check if this directory exists
     if (fso instanceof File) {
@@ -269,16 +295,16 @@ export abstract class Directory extends FileSystemObject {
     const children = await this.ls();
     for (const child of children) {
       const stats = await this.fs.head(child);
-      const fromFso = stats.size
-        ? await this.fs.getFile(child)
-        : await this.fs.getDirectory(child);
+      const fromFso = await (stats.size
+        ? this.fs.getFile(child)
+        : this.fs.getDirectory(child));
       const name = getName(child);
       const toPath = joinPaths(toDir.path, name);
-      const toFso = stats.size
-        ? await this.fs.getFile(toPath)
-        : await this.fs.getDirectory(toPath);
+      const toFso = await (stats.size
+        ? this.fs.getFile(toPath)
+        : this.fs.getDirectory(toPath));
       try {
-        await fromFso._xmit(toFso, move, copyErrors, bufferSize);
+        await fromFso._xmit(toFso, move, copyErrors, options);
         if (move) {
           try {
             await fromFso.delete();
@@ -354,7 +380,7 @@ export abstract class File extends FileSystemObject {
     fso: FileSystemObject,
     move: boolean,
     copyErrors: XmitError[],
-    bufferSize?: number
+    options: XmitOptions = {}
   ): Promise<void> {
     await this.stat(); // check if this directory exists
     if (fso instanceof Directory) {
@@ -366,7 +392,7 @@ export abstract class File extends FileSystemObject {
     }
     const to = fso as File;
 
-    const rs = await this.openReadStream({ bufferSize });
+    const rs = await this.openReadStream({ bufferSize: options.bufferSize });
     try {
       let create: boolean;
       try {
@@ -379,7 +405,10 @@ export abstract class File extends FileSystemObject {
           throw e;
         }
       }
-      const ws = await to.openWriteStream({ create, bufferSize });
+      const ws = await to.openWriteStream({
+        create,
+        bufferSize: options.bufferSize,
+      });
       try {
         let buffer: any;
         while ((buffer = rs.read()) == null) {
@@ -473,8 +502,8 @@ export interface OpenOptions {
 }
 
 export interface OpenWriteOptions extends OpenOptions {
-  create?: boolean;
   append?: boolean;
+  create?: boolean;
 }
 
 export abstract class Stream {
