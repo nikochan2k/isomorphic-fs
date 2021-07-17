@@ -8,7 +8,7 @@ import { toUint8Array } from "./util/buffer";
 import { toHex } from "./util/misc";
 import { getName, getParentPath, joinPaths } from "./util/path";
 
-export interface Interceptor {
+export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
   afterGet?: (path: string) => Promise<void>;
   afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -56,11 +56,11 @@ export interface Stats extends Props {
 }
 
 export interface FileSystemOptions {
-  interceptor?: Interceptor;
+  hook?: Hook;
 }
 
 export interface Options {
-  ignoreInterceptor?: boolean;
+  ignoreHook?: boolean;
 }
 export interface XmitOptions extends Options {
   bufferSize?: number;
@@ -129,13 +129,13 @@ export abstract class FileSystem {
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
   ) {
-    const interceptor = options.interceptor;
-    this.beforeDelete = interceptor?.beforeDelete;
-    this.beforeHead = interceptor?.beforeHead;
-    this.beforePatch = interceptor?.beforePatch;
-    this.afterDelete = interceptor?.afterDelete;
-    this.afterHead = interceptor?.afterHead;
-    this.afterPatch = interceptor?.afterPatch;
+    const hook = options.hook;
+    this.beforeDelete = hook?.beforeDelete;
+    this.beforeHead = hook?.beforeHead;
+    this.beforePatch = hook?.beforePatch;
+    this.afterDelete = hook?.afterDelete;
+    this.afterHead = hook?.afterHead;
+    this.afterPatch = hook?.afterPatch;
   }
 
   public async copy(
@@ -151,26 +151,26 @@ export abstract class FileSystem {
     path: string,
     options: DeleteOptions = {}
   ): Promise<void> {
-    if (!options.ignoreInterceptor && this.beforeDelete) {
+    if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(path, options)) {
         return;
       }
     }
     await this._delete(path, options);
-    if (!options.ignoreInterceptor && this.afterDelete) {
+    if (!options.ignoreHook && this.afterDelete) {
       await this.afterDelete(path);
     }
   }
 
   public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
     let stats: Stats | null | undefined;
-    if (!options.ignoreInterceptor && this.beforeHead) {
+    if (!options.ignoreHook && this.beforeHead) {
       stats = await this.beforeHead(path, options);
     }
     if (!stats) {
       stats = await this._head(path, options);
     }
-    if (!options.ignoreInterceptor && this.afterHead) {
+    if (!options.ignoreHook && this.afterHead) {
       await this.afterHead(path, stats);
     }
     return stats;
@@ -306,12 +306,12 @@ export abstract class Directory extends FileSystemObject {
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    const interceptor = fs.options?.interceptor;
-    if (interceptor) {
-      this.beforeMkcol = interceptor.beforeMkcol;
-      this.beforeList = interceptor.beforeList;
-      this.afterMkcol = interceptor.afterMkcol;
-      this.afterList = interceptor.afterList;
+    const hook = fs.options?.hook;
+    if (hook) {
+      this.beforeMkcol = hook.beforeMkcol;
+      this.beforeList = hook.beforeList;
+      this.afterMkcol = hook.afterMkcol;
+      this.afterList = hook.afterList;
     }
   }
 
@@ -361,13 +361,13 @@ export abstract class Directory extends FileSystemObject {
 
   public async list(options: ListOptions = {}): Promise<string[]> {
     let list: string[] | null | undefined;
-    if (!options.ignoreInterceptor && this.beforeList) {
+    if (!options.ignoreHook && this.beforeList) {
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
       list = await this._list(options);
     }
-    if (!options.ignoreInterceptor && this.afterList) {
+    if (!options.ignoreHook && this.afterList) {
       await this.afterList(this.path, list);
     }
     return list;
@@ -378,13 +378,13 @@ export abstract class Directory extends FileSystemObject {
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
   public async mkdir(options: MkcolOptions = {}): Promise<void> {
-    if (!options.ignoreInterceptor && this.beforeMkcol) {
+    if (!options.ignoreHook && this.beforeMkcol) {
       if (await this.beforeMkcol(this.path, options)) {
         return;
       }
     }
     await this._mkcol(options);
-    if (!options.ignoreInterceptor && this.afterMkcol) {
+    if (!options.ignoreHook && this.afterMkcol) {
       await this.afterMkcol(this.path);
     }
   }
@@ -409,11 +409,11 @@ export abstract class File extends FileSystemObject {
 
   constructor(fs: FileSystem, path: string) {
     super(fs, path);
-    const interceptor = fs.options?.interceptor;
-    if (interceptor) {
-      this.beforeGet = interceptor.beforeGet;
-      this.beforePost = interceptor.beforePost;
-      this.beforePut = interceptor.beforePut;
+    const hook = fs.options?.hook;
+    if (hook) {
+      this.beforeGet = hook.beforeGet;
+      this.beforePost = hook.beforePost;
+      this.beforePut = hook.beforePut;
     }
   }
 
@@ -566,7 +566,7 @@ export abstract class ReadStream extends Stream {
 
   constructor(fso: FileSystemObject, options: OpenOptions) {
     super(fso, options);
-    this.afterGet = fso.fs.options.interceptor?.afterGet;
+    this.afterGet = fso.fs.options.hook?.afterGet;
   }
 
   public async close(): Promise<void> {
@@ -598,9 +598,9 @@ export abstract class WriteStream extends Stream {
 
   constructor(fso: FileSystemObject, protected options: OpenWriteOptions) {
     super(fso, options);
-    const interceptor = fso.fs.options.interceptor;
-    this.afterPost = interceptor?.afterPost;
-    this.afterPut = interceptor?.afterPut;
+    const hook = fso.fs.options.hook;
+    this.afterPost = hook?.afterPost;
+    this.afterPut = hook?.afterPut;
   }
 
   public async close(): Promise<void> {
