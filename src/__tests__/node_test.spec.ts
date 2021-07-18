@@ -41,7 +41,7 @@ test("add empty file", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   const buffer = toBuffer("");
-  const ws = await file.openWriteStream();
+  const ws = await file.createWriteStream();
   await ws.write(buffer);
   await ws.close();
   const stats = await file.stat();
@@ -57,7 +57,7 @@ test("add text file", async () => {
     expect(e).toBeInstanceOf(NotFoundError);
   }
   const buffer = toBuffer("test");
-  const ws = await file.openWriteStream();
+  const ws = await file.createWriteStream();
   await ws.write(buffer);
   await ws.close();
   const stats = await file.stat();
@@ -66,7 +66,7 @@ test("add text file", async () => {
 
 test("read text file", async () => {
   const file = await fs.getFile("/test.txt");
-  const rs = await file.openReadStream();
+  const rs = await file.createReadStream();
   const buffer = await rs.read();
   expect(buffer.byteLength).toBe(4);
   const text = toString(buffer);
@@ -76,11 +76,11 @@ test("read text file", async () => {
 test("continuous read and write", async () => {
   const file = await fs.getFile("/otani.txt");
 
-  const ws = await file.openWriteStream();
+  const ws = await file.createWriteStream();
   await ws.write(toBuffer("大谷"));
   await ws.write(toBuffer("翔平"));
 
-  const rs = await file.openReadStream();
+  const rs = await file.createReadStream();
   let buffer = await rs.read(6);
   let text = toString(buffer);
   expect(text).toBe("大谷");
@@ -143,7 +143,7 @@ test("create file in dir", async () => {
   } catch (e) {
     expect(e).toBeInstanceOf(NotFoundError);
   }
-  const ws = await file.openWriteStream();
+  const ws = await file.createWriteStream();
   const outBuf = toBuffer("Sample");
   const before = Date.now();
   await ws.write(outBuf);
@@ -154,7 +154,7 @@ test("create file in dir", async () => {
   const modified = stats.modified ?? 0;
   expect(before <= modified && modified <= after).toBe(true);
 
-  const rs = await file.openReadStream();
+  const rs = await file.createReadStream();
   const inBuf = await rs.read();
   const text = toString(inBuf);
   expect(text).toBe("Sample");

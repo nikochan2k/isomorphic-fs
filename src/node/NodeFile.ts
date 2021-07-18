@@ -32,13 +32,13 @@ export class NodeFile extends AbstractFile {
     });
   }
 
-  public async _openReadStream(
+  public async _createReadStream(
     options: OpenWriteOptions
   ): Promise<AbstractReadStream> {
     return new NodeReadStream(this, options);
   }
 
-  public async _openWriteStream(
+  public async _createWriteStream(
     options: OpenWriteOptions
   ): Promise<AbstractWriteStream> {
     return new NodeWriteStream(this, options);

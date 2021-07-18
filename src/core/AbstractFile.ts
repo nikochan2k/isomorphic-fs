@@ -73,7 +73,7 @@ export abstract class AbstractFile
       }
     }
 
-    const rs = await this.openReadStream({ bufferSize: options.bufferSize });
+    const rs = await this.createReadStream({ bufferSize: options.bufferSize });
     try {
       let create: boolean;
       try {
@@ -86,7 +86,7 @@ export abstract class AbstractFile
           throw e;
         }
       }
-      const ws = await to.openWriteStream({
+      const ws = await to.createWriteStream({
         append: false,
         create,
         bufferSize: options.bufferSize,
@@ -113,7 +113,7 @@ export abstract class AbstractFile
   }
 
   public async hash(options: OpenOptions = {}): Promise<string> {
-    const rs = await this.openReadStream(options);
+    const rs = await this.createReadStream(options);
     try {
       const hash = createHash();
       let buffer: ArrayBuffer | Uint8Array | null;
@@ -127,18 +127,20 @@ export abstract class AbstractFile
     }
   }
 
-  public async openReadStream(options: OpenOptions = {}): Promise<ReadStream> {
+  public async createReadStream(
+    options: OpenOptions = {}
+  ): Promise<ReadStream> {
     let rs: ReadStream | null | undefined;
     if (!options.ignoreHook && this.beforeGet) {
       rs = await this.beforeGet(this.path, options);
     }
     if (!rs) {
-      rs = await this._openReadStream(options);
+      rs = await this._createReadStream(options);
     }
     return rs as ReadStream;
   }
 
-  public async openWriteStream(
+  public async createWriteStream(
     options: OpenWriteOptions = { append: false }
   ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
@@ -165,15 +167,15 @@ export abstract class AbstractFile
       }
     }
     if (!ws) {
-      ws = await this._openWriteStream(options);
+      ws = await this._createWriteStream(options);
     }
     return ws as WriteStream;
   }
 
-  public abstract _openReadStream(
+  public abstract _createReadStream(
     options: OpenOptions
   ): Promise<AbstractReadStream>;
-  public abstract _openWriteStream(
+  public abstract _createWriteStream(
     options: OpenOptions
   ): Promise<AbstractWriteStream>;
 }

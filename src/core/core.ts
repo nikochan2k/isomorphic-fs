@@ -187,8 +187,8 @@ export interface Directory extends FileSystemObject {
 
 export interface File extends FileSystemObject {
   hash(options?: OpenOptions): Promise<string>;
-  openReadStream(options?: OpenOptions): Promise<ReadStream>;
-  openWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
+  createReadStream(options?: OpenOptions): Promise<ReadStream>;
+  createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
 }
 
 export enum SeekOrigin {
