@@ -73,12 +73,12 @@ export abstract class AbstractDirectory
     const children = await this.list();
     for (const child of children) {
       const stats = await this.fs.head(child);
-      const fromFso = (await (stats.size
+      const fromFso = (await (stats.size != null
         ? this.fs.getFile(child)
         : this.fs.getDirectory(child))) as unknown as AbstractFileSystemObject;
       const name = getName(child);
       const toPath = joinPaths(toDir.path, name);
-      const toFso = (await (stats.size
+      const toFso = (await (stats.size != null
         ? this.fs.getFile(toPath)
         : this.fs.getDirectory(toPath))) as unknown as AbstractFileSystemObject;
       try {

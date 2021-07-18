@@ -122,7 +122,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   protected async getFileSystemObject(path: string): Promise<FileSystemObject> {
     const stats = await this.stat(path);
-    return stats.size ? this.getFile(path) : this.getDirectory(path);
+    return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 
   private async _prepareXmit(fromPath: string, toPath: string) {
