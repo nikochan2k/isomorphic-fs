@@ -40,6 +40,7 @@ export function convertError(
 export class NodeFileSystem extends AbstractFileSystem {
   constructor(rootDir: string, options?: FileSystemOptions) {
     super(normalizePath(rootDir), options);
+    fs.mkdirSync(rootDir, { recursive: true });
   }
 
   public _head(path: string, _options: HeadOptions): Promise<Stats> {

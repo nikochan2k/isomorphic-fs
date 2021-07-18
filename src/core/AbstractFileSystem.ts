@@ -8,6 +8,8 @@ import {
   FileSystemObject,
   FileSystemOptions,
   HeadOptions,
+  ListOptions,
+  MkcolOptions,
   MoveOptions,
   PatchOptions,
   Props,
@@ -30,6 +32,9 @@ export abstract class AbstractFileSystem implements FileSystem {
   ) => Promise<boolean>;
 
   public del = this.delete;
+  public ls = this.list;
+  public mkdir = this.mkcol;
+  public readdir = this.list;
   public rm = this.delete;
   public stat = this.head;
 
@@ -73,6 +78,16 @@ export abstract class AbstractFileSystem implements FileSystem {
       await this.afterHead(path, stats);
     }
     return stats;
+  }
+
+  public async list(path: string, options?: ListOptions): Promise<string[]> {
+    const dir = await this.getDirectory(path);
+    return dir.list(options);
+  }
+
+  public async mkcol(path: string, options?: MkcolOptions): Promise<void> {
+    const dir = await this.getDirectory(path);
+    return dir.mkcol(options);
   }
 
   public async move(

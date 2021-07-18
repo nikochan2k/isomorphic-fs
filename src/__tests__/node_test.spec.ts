@@ -1,5 +1,5 @@
 import "../index";
-import { rmdirSync } from "fs";
+import { rmdirSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
 import { FileSystem, SeekOrigin } from "../core/core";
@@ -22,15 +22,12 @@ beforeAll(async () => {
   fs = new NodeFileSystem(rootDir);
 });
 
+afterAll(() => {
+  rmSync(rootDir, { recursive: true });
+});
+
 test("readdir", async () => {
   const dir = await fs.getDirectory("/");
-  try {
-    await dir.stat();
-    fail("Found directory: " + dir.path);
-  } catch (e) {
-    expect(e).toBeInstanceOf(NotFoundError);
-  }
-  await dir.mkdir();
   const paths = await dir.readdir();
   expect(paths.length).toBe(0);
 });

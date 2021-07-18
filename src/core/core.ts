@@ -153,6 +153,11 @@ export interface FileSystem {
   rm(path: string, options?: DeleteOptions): Promise<void>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
+  list(path: string, options?: ListOptions): Promise<string[]>;
+  ls(path: string, options?: ListOptions): Promise<string[]>;
+  readdir(path: string, options?: ListOptions): Promise<string[]>;
+  mkdir(path: string, options?: MkcolOptions): Promise<void>;
+  mkcol(path: string, options?: MkcolOptions): Promise<void>;
 }
 
 export interface FileSystemObject {
