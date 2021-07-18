@@ -95,10 +95,10 @@ export abstract class AbstractFile
       try {
         await rs.pipe(ws);
       } finally {
-        ws.close();
+        await ws.close();
       }
     } finally {
-      rs.close();
+      await rs.close();
     }
 
     if (options.move) {
@@ -166,7 +166,7 @@ export abstract class AbstractFile
 
       return toHex(hash.digest());
     } finally {
-      rs.close();
+      await rs.close();
     }
   }
 
@@ -184,7 +184,7 @@ export abstract class AbstractFile
       }
       return buffer;
     } finally {
-      rs.close();
+      await rs.close();
     }
   }
 
@@ -206,7 +206,7 @@ export abstract class AbstractFile
         }
       } while (chunk.byteLength === bufferSize);
     } finally {
-      ws.close();
+      await ws.close();
     }
   }
 
