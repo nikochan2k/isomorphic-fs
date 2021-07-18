@@ -44,9 +44,8 @@ export abstract class AbstractDirectory
 
   public async _xmit(
     fso: FileSystemObject,
-    move: boolean,
     copyErrors: XmitError[],
-    options: XmitOptions = {}
+    options: XmitOptions
   ): Promise<void> {
     await this.head(); // check if this directory exists
     if (fso instanceof AbstractFile) {
@@ -58,7 +57,14 @@ export abstract class AbstractDirectory
     }
 
     const toDir = fso as Directory;
-    await toDir.mkcol({ ignoreHook: options.ignoreHook });
+    await toDir.mkcol({
+      force: options.force,
+      recursive: false,
+      ignoreHook: options.ignoreHook,
+    });
+    if (!options.recursive) {
+      return;
+    }
 
     const children = await this.list();
     for (const child of children) {
@@ -72,8 +78,8 @@ export abstract class AbstractDirectory
         ? this.fs.getFile(toPath)
         : this.fs.getDirectory(toPath))) as unknown as AbstractFileSystemObject;
       try {
-        await fromFso._xmit(toFso, move, copyErrors, options);
-        if (move) {
+        await fromFso._xmit(toFso, copyErrors, options);
+        if (options.move) {
           try {
             await fromFso.delete();
           } catch (error) {
@@ -104,7 +110,9 @@ export abstract class AbstractDirectory
    * Create a directory.
    * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
    */
-  public async mkcol(options: MkcolOptions = {}): Promise<void> {
+  public async mkcol(
+    options: MkcolOptions = { force: false, recursive: false }
+  ): Promise<void> {
     if (!options.ignoreHook && this.beforeMkcol) {
       if (await this.beforeMkcol(this.path, options)) {
         return;

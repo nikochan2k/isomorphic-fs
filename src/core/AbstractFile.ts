@@ -50,9 +50,8 @@ export abstract class AbstractFile
 
   public async _xmit(
     fso: AbstractFileSystemObject,
-    move: boolean,
     copyErrors: XmitError[],
-    options: XmitOptions = {}
+    options: XmitOptions
   ): Promise<void> {
     await this.stat(); // check if this directory exists
     if (fso instanceof AbstractDirectory) {
@@ -78,6 +77,7 @@ export abstract class AbstractFile
         }
       }
       const ws = await to.openWriteStream({
+        append: false,
         create,
         bufferSize: options.bufferSize,
       });
@@ -93,8 +93,9 @@ export abstract class AbstractFile
       await rs.close();
     }
 
-    if (move) {
+    if (options.move) {
       try {
+        await this.delete();
       } catch (error) {
         copyErrors.push({ from: this, to, error });
       }
@@ -128,7 +129,7 @@ export abstract class AbstractFile
   }
 
   public async openWriteStream(
-    options: OpenWriteOptions = {}
+    options: OpenWriteOptions = { append: false }
   ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
     try {

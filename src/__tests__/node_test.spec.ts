@@ -171,7 +171,7 @@ test("create file in dir", async () => {
 test("copy directory", async () => {
   const from = await fs.getDirectory("/folder");
   const to = await fs.getDirectory("/folder2");
-  const errors = await from.copy(to);
+  const errors = await from.copy(to, { force: false, recursive: true });
   expect(errors.length).toBe(0);
   const stats = await to.stat();
   expect(stats.size).toBeUndefined();
@@ -182,8 +182,23 @@ test("copy directory", async () => {
   expect(0 <= toList.indexOf("/folder2/sample.txt")).toBe(true);
 });
 
-test("move file", async () => {});
+test("move file", async () => {
+  await fs.move("/folder2/sample.txt", "/folder2/sample2.txt");
+  const stats = await fs.stat("/folder2/sample2.txt");
+  expect(stats.size).toBeGreaterThan(0);
+});
 
-test("move directory", async () => {});
+test("move directory", async () => {
+  const errors = await fs.move("/folder2", "/folder3");
+  console.log(errors);
+  expect(errors.length).toBe(0);
+  const root = await fs.getDirectory("/");
+  const list = await root.ls();
+  expect(list.indexOf("/folder2") < 0).toBe(true);
+  expect(0 <= list.indexOf("/folder3")).toBe(true);
+  const folder3 = await fs.getDirectory("/folder3");
+  const folder3List = await folder3.ls();
+  expect(0 <= folder3List.indexOf("/folder3/sample2.txt")).toBe(true);
+});
 
 test("copy large file", async () => {});

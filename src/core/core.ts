@@ -28,14 +28,14 @@ export interface DeleteOptions extends Options {
    * When `true`, exceptions will be ignored if `path` does not exist.
    * @default false
    */
-  force?: boolean;
+  force: boolean;
   /**
    * If `true`, perform a recursive directory removal. In
    * recursive mode, errors are not reported if `path` does not exist, and
    * operations are retried on failure.
    * @default false
    */
-  recursive?: boolean;
+  recursive: boolean;
 }
 
 export interface HeadOptions extends Options {}
@@ -46,11 +46,16 @@ export interface ListOptions extends Options {}
 
 export interface MkcolOptions extends Options {
   /**
+   * If it is true, exceptions will be ignored if the directory exist.
+   * @default false
+   */
+  force: boolean;
+  /**
    * Indicates whether parent folders should be created.
    * If a folder was created, the path to the first created folder will be returned.
    * @default false
    */
-  recursive?: boolean;
+  recursive: boolean;
 }
 
 export interface OpenOptions extends Options {
@@ -58,12 +63,34 @@ export interface OpenOptions extends Options {
 }
 
 export interface OpenWriteOptions extends OpenOptions {
-  append?: boolean;
+  /**
+   * Open file for appending.
+   * @default false
+   */
+  append: boolean;
+  /**
+   * If it is true, the file is created if it does not exist, fail if it exists.
+   * If it is false, fail if it exists, truncated if it does not exist.
+   * If it is undefined, the file is created if it does not exist, or truncated if it exists.
+   */
   create?: boolean;
 }
 
+export interface MoveOptions extends Options {
+  bufferSize?: number;
+  force: boolean;
+}
+
+export interface CopyOptions extends Options {
+  bufferSize?: number;
+  force: boolean;
+  recursive: boolean;
+}
 export interface XmitOptions extends Options {
   bufferSize?: number;
+  force: boolean;
+  move: boolean;
+  recursive: boolean;
 }
 
 export interface Hook {
@@ -110,7 +137,7 @@ export interface FileSystem {
   copy(
     fromPath: string,
     toPath: string,
-    options?: XmitOptions
+    options?: CopyOptions
   ): Promise<XmitError[]>;
   del(path: string, options?: DeleteOptions): Promise<void>;
   delete(path: string, options?: DeleteOptions): Promise<void>;
@@ -120,7 +147,7 @@ export interface FileSystem {
   move(
     fromPath: string,
     toPath: string,
-    options?: XmitOptions
+    options?: MoveOptions
   ): Promise<XmitError[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
   rm(path: string, options?: DeleteOptions): Promise<void>;
@@ -131,17 +158,17 @@ export interface FileSystem {
 export interface FileSystemObject {
   fs: FileSystem;
   path: string;
-  copy(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
-  cp(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
+  copy(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
+  cp(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
   del(options?: DeleteOptions): Promise<void>;
   delete(options?: DeleteOptions): Promise<void>;
   getParent(): Promise<string>;
-  head(options?: DeleteOptions): Promise<Stats>;
-  move(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
-  mv(fso: FileSystemObject, options?: XmitOptions): Promise<XmitError[]>;
+  head(options?: HeadOptions): Promise<Stats>;
+  move(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
+  mv(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
   patch(props: Props, options?: PatchOptions): Promise<void>;
   rm(options?: DeleteOptions): Promise<void>;
-  stat(options?: DeleteOptions): Promise<Stats>;
+  stat(options?: HeadOptions): Promise<Stats>;
   toURL(urlType?: URLType): Promise<string>;
 }
 

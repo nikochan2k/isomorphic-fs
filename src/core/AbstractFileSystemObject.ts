@@ -1,7 +1,9 @@
 import {
+  CopyOptions,
   DeleteOptions,
   FileSystemObject,
   HeadOptions,
+  MoveOptions,
   PatchOptions,
   Props,
   Stats,
@@ -23,14 +25,21 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public async copy(
     fso: FileSystemObject,
-    options: XmitOptions
+    options: CopyOptions = { force: false, recursive: false }
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, false, copyErrors, options);
+    await this._xmit(fso, copyErrors, {
+      bufferSize: options.bufferSize,
+      force: options.force,
+      move: false,
+      recursive: options.recursive,
+    });
     return copyErrors;
   }
 
-  public async delete(options: DeleteOptions = {}): Promise<void> {
+  public async delete(
+    options: DeleteOptions = { force: false, recursive: false }
+  ): Promise<void> {
     return this.fs.delete(this.path, options);
   }
 
@@ -44,10 +53,15 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public async move(
     fso: FileSystemObject,
-    options: XmitOptions
+    options: MoveOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, true, copyErrors, options);
+    await this._xmit(fso, copyErrors, {
+      bufferSize: options.bufferSize,
+      force: options.force,
+      move: true,
+      recursive: true,
+    });
     return copyErrors;
   }
 
@@ -60,7 +74,6 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public abstract _xmit(
     fso: FileSystemObject,
-    move: boolean,
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void>;

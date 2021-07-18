@@ -1,16 +1,17 @@
 import {
+  CopyOptions,
   DeleteOptions,
   Directory,
+  File,
   FileSystem,
   FileSystemOptions,
   HeadOptions,
+  MoveOptions,
   PatchOptions,
   Props,
   Stats,
   URLType,
   XmitError,
-  XmitOptions,
-  File,
 } from "./core";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -51,7 +52,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async copy(
     fromPath: string,
     toPath: string,
-    options: XmitOptions = {}
+    options: CopyOptions = { force: false, recursive: false }
   ): Promise<XmitError[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
@@ -59,7 +60,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async delete(
     path: string,
-    options: DeleteOptions = {}
+    options: DeleteOptions = { force: false, recursive: false }
   ): Promise<void> {
     if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(path, options)) {
@@ -89,7 +90,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async move(
     fromPath: string,
     toPath: string,
-    options: XmitOptions = {}
+    options: MoveOptions = { force: false }
   ): Promise<XmitError[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.move(to, options);
