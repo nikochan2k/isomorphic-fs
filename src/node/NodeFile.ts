@@ -1,9 +1,10 @@
+import { createHash } from "crypto";
 import * as fs from "fs";
 import { AbstractFile } from "../core/AbstractFile";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
 import { AbstractReadStream } from "../core/AbstractReadStream";
 import { AbstractWriteStream } from "../core/AbstractWriteStream";
-import { DeleteOptions, OpenWriteOptions } from "../core/core";
+import { DeleteOptions, OpenOptions, OpenWriteOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";
@@ -14,6 +15,18 @@ export class NodeFile extends AbstractFile {
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
+  }
+
+  public async _createReadStream(
+    options: OpenWriteOptions
+  ): Promise<AbstractReadStream> {
+    return new NodeReadStream(this, options);
+  }
+
+  public async _createWriteStream(
+    options: OpenWriteOptions
+  ): Promise<AbstractWriteStream> {
+    return new NodeWriteStream(this, options);
   }
 
   public _delete(options: DeleteOptions): Promise<void> {
@@ -32,16 +45,41 @@ export class NodeFile extends AbstractFile {
     });
   }
 
-  public async _createReadStream(
-    options: OpenWriteOptions
-  ): Promise<AbstractReadStream> {
-    return new NodeReadStream(this, options);
-  }
-
-  public async _createWriteStream(
-    options: OpenWriteOptions
-  ): Promise<AbstractWriteStream> {
-    return new NodeWriteStream(this, options);
+  public override hash(options: OpenOptions = {}): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      if (!options.ignoreHook) {
+        const beforeGet = this.fs.options.hook?.beforeGet;
+        if (beforeGet) {
+          await this.beforeGet(this.path, options);
+        }
+      }
+      const hash = createHash("sha256");
+      const input = fs.createReadStream(this.getFullPath(), {
+        highWaterMark: options.bufferSize,
+      });
+      const onData = (data: any) => {
+        hash.update(data);
+      };
+      input.on("data", onData);
+      const onEnd = async () => {
+        if (!options.ignoreHook) {
+          const afterGet = this.fs.options.hook?.afterGet;
+          if (afterGet) {
+            await afterGet(this.path);
+          }
+        }
+        input.off("data", onData);
+        input.off("end", onEnd);
+        resolve(hash.digest("hex"));
+      };
+      input.on("end", onEnd);
+      const onError = (err: any) => {
+        input.off("data", onData);
+        input.off("error", onError);
+        reject(convertError(this.fs.repository, this.path, err, false));
+      };
+      input.on("error", onError);
+    });
   }
 
   private getFullPath() {
