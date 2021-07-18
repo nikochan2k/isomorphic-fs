@@ -7,6 +7,7 @@ import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractReadStream } from "./AbstractReadStream";
 import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
+  DEFAULT_BUFFER_SIZE,
   File,
   OpenOptions,
   OpenWriteOptions,
@@ -25,15 +26,15 @@ export abstract class AbstractFile
   extends AbstractFileSystemObject
   implements File
 {
-  protected beforeGet?: (
+  private beforeGet?: (
     path: string,
     options: OpenOptions
   ) => Promise<ReadStream | null>;
-  protected beforePost?: (
+  private beforePost?: (
     path: string,
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
-  protected beforePut?: (
+  private beforePut?: (
     path: string,
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
@@ -94,10 +95,10 @@ export abstract class AbstractFile
       try {
         await rs.pipe(ws);
       } finally {
-        await ws.close();
+        ws.close();
       }
     } finally {
-      await rs.close();
+      rs.close();
     }
 
     if (options.move) {
@@ -106,21 +107,6 @@ export abstract class AbstractFile
       } catch (error) {
         copyErrors.push({ from: this, to, error });
       }
-    }
-  }
-
-  public async hash(options: OpenOptions = {}): Promise<string> {
-    const rs = await this.createReadStream(options);
-    try {
-      const hash = createHash();
-      let buffer: ArrayBuffer | Uint8Array | null;
-      while ((buffer = await rs.read()) != null) {
-        hash.update(toUint8Array(buffer));
-      }
-
-      return toHex(hash.digest());
-    } finally {
-      rs.close();
     }
   }
 
@@ -169,10 +155,70 @@ export abstract class AbstractFile
     return ws as WriteStream;
   }
 
+  public async hash(options: OpenOptions = {}): Promise<string> {
+    const rs = await this.createReadStream(options);
+    try {
+      const hash = createHash();
+      let buffer: ArrayBuffer | Uint8Array | null;
+      while ((buffer = await rs.read()) != null) {
+        hash.update(toUint8Array(buffer));
+      }
+
+      return toHex(hash.digest());
+    } finally {
+      rs.close();
+    }
+  }
+
+  public async readAll(options: OpenOptions = {}): Promise<Uint8Array> {
+    const stats = await this.stat();
+    const buffer = this._createBuffer(stats.size);
+    const rs = await this.createReadStream(options);
+    try {
+      let pos = 0;
+      let chunk: any;
+      while ((chunk = await rs.read()) != null) {
+        const u8 = toUint8Array(chunk);
+        buffer.set(u8, pos);
+        pos += u8.byteLength;
+      }
+      return buffer;
+    } finally {
+      rs.close();
+    }
+  }
+
+  public async writeAll(
+    buffer: ArrayBuffer | Uint8Array,
+    options: OpenWriteOptions = { append: false }
+  ): Promise<void> {
+    const u8 = toUint8Array(buffer);
+    const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
+    const ws = await this.createWriteStream(options);
+    try {
+      let pos = 0;
+      let chunk: Uint8Array;
+      do {
+        chunk = u8.subarray(pos, pos + bufferSize);
+        pos += bufferSize;
+        if (0 < chunk.byteLength) {
+          await ws.write(chunk);
+        }
+      } while (chunk.byteLength === bufferSize);
+    } finally {
+      ws.close();
+    }
+  }
+
   public abstract _createReadStream(
     options: OpenOptions
   ): Promise<AbstractReadStream>;
   public abstract _createWriteStream(
     options: OpenOptions
   ): Promise<AbstractWriteStream>;
+
+  protected _createBuffer(byteLength: number): Uint8Array {
+    const ab = new ArrayBuffer(byteLength);
+    return new Uint8Array(ab);
+  }
 }

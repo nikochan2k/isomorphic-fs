@@ -1,8 +1,8 @@
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
-import { OpenOptions, SeekOrigin, Stream } from "./core";
+import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 
 export abstract class AbstractStream implements Stream {
-  protected readonly bufferSize = 64 * 1024;
+  protected readonly bufferSize = DEFAULT_BUFFER_SIZE;
 
   constructor(protected fso: AbstractFileSystemObject, options: OpenOptions) {
     if (options.bufferSize) {

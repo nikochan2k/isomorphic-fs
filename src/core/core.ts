@@ -193,6 +193,11 @@ export interface Directory extends FileSystemObject {
 
 export interface File extends FileSystemObject {
   hash(options?: OpenOptions): Promise<string>;
+  readAll(options: OpenOptions): Promise<ArrayBuffer | Uint8Array | null>;
+  writeAll(
+    buffer: ArrayBuffer | Uint8Array,
+    options?: OpenWriteOptions
+  ): Promise<void>;
   createReadStream(options?: OpenOptions): Promise<ReadStream>;
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
 }
@@ -215,3 +220,5 @@ export interface WriteStream extends Stream {
   setLength(len: number): Promise<void>;
   write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
 }
+
+export const DEFAULT_BUFFER_SIZE = 64 * 1024;
