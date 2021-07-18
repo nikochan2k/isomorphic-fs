@@ -52,7 +52,7 @@ export class NodeFile extends AbstractFile {
       if (!options.ignoreHook) {
         const beforeGet = this.fs.options.hook?.beforeGet;
         if (beforeGet) {
-          await this.beforeGet(path, options);
+          await beforeGet(path, options);
         }
       }
       const hash = createHash("sha256");

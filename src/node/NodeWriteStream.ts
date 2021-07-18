@@ -4,6 +4,7 @@ import { AbstractWriteStream } from "../core/AbstractWriteStream";
 import { OpenWriteOptions, SeekOrigin } from "../core/core";
 import { InvalidModificationError } from "../core/errors";
 import { joinPaths } from "../util/path";
+import { toBuffer } from "./buffer";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeWriteStream extends AbstractWriteStream {
@@ -38,7 +39,7 @@ export class NodeWriteStream extends AbstractWriteStream {
     });
   }
 
-  public _write(buffer: ArrayBuffer | Uint8Array | Buffer): Promise<void> {
+  public _write(buffer: ArrayBuffer | Uint8Array): Promise<void> {
     const fso = this.fso;
     if (!this.writeStream || this.writeStream.destroyed) {
       try {
@@ -56,12 +57,13 @@ export class NodeWriteStream extends AbstractWriteStream {
 
     const writeStream = this.writeStream;
     return new Promise<void>((resolve, reject) => {
-      writeStream.write(buffer, (err) => {
+      const nodeBuffer = toBuffer(buffer);
+      writeStream.write(nodeBuffer, (err) => {
         if (err) {
           reject(convertError(fso.fs.repository, fso.path, err, true));
           return;
         }
-        this.position += buffer.byteLength;
+        this.position += nodeBuffer.byteLength;
         resolve();
       });
     });

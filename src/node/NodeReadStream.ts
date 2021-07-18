@@ -19,9 +19,7 @@ export class NodeReadStream extends AbstractReadStream {
     }
   }
 
-  public _read(
-    size?: number
-  ): Promise<ArrayBuffer | Uint8Array | Buffer | null> {
+  public _read(size?: number): Promise<ArrayBuffer | Uint8Array | null> {
     const fso = this.fso;
     if (!this.readStream || this.readStream.destroyed) {
       try {
@@ -38,32 +36,34 @@ export class NodeReadStream extends AbstractReadStream {
     }
 
     const readStream = this.readStream;
-    return new Promise<ArrayBuffer | Uint8Array | Buffer | null>(
-      (resolve, reject) => {
-        const onError = (err: Error) => {
-          readStream.off("error", onError);
-          reject(convertError(fso.fs.repository, fso.path, err, false));
-        };
-        readStream.on("error", onError);
-        const onReadable = () => {
-          readStream.off("readable", onReadable);
-          let buffer: Buffer = size ? readStream.read(size) : null;
-          if (buffer === null) {
-            buffer = readStream.read();
-          }
-          if (buffer) {
-            this.position += buffer.byteLength;
-            resolve(buffer);
-          }
-        };
-        const onEnd = () => resolve(null);
-        readStream.on("end", () => {
-          readStream.off("end", onEnd);
-          onEnd();
-        });
-        readStream.on("readable", onReadable);
-      }
-    );
+    return new Promise<ArrayBuffer | Uint8Array | null>((resolve, reject) => {
+      const onError = (err: Error) => {
+        readStream.off("error", onError);
+        reject(convertError(fso.fs.repository, fso.path, err, false));
+      };
+      readStream.on("error", onError);
+      const onReadable = () => {
+        readStream.off("readable", onReadable);
+        let b: Buffer = size ? readStream.read(size) : null;
+        if (b === null) {
+          b = readStream.read();
+        }
+        if (b) {
+          this.position += b.byteLength;
+          const buffer = b.buffer.slice(
+            b.byteOffset,
+            b.byteOffset + b.byteLength
+          );
+          resolve(buffer);
+        }
+      };
+      const onEnd = () => resolve(null);
+      readStream.on("end", () => {
+        readStream.off("end", onEnd);
+        onEnd();
+      });
+      readStream.on("readable", onReadable);
+    });
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
