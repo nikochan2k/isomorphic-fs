@@ -4,7 +4,6 @@ import { AbstractDirectory } from "../core/AbstractDirectory";
 import { AbstractFile } from "../core/AbstractFile";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
 import {
-  DeleteOptions,
   FileSystemOptions,
   HeadOptions,
   PatchOptions,
@@ -41,22 +40,6 @@ export function convertError(
 export class NodeFileSystem extends AbstractFileSystem {
   constructor(rootDir: string, options?: FileSystemOptions) {
     super(normalizePath(rootDir), options);
-  }
-
-  public _delete(path: string, options: DeleteOptions): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      fs.rm(
-        this.getFullPath(path),
-        { force: options.force, recursive: options.recursive },
-        (err) => {
-          if (err) {
-            reject(convertError(this.repository, path, err, true));
-          } else {
-            resolve();
-          }
-        }
-      );
-    });
   }
 
   public _head(path: string, _options: HeadOptions): Promise<Stats> {

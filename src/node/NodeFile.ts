@@ -4,7 +4,7 @@ import { AbstractFile } from "../core/AbstractFile";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
 import { AbstractReadStream } from "../core/AbstractReadStream";
 import { AbstractWriteStream } from "../core/AbstractWriteStream";
-import { OpenWriteOptions } from "../core/core";
+import { DeleteOptions, OpenWriteOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";
@@ -15,6 +15,22 @@ export class NodeFile extends AbstractFile {
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
+  }
+
+  public _delete(options: DeleteOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rm(
+        this.getFullPath(),
+        { force: options.force, recursive: options.recursive },
+        (err) => {
+          if (err) {
+            reject(convertError(this.fs.repository, this.path, err, true));
+          } else {
+            resolve();
+          }
+        }
+      );
+    });
   }
 
   public async _openReadStream(

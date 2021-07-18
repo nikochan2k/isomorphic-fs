@@ -15,20 +15,32 @@ import { AbstractFileSystem } from "./AbstractFileSystem";
 import { getParentPath } from "../util/path";
 
 export abstract class AbstractFileSystemObject implements FileSystemObject {
+  private afterDelete?: (path: string) => Promise<void>;
+  private beforeDelete?: (
+    path: string,
+    options: DeleteOptions
+  ) => Promise<boolean>;
+
   public cp = this.copy;
   public del = this.delete;
   public mv = this.move;
   public rm = this.delete;
   public stat = this.head;
 
-  constructor(public readonly fs: AbstractFileSystem, public path: string) {}
+  constructor(public readonly fs: AbstractFileSystem, public path: string) {
+    const hook = fs.options.hook;
+    if (hook) {
+      this.beforeDelete = hook?.beforeDelete;
+      this.afterDelete = hook?.afterDelete;
+    }
+  }
 
   public async copy(
-    fso: FileSystemObject,
+    to: FileSystemObject,
     options: CopyOptions = { force: false, recursive: false }
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, copyErrors, {
+    await this._xmit(to, copyErrors, {
       bufferSize: options.bufferSize,
       force: options.force,
       move: false,
@@ -40,7 +52,15 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   public async delete(
     options: DeleteOptions = { force: false, recursive: false }
   ): Promise<void> {
-    return this.fs.delete(this.path, options);
+    if (!options.ignoreHook && this.beforeDelete) {
+      if (await this.beforeDelete(this.path, options)) {
+        return;
+      }
+    }
+    await this._delete(options);
+    if (!options.ignoreHook && this.afterDelete) {
+      await this.afterDelete(this.path);
+    }
   }
 
   public async getParent(): Promise<string> {
@@ -52,11 +72,11 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   }
 
   public async move(
-    fso: FileSystemObject,
+    to: FileSystemObject,
     options: MoveOptions
   ): Promise<XmitError[]> {
     const copyErrors: XmitError[] = [];
-    await this._xmit(fso, copyErrors, {
+    await this._xmit(to, copyErrors, {
       bufferSize: options.bufferSize,
       force: options.force,
       move: true,
@@ -72,6 +92,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
 
+  public abstract _delete(options: DeleteOptions): Promise<void>;
   public abstract _xmit(
     fso: FileSystemObject,
     copyErrors: XmitError[],

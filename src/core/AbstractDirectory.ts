@@ -9,7 +9,11 @@ import {
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import { getName, joinPaths } from "../util/path";
-import { InvalidModificationError } from "./errors";
+import {
+  InvalidModificationError,
+  NotFoundError,
+  PathExistsError,
+} from "./errors";
 import { AbstractFile } from "./AbstractFile";
 
 export abstract class AbstractDirectory
@@ -43,20 +47,20 @@ export abstract class AbstractDirectory
   }
 
   public async _xmit(
-    fso: FileSystemObject,
+    to: FileSystemObject,
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void> {
     await this.head(); // check if this directory exists
-    if (fso instanceof AbstractFile) {
+    if (to instanceof AbstractFile) {
       throw new InvalidModificationError(
-        fso.fs.repository,
-        fso.path,
-        `Cannot copy a directory "${this}" to a file "${fso}"`
+        to.fs.repository,
+        to.path,
+        `Cannot copy a directory "${this}" to a file "${to}"`
       );
     }
 
-    const toDir = fso as Directory;
+    const toDir = to as Directory;
     await toDir.mkcol({
       force: options.force,
       recursive: false,
@@ -79,15 +83,16 @@ export abstract class AbstractDirectory
         : this.fs.getDirectory(toPath))) as unknown as AbstractFileSystemObject;
       try {
         await fromFso._xmit(toFso, copyErrors, options);
-        if (options.move) {
-          try {
-            await fromFso.delete();
-          } catch (error) {
-            copyErrors.push({ from: fromFso, to: toFso, error });
-          }
-        }
       } catch (error) {
         copyErrors.push({ from: fromFso, to: toFso, error });
+      }
+    }
+
+    if (options.move) {
+      try {
+        await this.delete();
+      } catch (error) {
+        copyErrors.push({ from: this, to, error });
       }
     }
   }
@@ -113,6 +118,16 @@ export abstract class AbstractDirectory
   public async mkcol(
     options: MkcolOptions = { force: false, recursive: false }
   ): Promise<void> {
+    if (!options.force) {
+      try {
+        await this.stat();
+        throw new PathExistsError(this.fs.repository, this.path);
+      } catch (e) {
+        if (!(e instanceof NotFoundError)) {
+          throw e;
+        }
+      }
+    }
     if (!options.ignoreHook && this.beforeMkcol) {
       if (await this.beforeMkcol(this.path, options)) {
         return;

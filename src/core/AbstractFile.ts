@@ -49,19 +49,29 @@ export abstract class AbstractFile
   }
 
   public async _xmit(
-    fso: AbstractFileSystemObject,
+    toFso: AbstractFileSystemObject,
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void> {
-    await this.stat(); // check if this directory exists
-    if (fso instanceof AbstractDirectory) {
+    await this.head(); // check if this directory exists
+    if (toFso instanceof AbstractDirectory) {
       throw new InvalidModificationError(
-        fso.fs.repository,
-        fso.path,
-        `Cannot copy a file "${this}" to a directory "${fso}"`
+        toFso.fs.repository,
+        toFso.path,
+        `Cannot copy a file "${this}" to a directory "${toFso}"`
       );
     }
-    const to = fso as AbstractFile;
+    const to = toFso as AbstractFile;
+    if (!options.force) {
+      try {
+        await to.head();
+        throw new PathExistsError(to.fs.repository, to.path);
+      } catch (e) {
+        if (!(e instanceof NotFoundError)) {
+          throw e;
+        }
+      }
+    }
 
     const rs = await this.openReadStream({ bufferSize: options.bufferSize });
     try {

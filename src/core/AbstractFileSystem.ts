@@ -1,9 +1,11 @@
+import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
   DeleteOptions,
   Directory,
   File,
   FileSystem,
+  FileSystemObject,
   FileSystemOptions,
   HeadOptions,
   MoveOptions,
@@ -15,13 +17,8 @@ import {
 } from "./core";
 
 export abstract class AbstractFileSystem implements FileSystem {
-  private afterDelete?: (path: string) => Promise<void>;
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
   private afterPatch?: (path: string) => Promise<void>;
-  private beforeDelete?: (
-    path: string,
-    options: DeleteOptions
-  ) => Promise<boolean>;
   private beforeHead?: (
     path: string,
     options: HeadOptions
@@ -41,10 +38,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     public readonly options: FileSystemOptions = {}
   ) {
     const hook = options.hook;
-    this.beforeDelete = hook?.beforeDelete;
     this.beforeHead = hook?.beforeHead;
     this.beforePatch = hook?.beforePatch;
-    this.afterDelete = hook?.afterDelete;
     this.afterHead = hook?.afterHead;
     this.afterPatch = hook?.afterPatch;
   }
@@ -62,15 +57,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     path: string,
     options: DeleteOptions = { force: false, recursive: false }
   ): Promise<void> {
-    if (!options.ignoreHook && this.beforeDelete) {
-      if (await this.beforeDelete(path, options)) {
-        return;
-      }
-    }
-    await this._delete(path, options);
-    if (!options.ignoreHook && this.afterDelete) {
-      await this.afterDelete(path);
-    }
+    const fso = await this.getFileSystemObject(path);
+    return fso.delete(options);
   }
 
   public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
@@ -112,7 +100,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public abstract _delete(path: string, options: DeleteOptions): Promise<void>;
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _patch(
     path: string,
@@ -133,12 +120,14 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract getFile(path: string): Promise<File>;
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 
+  protected async getFileSystemObject(path: string): Promise<FileSystemObject> {
+    const stats = await this.stat(path);
+    return stats.size ? this.getFile(path) : this.getDirectory(path);
+  }
+
   private async _prepareXmit(fromPath: string, toPath: string) {
-    const stats = await this.stat(fromPath);
-    const from = await (stats.size
-      ? this.getFile(fromPath)
-      : this.getDirectory(fromPath));
-    const to = await (stats.size
+    const from = await this.getFileSystemObject(fromPath);
+    const to = await (from instanceof AbstractFile
       ? this.getFile(toPath)
       : this.getDirectory(toPath));
     return { from, to };

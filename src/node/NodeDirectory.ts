@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { AbstractDirectory } from "../core/AbstractDirectory";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
-import { ListOptions, MkcolOptions } from "../core/core";
+import { DeleteOptions, ListOptions, MkcolOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
@@ -10,6 +10,18 @@ export class NodeDirectory extends AbstractDirectory {
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
+  }
+
+  public _delete(options: DeleteOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      fs.rmdir(this.getFullPath(), { recursive: options.recursive }, (err) => {
+        if (err) {
+          reject(convertError(this.fs.repository, this.path, err, true));
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
   public _list(_options: ListOptions): Promise<string[]> {
