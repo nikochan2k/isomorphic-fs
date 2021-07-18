@@ -1,6 +1,6 @@
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractStream } from "./AbstractStream";
-import { OpenOptions, ReadStream } from "./core";
+import { OpenOptions, ReadStream, WriteStream } from "./core";
 
 export abstract class AbstractReadStream
   extends AbstractStream
@@ -22,6 +22,13 @@ export abstract class AbstractReadStream
     await this._close();
     if (!this.options.ignoreHook && this.afterGet) {
       this.afterGet(this.fso.path);
+    }
+  }
+
+  public async pipe(ws: WriteStream): Promise<void> {
+    let buffer: any;
+    while ((buffer = await this.read()) != null) {
+      await ws.write(buffer);
     }
   }
 

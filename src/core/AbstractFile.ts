@@ -92,10 +92,7 @@ export abstract class AbstractFile
         bufferSize: options.bufferSize,
       });
       try {
-        let buffer: any;
-        while ((buffer = await rs.read()) != null) {
-          await ws.write(buffer);
-        }
+        await rs.pipe(ws);
       } finally {
         await ws.close();
       }

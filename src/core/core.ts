@@ -209,6 +209,7 @@ export interface Stream {
 
 export interface ReadStream extends Stream {
   read(size?: number): Promise<ArrayBuffer | Uint8Array | null>;
+  pipe(ws: WriteStream): Promise<void>;
 }
 export interface WriteStream extends Stream {
   setLength(len: number): Promise<void>;
