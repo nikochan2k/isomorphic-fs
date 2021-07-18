@@ -25,15 +25,15 @@ export abstract class AbstractFile
   extends AbstractFileSystemObject
   implements File
 {
-  private beforeGet?: (
+  protected beforeGet?: (
     path: string,
     options: OpenOptions
   ) => Promise<ReadStream | null>;
-  private beforePost?: (
+  protected beforePost?: (
     path: string,
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
-  private beforePut?: (
+  protected beforePut?: (
     path: string,
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
@@ -112,8 +112,8 @@ export abstract class AbstractFile
     }
   }
 
-  public async hash(bufferSize?: number): Promise<string> {
-    const rs = await this.openReadStream({ bufferSize });
+  public async hash(options: OpenOptions = {}): Promise<string> {
+    const rs = await this.openReadStream(options);
     try {
       const hash = createHash();
       let buffer: ArrayBuffer | Uint8Array | null;

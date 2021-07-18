@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import * as fs from "fs";
 import { AbstractFile } from "../core/AbstractFile";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
@@ -43,22 +42,6 @@ export class NodeFile extends AbstractFile {
     options: OpenWriteOptions
   ): Promise<AbstractWriteStream> {
     return new NodeWriteStream(this, options);
-  }
-
-  public override hash(): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
-      const hash = createHash("sha256");
-      const input = fs.createReadStream(this.getFullPath());
-      input.on("data", (data) => {
-        hash.update(data);
-      });
-      input.on("end", () => {
-        resolve(hash.digest("hex"));
-      });
-      input.on("error", (err) => {
-        reject(convertError(this.fs.repository, this.path, err, false));
-      });
-    });
   }
 
   private getFullPath() {

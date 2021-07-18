@@ -186,7 +186,7 @@ export interface Directory extends FileSystemObject {
 }
 
 export interface File extends FileSystemObject {
-  hash(bufferSize?: number): Promise<string>;
+  hash(options?: OpenOptions): Promise<string>;
   openReadStream(options?: OpenOptions): Promise<ReadStream>;
   openWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
 }
