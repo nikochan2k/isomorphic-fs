@@ -9,12 +9,12 @@ const LUT_HEX_4b = [
   "7",
   "8",
   "9",
-  "A",
-  "B",
-  "C",
-  "D",
-  "E",
-  "F",
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
 ];
 
 const LUT_HEX_8b = new Array(0x100);
