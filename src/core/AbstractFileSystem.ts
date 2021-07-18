@@ -35,9 +35,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: PatchOptions
   ) => Promise<boolean>;
 
+  public cp = this.copy;
   public del = this.delete;
   public ls = this.list;
   public mkdir = this.mkcol;
+  public mv = this.move;
   public readdir = this.list;
   public rm = this.delete;
   public stat = this.head;
@@ -138,6 +140,23 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (this.afterPatch) {
       await this.afterPatch(path);
     }
+  }
+
+  public async readAll(
+    path: string,
+    options: OpenOptions
+  ): Promise<ArrayBuffer | Uint8Array> {
+    const file = await this.getFile(path);
+    return file.readAll(options);
+  }
+
+  public async writeAll(
+    path: string,
+    buffer: ArrayBuffer | Uint8Array,
+    options?: OpenWriteOptions
+  ): Promise<void> {
+    const file = await this.getFile(path);
+    return file.writeAll(buffer, options);
   }
 
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;

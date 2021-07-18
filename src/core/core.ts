@@ -132,43 +132,64 @@ export interface XmitError {
 }
 
 export interface FileSystem {
-  repository: string;
   options: FileSystemOptions;
+  repository: string;
+
   copy(
     fromPath: string,
     toPath: string,
     options?: CopyOptions
   ): Promise<XmitError[]>;
-  del(path: string, options?: DeleteOptions): Promise<void>;
-  delete(path: string, options?: DeleteOptions): Promise<void>;
-  getDirectory(path: string): Promise<Directory>;
-  getFile(path: string): Promise<File>;
-  head(path: string, options?: HeadOptions): Promise<Stats>;
-  move(
+  cp(
     fromPath: string,
     toPath: string,
-    options?: MoveOptions
+    options?: CopyOptions
   ): Promise<XmitError[]>;
-  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  rm(path: string, options?: DeleteOptions): Promise<void>;
-  stat(path: string, options?: HeadOptions): Promise<Stats>;
-  toURL(path: string, urlType?: URLType): Promise<string>;
-  list(path: string, options?: ListOptions): Promise<string[]>;
-  ls(path: string, options?: ListOptions): Promise<string[]>;
-  readdir(path: string, options?: ListOptions): Promise<string[]>;
-  mkdir(path: string, options?: MkcolOptions): Promise<void>;
-  mkcol(path: string, options?: MkcolOptions): Promise<void>;
-  hash(path: string, options?: OpenOptions): Promise<string>;
   createReadStream(path: string, options?: OpenOptions): Promise<ReadStream>;
   createWriteStream(
     path: string,
     options?: OpenWriteOptions
   ): Promise<WriteStream>;
+  del(path: string, options?: DeleteOptions): Promise<void>;
+  delete(path: string, options?: DeleteOptions): Promise<void>;
+  getDirectory(path: string): Promise<Directory>;
+  getFile(path: string): Promise<File>;
+  hash(path: string, options?: OpenOptions): Promise<string>;
+  head(path: string, options?: HeadOptions): Promise<Stats>;
+  list(path: string, options?: ListOptions): Promise<string[]>;
+  ls(path: string, options?: ListOptions): Promise<string[]>;
+  mkcol(path: string, options?: MkcolOptions): Promise<void>;
+  mkdir(path: string, options?: MkcolOptions): Promise<void>;
+  move(
+    fromPath: string,
+    toPath: string,
+    options?: MoveOptions
+  ): Promise<XmitError[]>;
+  mv(
+    fromPath: string,
+    toPath: string,
+    options?: MoveOptions
+  ): Promise<XmitError[]>;
+  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
+  readAll(
+    path: string,
+    options: OpenOptions
+  ): Promise<ArrayBuffer | Uint8Array | null>;
+  readdir(path: string, options?: ListOptions): Promise<string[]>;
+  rm(path: string, options?: DeleteOptions): Promise<void>;
+  stat(path: string, options?: HeadOptions): Promise<Stats>;
+  toURL(path: string, urlType?: URLType): Promise<string>;
+  writeAll(
+    path: string,
+    buffer: ArrayBuffer | Uint8Array,
+    options?: OpenWriteOptions
+  ): Promise<void>;
 }
 
 export interface FileSystemObject {
   fs: FileSystem;
   path: string;
+
   copy(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
   cp(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
   del(options?: DeleteOptions): Promise<void>;
@@ -186,20 +207,20 @@ export interface FileSystemObject {
 export interface Directory extends FileSystemObject {
   list(options?: ListOptions): Promise<string[]>;
   ls(options?: ListOptions): Promise<string[]>;
-  readdir(options?: ListOptions): Promise<string[]>;
-  mkdir(options?: MkcolOptions): Promise<void>;
   mkcol(options?: MkcolOptions): Promise<void>;
+  mkdir(options?: MkcolOptions): Promise<void>;
+  readdir(options?: ListOptions): Promise<string[]>;
 }
 
 export interface File extends FileSystemObject {
+  createReadStream(options?: OpenOptions): Promise<ReadStream>;
+  createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
   readAll(options: OpenOptions): Promise<ArrayBuffer | Uint8Array | null>;
   writeAll(
     buffer: ArrayBuffer | Uint8Array,
     options?: OpenWriteOptions
   ): Promise<void>;
-  createReadStream(options?: OpenOptions): Promise<ReadStream>;
-  createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
 }
 
 export enum SeekOrigin {
@@ -208,13 +229,13 @@ export enum SeekOrigin {
   End,
 }
 export interface Stream {
-  seek(offset: number, origin: SeekOrigin): Promise<void>;
   close(): Promise<void>;
+  seek(offset: number, origin: SeekOrigin): Promise<void>;
 }
 
 export interface ReadStream extends Stream {
-  read(size?: number): Promise<ArrayBuffer | Uint8Array | null>;
   pipe(ws: WriteStream): Promise<void>;
+  read(size?: number): Promise<ArrayBuffer | Uint8Array | null>;
 }
 export interface WriteStream extends Stream {
   setLength(len: number): Promise<void>;
