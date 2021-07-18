@@ -26,7 +26,7 @@ afterAll(() => {
   rmSync(rootDir, { recursive: true });
 });
 
-test("readdir", async () => {
+test("rootdir", async () => {
   const dir = await fs.getDirectory("/");
   const paths = await dir.readdir();
   expect(paths.length).toBe(0);

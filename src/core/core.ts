@@ -158,6 +158,12 @@ export interface FileSystem {
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   mkdir(path: string, options?: MkcolOptions): Promise<void>;
   mkcol(path: string, options?: MkcolOptions): Promise<void>;
+  hash(path: string, options?: OpenOptions): Promise<string>;
+  createReadStream(path: string, options?: OpenOptions): Promise<ReadStream>;
+  createWriteStream(
+    path: string,
+    options?: OpenWriteOptions
+  ): Promise<WriteStream>;
 }
 
 export interface FileSystemObject {

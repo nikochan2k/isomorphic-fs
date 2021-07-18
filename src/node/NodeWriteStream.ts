@@ -41,13 +41,17 @@ export class NodeWriteStream extends AbstractWriteStream {
   public _write(buffer: ArrayBuffer | Uint8Array | Buffer): Promise<void> {
     const fso = this.fso;
     if (!this.writeStream || this.writeStream.destroyed) {
-      this.writeStream = fs.createWriteStream(
-        joinPaths(fso.fs.repository, fso.path),
-        {
-          flags: this.options.append ? "a" : "w",
-          highWaterMark: this.bufferSize,
-        }
-      );
+      try {
+        this.writeStream = fs.createWriteStream(
+          joinPaths(fso.fs.repository, fso.path),
+          {
+            flags: this.options.append ? "a" : "w",
+            highWaterMark: this.bufferSize,
+          }
+        );
+      } catch (e) {
+        throw convertError(fso.fs.repository, fso.path, e, true);
+      }
     }
 
     const writeStream = this.writeStream;
@@ -66,6 +70,7 @@ export class NodeWriteStream extends AbstractWriteStream {
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
     await this.close();
 
+    const fso = this.fso;
     const flags = origin === SeekOrigin.End ? "a" : "w";
     let start: number | undefined;
     if (origin === SeekOrigin.Begin) {
@@ -76,17 +81,21 @@ export class NodeWriteStream extends AbstractWriteStream {
       this.position = start;
     } else {
       start = undefined;
-      const stats = await this.fso.stat();
+      const stats = await fso.stat();
       this.position = stats.size as number;
     }
 
-    this.writeStream = fs.createWriteStream(
-      joinPaths(this.fso.fs.repository, this.fso.path),
-      {
-        flags,
-        highWaterMark: this.bufferSize,
-        start,
-      }
-    );
+    try {
+      this.writeStream = fs.createWriteStream(
+        joinPaths(fso.fs.repository, fso.path),
+        {
+          flags,
+          highWaterMark: this.bufferSize,
+          start,
+        }
+      );
+    } catch (e) {
+      throw convertError(fso.fs.repository, fso.path, e, true);
+    }
   }
 }

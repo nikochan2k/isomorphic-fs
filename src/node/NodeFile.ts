@@ -47,16 +47,22 @@ export class NodeFile extends AbstractFile {
 
   public override hash(options: OpenOptions = {}): Promise<string> {
     return new Promise<string>(async (resolve, reject) => {
+      const repository = this.fs.repository;
+      const path = this.path;
       if (!options.ignoreHook) {
         const beforeGet = this.fs.options.hook?.beforeGet;
         if (beforeGet) {
-          await this.beforeGet(this.path, options);
+          await this.beforeGet(path, options);
         }
       }
       const hash = createHash("sha256");
-      const input = fs.createReadStream(this.getFullPath(), {
-        highWaterMark: options.bufferSize,
-      });
+      try {
+        var input = fs.createReadStream(this.getFullPath(), {
+          highWaterMark: options.bufferSize,
+        });
+      } catch (e) {
+        throw convertError(repository, path, e, false);
+      }
       const onData = (data: any) => {
         hash.update(data);
       };
@@ -76,7 +82,7 @@ export class NodeFile extends AbstractFile {
       const onError = (err: any) => {
         input.off("data", onData);
         input.off("error", onError);
-        reject(convertError(this.fs.repository, this.path, err, false));
+        reject(convertError(repository, path, err, false));
       };
       input.on("error", onError);
     });

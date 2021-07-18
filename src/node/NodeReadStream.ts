@@ -24,13 +24,17 @@ export class NodeReadStream extends AbstractReadStream {
   ): Promise<ArrayBuffer | Uint8Array | Buffer | null> {
     const fso = this.fso;
     if (!this.readStream || this.readStream.destroyed) {
-      this.readStream = fs.createReadStream(
-        joinPaths(fso.fs.repository, fso.path),
-        {
-          flags: "r",
-          highWaterMark: this.bufferSize,
-        }
-      );
+      try {
+        this.readStream = fs.createReadStream(
+          joinPaths(fso.fs.repository, fso.path),
+          {
+            flags: "r",
+            highWaterMark: this.bufferSize,
+          }
+        );
+      } catch (e) {
+        throw convertError(fso.fs.repository, fso.path, e, false);
+      }
     }
 
     const readStream = this.readStream;
@@ -76,14 +80,19 @@ export class NodeReadStream extends AbstractReadStream {
       start = undefined;
     }
 
-    this.readStream = fs.createReadStream(
-      joinPaths(this.fso.fs.repository, this.fso.path),
-      {
-        flags: "r",
-        highWaterMark: this.bufferSize,
-        start,
-      }
-    );
+    const fso = this.fso;
+    try {
+      this.readStream = fs.createReadStream(
+        joinPaths(fso.fs.repository, fso.path),
+        {
+          flags: "r",
+          highWaterMark: this.bufferSize,
+          start,
+        }
+      );
+    } catch (e) {
+      throw convertError(fso.fs.repository, fso.path, e, false);
+    }
     this.position = start || 0;
   }
 }

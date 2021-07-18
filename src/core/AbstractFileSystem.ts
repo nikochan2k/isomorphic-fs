@@ -11,10 +11,14 @@ import {
   ListOptions,
   MkcolOptions,
   MoveOptions,
+  OpenOptions,
+  OpenWriteOptions,
   PatchOptions,
   Props,
+  ReadStream,
   Stats,
   URLType,
+  WriteStream,
   XmitError,
 } from "./core";
 
@@ -58,12 +62,33 @@ export abstract class AbstractFileSystem implements FileSystem {
     return from.copy(to, options);
   }
 
+  public async createReadStream(
+    path: string,
+    options?: OpenOptions
+  ): Promise<ReadStream> {
+    const file = await this.getFile(path);
+    return file.createReadStream(options);
+  }
+
+  public async createWriteStream(
+    path: string,
+    options?: OpenWriteOptions
+  ): Promise<WriteStream> {
+    const file = await this.getFile(path);
+    return file.createWriteStream(options);
+  }
+
   public async delete(
     path: string,
     options: DeleteOptions = { force: false, recursive: false }
   ): Promise<void> {
     const fso = await this.getFileSystemObject(path);
     return fso.delete(options);
+  }
+
+  public async hash(path: string, options?: OpenOptions): Promise<string> {
+    const file = await this.getFile(path);
+    return file.hash(options);
   }
 
   public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
