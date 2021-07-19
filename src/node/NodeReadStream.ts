@@ -14,9 +14,15 @@ export class NodeReadStream extends AbstractReadStream {
   }
 
   public async _close(): Promise<void> {
-    if (this.readStream && !this.readStream.destroyed) {
+    if (!this.readStream) {
+      return;
+    }
+
+    if (!this.readStream.destroyed) {
+      this.readStream.removeAllListeners();
       this.readStream.destroy();
     }
+    this.readStream = null;
   }
 
   public _read(size?: number): Promise<ArrayBuffer | Uint8Array | null> {
@@ -40,13 +46,13 @@ export class NodeReadStream extends AbstractReadStream {
       const onError = (err: Error) => {
         readStream.destroy();
         reject(convertError(fso.fs.repository, fso.path, err, false));
-        cleanup();
+        readStream.removeAllListeners();
       };
       readStream.on("error", onError);
       const onEnd = () => {
         readStream.destroy();
         resolve(null);
-        cleanup();
+        readStream.removeAllListeners();
       };
       readStream.on("end", onEnd);
       const onReadable = () => {
@@ -64,14 +70,9 @@ export class NodeReadStream extends AbstractReadStream {
         } else {
           resolve(null);
         }
-        cleanup();
+        readStream.removeAllListeners();
       };
       readStream.on("readable", onReadable);
-      const cleanup = () => {
-        readStream.off("readable", onReadable);
-        readStream.off("end", onEnd);
-        readStream.off("error", onError);
-      };
     });
   }
 
