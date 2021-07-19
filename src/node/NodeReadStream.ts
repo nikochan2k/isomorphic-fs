@@ -8,6 +8,8 @@ import { convertError } from "./NodeFileSystem";
 export class NodeReadStream extends AbstractReadStream {
   private position = 0;
   private readStream?: fs.ReadStream;
+  // private onEnd: () => void;
+  // private onError: (err: Error) => void;
 
   constructor(fso: AbstractFileSystemObject, options: OpenOptions) {
     super(fso, options);
@@ -39,11 +41,13 @@ export class NodeReadStream extends AbstractReadStream {
     return new Promise<ArrayBuffer | Uint8Array | null>((resolve, reject) => {
       const onError = (err: Error) => {
         readStream.off("error", onError);
+        readStream.destroy();
         reject(convertError(fso.fs.repository, fso.path, err, false));
       };
       readStream.on("error", onError);
       const onEnd = () => {
         readStream.off("end", onEnd);
+        readStream.destroy();
         resolve(null);
       };
       readStream.on("end", onEnd);
