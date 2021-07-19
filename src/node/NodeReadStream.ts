@@ -14,52 +14,39 @@ export class NodeReadStream extends AbstractReadStream {
   }
 
   public async _close(): Promise<void> {
+    this.destory();
+  }
+
+  private destory() {
     if (!this.readStream) {
       return;
     }
 
-    if (!this.readStream.destroyed) {
-      this.readStream.removeAllListeners();
-      this.readStream.destroy();
-    }
+    this.readStream.removeAllListeners();
+    this.readStream.destroy();
     this.readStream = null;
   }
 
   public _read(size?: number): Promise<ArrayBuffer | Uint8Array | null> {
-    const fso = this.fso;
-    if (!this.readStream || this.readStream.destroyed) {
-      try {
-        this.readStream = fs.createReadStream(
-          joinPaths(fso.fs.repository, fso.path),
-          {
-            flags: "r",
-            highWaterMark: this.bufferSize,
-          }
-        );
-      } catch (e) {
-        throw convertError(fso.fs.repository, fso.path, e, false);
-      }
-    }
-
-    const readStream = this.readStream;
     return new Promise<ArrayBuffer | Uint8Array | null>((resolve, reject) => {
+      try {
+        var readStream = this.buildReadStream();
+      } catch (e) {
+        reject(e);
+      }
+      const fso = this.fso;
       const onError = (err: Error) => {
-        readStream.destroy();
         reject(convertError(fso.fs.repository, fso.path, err, false));
-        readStream.removeAllListeners();
+        this.destory();
       };
       readStream.on("error", onError);
       const onEnd = () => {
-        readStream.destroy();
         resolve(null);
-        readStream.removeAllListeners();
+        this.destory();
       };
       readStream.on("end", onEnd);
       const onReadable = () => {
-        let b: Buffer = size ? readStream.read(size) : null;
-        if (b === null) {
-          b = readStream.read();
-        }
+        const b = size ? readStream.read(size) : readStream.read();
         if (b) {
           this.position += b.byteLength;
           const buffer = b.buffer.slice(
@@ -77,10 +64,6 @@ export class NodeReadStream extends AbstractReadStream {
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
-    if (this.readStream && !this.readStream.destroyed) {
-      this.readStream.destroy();
-    }
-
     let start: number | undefined;
     if (origin === SeekOrigin.Begin) {
       start = offset;
@@ -90,19 +73,28 @@ export class NodeReadStream extends AbstractReadStream {
       start = undefined;
     }
 
-    const fso = this.fso;
-    try {
-      this.readStream = fs.createReadStream(
-        joinPaths(fso.fs.repository, fso.path),
-        {
-          flags: "r",
-          highWaterMark: this.bufferSize,
-          start,
-        }
-      );
-    } catch (e) {
-      throw convertError(fso.fs.repository, fso.path, e, false);
-    }
+    this.destory();
+    this.buildReadStream(start);
     this.position = start || 0;
+  }
+
+  private buildReadStream(start?: number) {
+    if (this.readStream && !this.readStream.destroyed) {
+      return this.readStream;
+    }
+
+    const fso = this.fso;
+    const repository = fso.fs.repository;
+    const path = fso.path;
+    try {
+      this.readStream = fs.createReadStream(joinPaths(repository, path), {
+        flags: "r",
+        highWaterMark: this.bufferSize,
+        start,
+      });
+      return this.readStream;
+    } catch (e) {
+      throw convertError(repository, path, e, false);
+    }
   }
 }
