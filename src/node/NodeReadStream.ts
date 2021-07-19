@@ -42,6 +42,11 @@ export class NodeReadStream extends AbstractReadStream {
         reject(convertError(fso.fs.repository, fso.path, err, false));
       };
       readStream.on("error", onError);
+      const onEnd = () => {
+        readStream.off("end", onEnd);
+        resolve(null);
+      };
+      readStream.on("end", onEnd);
       const onReadable = () => {
         readStream.off("readable", onReadable);
         let b: Buffer = size ? readStream.read(size) : null;
@@ -57,11 +62,6 @@ export class NodeReadStream extends AbstractReadStream {
           resolve(buffer);
         }
       };
-      const onEnd = () => resolve(null);
-      readStream.on("end", () => {
-        readStream.off("end", onEnd);
-        onEnd();
-      });
       readStream.on("readable", onReadable);
     });
   }
