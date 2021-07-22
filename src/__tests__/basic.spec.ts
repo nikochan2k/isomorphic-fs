@@ -191,7 +191,7 @@ test("move directory", async () => {
 });
 
 test("copy large file", async () => {
-  const imagePath = path.join(__dirname, "sample.jpg");
+  const imagePath = path.join(process.cwd(), "sample.jpg");
   const nodeStats = statSync(imagePath);
   const buffer = readFileSync(imagePath);
   const ab = toArrayBuffer(buffer);
