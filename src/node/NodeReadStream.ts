@@ -27,8 +27,8 @@ export class NodeReadStream extends AbstractReadStream {
     this.readStream = null;
   }
 
-  public _read(size?: number): Promise<ArrayBuffer | Uint8Array | null> {
-    return new Promise<ArrayBuffer | Uint8Array | null>((resolve, reject) => {
+  public _read(size?: number): Promise<ArrayBuffer | null> {
+    return new Promise<ArrayBuffer | null>((resolve, reject) => {
       try {
         var readStream = this.buildReadStream();
       } catch (e) {
@@ -46,7 +46,7 @@ export class NodeReadStream extends AbstractReadStream {
       };
       readStream.on("end", onEnd);
       const onReadable = () => {
-        const b = size ? readStream.read(size) : readStream.read();
+        const b: Buffer = size ? readStream.read(size) : readStream.read();
         if (b) {
           this.position += b.byteLength;
           const buffer = b.buffer.slice(
