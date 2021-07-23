@@ -1,4 +1,4 @@
-export abstract class AbstractFileError implements Error {
+export abstract class AbstractFileSystemError implements Error {
   // #region Properties (3)
 
   public message: string;
@@ -35,7 +35,7 @@ export abstract class AbstractFileError implements Error {
   // #endregion Constructors (1)
 }
 
-export class NotFoundError extends AbstractFileError {
+export class NotFoundError extends AbstractFileSystemError {
   // #region Properties (1)
 
   public name = "Not found error";
@@ -51,7 +51,7 @@ export class NotFoundError extends AbstractFileError {
   // #endregion Constructors (1)
 }
 
-export class NotReadableError extends AbstractFileError {
+export class NotReadableError extends AbstractFileSystemError {
   // #region Properties (1)
 
   public name = "Not readable error";
@@ -67,7 +67,7 @@ export class NotReadableError extends AbstractFileError {
   // #endregion Constructors (1)
 }
 
-export class NoModificationAllowedError extends AbstractFileError {
+export class NoModificationAllowedError extends AbstractFileSystemError {
   // #region Properties (1)
 
   public name = "No modification allowed error";
@@ -83,7 +83,7 @@ export class NoModificationAllowedError extends AbstractFileError {
   // #endregion Constructors (1)
 }
 
-export class InvalidStateError extends AbstractFileError {
+export class InvalidStateError extends AbstractFileSystemError {
   // #region Properties (1)
 
   public name = "Invalid state error";
@@ -99,7 +99,55 @@ export class InvalidStateError extends AbstractFileError {
   // #endregion Constructors (1)
 }
 
-export class InvalidModificationError extends AbstractFileError {
+export class EncodingError extends AbstractFileSystemError {
+  // #region Properties (1)
+
+  public name = "Encoding error";
+
+  // #endregion Properties (1)
+
+  // #region Constructors (1)
+
+  constructor(repository: string, path: string, detail?: any) {
+    super(repository, path, detail);
+  }
+
+  // #endregion Constructors (1)
+}
+
+export class QuotaExceededError extends AbstractFileSystemError {
+  // #region Properties (1)
+
+  public name = "Quota exceeded error";
+
+  // #endregion Properties (1)
+
+  // #region Constructors (1)
+
+  constructor(repository: string, path: string, detail?: any) {
+    super(repository, path, detail);
+  }
+
+  // #endregion Constructors (1)
+}
+
+export class SecurityError extends AbstractFileSystemError {
+  // #region Properties (1)
+
+  public name = "Security error";
+
+  // #endregion Properties (1)
+
+  // #region Constructors (1)
+
+  constructor(repository: string, path: string, detail?: any) {
+    super(repository, path, detail);
+  }
+
+  // #endregion Constructors (1)
+}
+
+export class InvalidModificationError extends AbstractFileSystemError {
   // #region Properties (1)
 
   public name = "Invalid modification error";
@@ -115,7 +163,23 @@ export class InvalidModificationError extends AbstractFileError {
   // #endregion Constructors (1)
 }
 
-export class PathExistsError extends AbstractFileError {
+export class TypeMismatchError extends AbstractFileSystemError {
+  // #region Properties (1)
+
+  public name = "Type mismatch error";
+
+  // #endregion Properties (1)
+
+  // #region Constructors (1)
+
+  constructor(repository: string, path: string, detail?: any) {
+    super(repository, path, detail);
+  }
+
+  // #endregion Constructors (1)
+}
+
+export class PathExistsError extends AbstractFileSystemError {
   // #region Properties (1)
 
   public name = "Path exists error";

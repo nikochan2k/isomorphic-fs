@@ -12,8 +12,8 @@ import {
   URLType,
 } from "../core/core";
 import {
-  InvalidModificationError,
   InvalidStateError,
+  NoModificationAllowedError,
   NotFoundError,
   NotReadableError,
 } from "../core/errors";
@@ -31,7 +31,7 @@ export function convertError(
     return new NotFoundError(repository, path, err);
   }
   if (write) {
-    return new InvalidModificationError(repository, path, err);
+    return new NoModificationAllowedError(repository, path, err);
   } else {
     return new NotReadableError(repository, path, err);
   }

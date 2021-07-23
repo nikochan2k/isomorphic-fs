@@ -1,3 +1,5 @@
+import { EncodingError } from "../core";
+
 export const DIR_SEPARATOR = "/";
 
 function getPathParts(path: string) {
@@ -6,8 +8,8 @@ function getPathParts(path: string) {
   for (const part of parts) {
     if (part === "..") {
       // Go up one level.
-      if (!pathParts.length) {
-        throw Error("Invalid path");
+      if (pathParts.length === 0) {
+        throw new EncodingError("", path);
       }
       pathParts.pop();
     } else if (part === ".") {

@@ -1,3 +1,7 @@
+import { getName, joinPaths } from "../util/path";
+import { AbstractFile } from "./AbstractFile";
+import { AbstractFileSystem } from "./AbstractFileSystem";
+import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import {
   Directory,
   FileSystemObject,
@@ -6,15 +10,12 @@ import {
   XmitError,
   XmitOptions,
 } from "./core";
-import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
-import { AbstractFileSystem } from "./AbstractFileSystem";
-import { getName, joinPaths } from "../util/path";
 import {
-  InvalidModificationError,
+  NoModificationAllowedError,
   NotFoundError,
   PathExistsError,
+  TypeMismatchError,
 } from "./errors";
-import { AbstractFile } from "./AbstractFile";
 
 export abstract class AbstractDirectory
   extends AbstractFileSystemObject
@@ -53,7 +54,7 @@ export abstract class AbstractDirectory
   ): Promise<void> {
     await this.head(); // check if this directory exists
     if (to instanceof AbstractFile) {
-      throw new InvalidModificationError(
+      throw new TypeMismatchError(
         to.fs.repository,
         to.path,
         `Cannot copy a directory "${this}" to a file "${to}"`
@@ -124,7 +125,7 @@ export abstract class AbstractDirectory
         throw new PathExistsError(this.fs.repository, this.path);
       } catch (e) {
         if (!(e instanceof NotFoundError)) {
-          throw e;
+          throw new NoModificationAllowedError(this.fs.repository, this.path);
         }
       }
     }

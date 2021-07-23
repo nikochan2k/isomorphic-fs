@@ -18,8 +18,11 @@ import {
 } from "./core";
 import {
   InvalidModificationError,
+  NoModificationAllowedError,
   NotFoundError,
+  NotReadableError,
   PathExistsError,
+  TypeMismatchError,
 } from "./errors";
 
 export abstract class AbstractFile
@@ -56,7 +59,7 @@ export abstract class AbstractFile
   ): Promise<void> {
     await this.head(); // check if this directory exists
     if (toFso instanceof AbstractDirectory) {
-      throw new InvalidModificationError(
+      throw new TypeMismatchError(
         toFso.fs.repository,
         toFso.path,
         `Cannot copy a file "${this}" to a directory "${toFso}"`
@@ -69,7 +72,7 @@ export abstract class AbstractFile
         throw new PathExistsError(to.fs.repository, to.path);
       } catch (e) {
         if (!(e instanceof NotFoundError)) {
-          throw e;
+          throw new InvalidModificationError(to.fs.repository, to.path);
         }
       }
     }
@@ -84,7 +87,7 @@ export abstract class AbstractFile
         if (e instanceof NotFoundError) {
           create = true;
         } else {
-          throw e;
+          throw new NotReadableError(this.fs.repository, this.path);
         }
       }
       const ws = await to.createWriteStream({
@@ -139,14 +142,14 @@ export abstract class AbstractFile
     } catch (e) {
       if (e instanceof NotFoundError) {
         if (options.create === false) {
-          throw e;
+          throw new InvalidModificationError(this.fs.repository, this.path);
         }
         options.create = true;
         if (!options.ignoreHook && this.beforePost) {
           ws = await this.beforePost(this.path, options);
         }
       } else {
-        throw e;
+        throw new NoModificationAllowedError(this.fs.repository, this.path);
       }
     }
     if (!ws) {
