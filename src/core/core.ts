@@ -194,7 +194,7 @@ export interface FileSystemObject {
   cp(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
   del(options?: DeleteOptions): Promise<void>;
   delete(options?: DeleteOptions): Promise<void>;
-  getParent(): Promise<string>;
+  getParent(): Promise<Directory>;
   head(options?: HeadOptions): Promise<Stats>;
   move(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
   mv(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;

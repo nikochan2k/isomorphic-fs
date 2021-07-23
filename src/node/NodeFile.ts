@@ -3,7 +3,7 @@ import { AbstractFile } from "../core/AbstractFile";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
 import { AbstractReadStream } from "../core/AbstractReadStream";
 import { AbstractWriteStream } from "../core/AbstractWriteStream";
-import { DeleteOptions, OpenWriteOptions } from "../core/core";
+import { DeleteOptions, OpenOptions, OpenWriteOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 import { NodeReadStream } from "./NodeReadStream";
@@ -17,7 +17,7 @@ export class NodeFile extends AbstractFile {
   }
 
   public async _createReadStream(
-    options: OpenWriteOptions
+    options: OpenOptions
   ): Promise<AbstractReadStream> {
     return new NodeReadStream(this, options);
   }

@@ -52,12 +52,11 @@ export abstract class AbstractDirectory
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void> {
-    await this.head(); // check if this directory exists
     if (to instanceof AbstractFile) {
       throw new TypeMismatchError(
         to.fs.repository,
         to.path,
-        `Cannot copy a directory "${this}" to a file "${to}"`
+        `"${to}" is not a directory`
       );
     }
 
@@ -104,7 +103,7 @@ export abstract class AbstractDirectory
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
-      list = await this._list(options);
+      list = await this._list();
     }
     if (!options.ignoreHook && this.afterList) {
       await this.afterList(this.path, list);
@@ -119,14 +118,31 @@ export abstract class AbstractDirectory
   public async mkcol(
     options: MkcolOptions = { force: false, recursive: false }
   ): Promise<void> {
-    if (!options.force) {
-      try {
-        await this.stat();
-        throw new PathExistsError(this.fs.repository, this.path);
-      } catch (e) {
-        if (!(e instanceof NotFoundError)) {
-          throw new NoModificationAllowedError(this.fs.repository, this.path);
+    try {
+      const stats = await this.head();
+      if (stats.size != null) {
+        throw new TypeMismatchError(
+          this.fs.repository,
+          this.path,
+          `"${this.path}" is not a directory`
+        );
+      }
+      if (!options.force) {
+        throw new PathExistsError(
+          this.fs.repository,
+          this.path,
+          `"${this.path}" has already existed`
+        );
+      }
+      return;
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        if (options.recursive) {
+          const parent = await this.getParent();
+          await parent.mkcol({ force: true, recursive: true });
         }
+      } else {
+        throw new NoModificationAllowedError(this.fs.repository, this.path);
       }
     }
     if (!options.ignoreHook && this.beforeMkcol) {
@@ -134,12 +150,12 @@ export abstract class AbstractDirectory
         return;
       }
     }
-    await this._mkcol(options);
+    await this._mkcol();
     if (!options.ignoreHook && this.afterMkcol) {
       await this.afterMkcol(this.path);
     }
   }
 
-  public abstract _list(options: ListOptions): Promise<string[]>;
-  public abstract _mkcol(options: MkcolOptions): Promise<void>;
+  public abstract _list(): Promise<string[]>;
+  public abstract _mkcol(): Promise<void>;
 }

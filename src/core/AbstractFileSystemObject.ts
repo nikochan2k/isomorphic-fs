@@ -1,6 +1,7 @@
 import {
   CopyOptions,
   DeleteOptions,
+  Directory,
   FileSystemObject,
   HeadOptions,
   MoveOptions,
@@ -39,6 +40,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
     to: FileSystemObject,
     options: CopyOptions = { force: false, recursive: false }
   ): Promise<XmitError[]> {
+    await this.head(); // check existance
     const copyErrors: XmitError[] = [];
     await this._xmit(to, copyErrors, {
       bufferSize: options.bufferSize,
@@ -63,8 +65,9 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
     }
   }
 
-  public async getParent(): Promise<string> {
-    return getParentPath(this.path);
+  public async getParent(): Promise<Directory> {
+    const parentPath = getParentPath(this.path);
+    return this.fs.getDirectory(parentPath);
   }
 
   public head(options: HeadOptions = {}): Promise<Stats> {
@@ -75,6 +78,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
     to: FileSystemObject,
     options: MoveOptions
   ): Promise<XmitError[]> {
+    await this.head(); // check existance
     const copyErrors: XmitError[] = [];
     await this._xmit(to, copyErrors, {
       bufferSize: options.bufferSize,

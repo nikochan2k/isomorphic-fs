@@ -57,23 +57,22 @@ export abstract class AbstractFile
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void> {
-    await this.head(); // check if this directory exists
     if (toFso instanceof AbstractDirectory) {
       throw new TypeMismatchError(
         toFso.fs.repository,
         toFso.path,
-        `Cannot copy a file "${this}" to a directory "${toFso}"`
+        `"${toFso}" is not a file`
       );
     }
     const to = toFso as AbstractFile;
-    if (!options.force) {
-      try {
-        await to.head();
+    try {
+      await to.head();
+      if (!options.force) {
         throw new PathExistsError(to.fs.repository, to.path);
-      } catch (e) {
-        if (!(e instanceof NotFoundError)) {
-          throw new InvalidModificationError(to.fs.repository, to.path);
-        }
+      }
+    } catch (e) {
+      if (!(e instanceof NotFoundError)) {
+        throw new InvalidModificationError(to.fs.repository, to.path);
       }
     }
 
@@ -131,9 +130,20 @@ export abstract class AbstractFile
   ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
     try {
-      await this.stat();
+      const stats = await this.head();
+      if (stats.size == null) {
+        throw new PathExistsError(
+          this.fs.repository,
+          this.path,
+          `"${this.path}" is directory`
+        );
+      }
       if (options.create === true) {
-        throw new PathExistsError(this.fs.repository, this.path);
+        throw new PathExistsError(
+          this.fs.repository,
+          this.path,
+          `"${this.path}" has already exists`
+        );
       }
       options.create = false;
       if (!options.ignoreHook && this.beforePut) {
@@ -174,7 +184,7 @@ export abstract class AbstractFile
   }
 
   public async readAll(options: OpenOptions = {}): Promise<Uint8Array> {
-    const stats = await this.stat();
+    const stats = await this.head();
     const buffer = this._createBuffer(stats.size);
     const rs = await this.createReadStream(options);
     try {
@@ -217,7 +227,7 @@ export abstract class AbstractFile
     options: OpenOptions
   ): Promise<AbstractReadStream>;
   public abstract _createWriteStream(
-    options: OpenOptions
+    options: OpenWriteOptions
   ): Promise<AbstractWriteStream>;
 
   protected _createBuffer(byteLength: number): Uint8Array {

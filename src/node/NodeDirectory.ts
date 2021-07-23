@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { AbstractDirectory } from "../core/AbstractDirectory";
 import { AbstractFileSystem } from "../core/AbstractFileSystem";
-import { DeleteOptions, ListOptions, MkcolOptions } from "../core/core";
+import { DeleteOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
@@ -24,7 +24,7 @@ export class NodeDirectory extends AbstractDirectory {
     });
   }
 
-  public _list(_options: ListOptions): Promise<string[]> {
+  public _list(): Promise<string[]> {
     return new Promise<string[]>((resolve, reject) => {
       fs.readdir(this.getFullPath(), (err, names) => {
         if (err) {
@@ -36,10 +36,9 @@ export class NodeDirectory extends AbstractDirectory {
     });
   }
 
-  public _mkcol(options: MkcolOptions): Promise<void> {
-    const recursive = options?.recursive || true;
+  public _mkcol(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      fs.mkdir(this.getFullPath(), { recursive }, (err) => {
+      fs.mkdir(this.getFullPath(), { recursive: true }, (err) => {
         if (err) {
           reject(convertError(this.fs.repository, this.path, err, true));
         } else {
