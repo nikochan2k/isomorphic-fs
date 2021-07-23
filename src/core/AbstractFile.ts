@@ -8,6 +8,7 @@ import { AbstractReadStream } from "./AbstractReadStream";
 import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
   DEFAULT_BUFFER_SIZE,
+  DeleteOptions,
   File,
   OpenOptions,
   OpenWriteOptions,
@@ -50,6 +51,28 @@ export abstract class AbstractFile
       this.beforePost = hook.beforePost;
       this.beforePut = hook.beforePut;
     }
+  }
+
+  public async _delete(options: DeleteOptions): Promise<void> {
+    try {
+      const stats = await this.head();
+      if (stats.size == null) {
+        throw new TypeMismatchError(
+          this.fs.repository,
+          this.path,
+          `"${this.path}" is not a file`
+        );
+      }
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        if (!options.force) {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    }
+    return this._rm();
   }
 
   public async _xmit(
@@ -229,6 +252,7 @@ export abstract class AbstractFile
   public abstract _createWriteStream(
     options: OpenWriteOptions
   ): Promise<AbstractWriteStream>;
+  public abstract _rm(): Promise<void>;
 
   protected _createBuffer(byteLength: number): Uint8Array {
     const ab = new ArrayBuffer(byteLength);

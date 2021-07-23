@@ -3,6 +3,7 @@ import { AbstractFile } from "./AbstractFile";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import {
+  DeleteOptions,
   Directory,
   FileSystemObject,
   ListOptions,
@@ -46,6 +47,36 @@ export abstract class AbstractDirectory
       this.afterList = hook.afterList;
     }
   }
+
+  public async _delete(options: DeleteOptions): Promise<void> {
+    try {
+      const stats = await this.head();
+      if (stats.size != null) {
+        throw new TypeMismatchError(
+          this.fs.repository,
+          this.path,
+          `"${this.path}" is not a directory`
+        );
+      }
+    } catch (e) {
+      if (e instanceof NotFoundError) {
+        if (!options.force) {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    }
+    if (options.recursive) {
+      return this._rmdirRecursively();
+    } else {
+      return this._rmdir();
+    }
+  }
+
+  public abstract _rmdir(): Promise<void>;
+
+  public abstract _rmdirRecursively(): Promise<void>;
 
   public async _xmit(
     to: FileSystemObject,
