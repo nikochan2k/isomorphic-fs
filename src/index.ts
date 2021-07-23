@@ -1,5 +1,10 @@
 import "tslib";
 import "./polyfill";
-export * from "./core";
-export * as util from "./util";
-export * as node from "./node";
+const core = import("./core");
+const util = import("./util");
+const node = import("./node");
+export default {
+  ...core,
+  util,
+  node,
+};
