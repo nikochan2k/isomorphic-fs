@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { AbstractFileSystemObject } from "../core/AbstractFileSystemObject";
+import { AbstractFile } from "../core";
 import { AbstractWriteStream } from "../core/AbstractWriteStream";
 import { OpenWriteOptions, SeekOrigin } from "../core/core";
 import { InvalidModificationError } from "../core/errors";
@@ -11,8 +11,8 @@ export class NodeWriteStream extends AbstractWriteStream {
   private position = 0;
   private writeStream?: fs.WriteStream;
 
-  constructor(fso: AbstractFileSystemObject, options: OpenWriteOptions) {
-    super(fso, options);
+  constructor(file: AbstractFile, options: OpenWriteOptions) {
+    super(file, options);
   }
 
   public async _close(): Promise<void> {

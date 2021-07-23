@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { AbstractFileSystemObject } from "../core/AbstractFileSystemObject";
+import { AbstractFile } from "../core";
 import { AbstractReadStream } from "../core/AbstractReadStream";
 import { OpenOptions, SeekOrigin } from "../core/core";
 import { joinPaths } from "../util/path";
@@ -9,8 +9,8 @@ export class NodeReadStream extends AbstractReadStream {
   private position = 0;
   private readStream?: fs.ReadStream;
 
-  constructor(fso: AbstractFileSystemObject, options: OpenOptions) {
-    super(fso, options);
+  constructor(file: AbstractFile, options: OpenOptions) {
+    super(file, options);
   }
 
   public async _close(): Promise<void> {
