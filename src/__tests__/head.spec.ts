@@ -1,4 +1,4 @@
-import "../index";
+import "../polyfill";
 import { rmdirSync } from "fs";
 import { tmpdir } from "os";
 import { normalize } from "path";
