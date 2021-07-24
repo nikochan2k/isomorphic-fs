@@ -58,7 +58,7 @@ test("add text file", async () => {
 test("read text file", async () => {
   const file = await fs.getFile("/test.txt");
   const rs = await file.createReadStream();
-  const buffer = await rs.read();
+  const buffer = (await rs.read()) as ArrayBuffer;
   expect(buffer.byteLength).toBe(4);
   const text = toString(buffer);
   expect(text).toBe("test");
@@ -72,12 +72,12 @@ test("continuous read and write", async () => {
   await ws.write(toBuffer("翔平"));
 
   const rs = await file.createReadStream();
-  let buffer = await rs.read(6);
+  let buffer = (await rs.read(6)) as ArrayBuffer;
   let text = toString(buffer);
   expect(text).toBe("大谷");
 
   await rs.seek(6, SeekOrigin.Begin);
-  buffer = await rs.read();
+  buffer = (await rs.read()) as ArrayBuffer;
   text = toString(buffer);
   expect(text).toBe("翔平");
 
@@ -85,14 +85,14 @@ test("continuous read and write", async () => {
   ws.write(toBuffer("ホームラン"));
 
   await rs.seek(0, SeekOrigin.Begin);
-  buffer = await rs.read();
+  buffer = (await rs.read()) as ArrayBuffer;
   text = toString(buffer);
   expect(text).toBe("大谷翔平ホームラン");
 
   await rs.seek(0, SeekOrigin.Begin);
   await rs.read(6);
   await rs.seek(6, SeekOrigin.Current);
-  buffer = await rs.read();
+  buffer = (await rs.read()) as ArrayBuffer;
   text = toString(buffer);
   expect(text).toBe("ホームラン");
 
@@ -146,7 +146,7 @@ test("create file in dir", async () => {
   expect(before <= modified && modified <= after).toBe(true);
 
   const rs = await file.createReadStream();
-  const inBuf = await rs.read();
+  const inBuf = (await rs.read()) as ArrayBuffer;
   const text = toString(inBuf);
   expect(text).toBe("Sample");
   rs.close();
@@ -210,7 +210,7 @@ test("read specific bytes", async () => {
   const actual = readFileSync(imagePath);
 
   const rs = await fs.createReadStream("/sample.jpg");
-  const buffer = await rs.read(777777);
+  const buffer = (await rs.read(777777)) as ArrayBuffer;
   await rs.close();
 
   expect(buffer.byteLength).toBe(777777);
