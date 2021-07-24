@@ -24,7 +24,7 @@ export class NodeReadStream extends AbstractReadStream {
 
     this.readStream.removeAllListeners();
     this.readStream.destroy();
-    this.readStream = null;
+    this.readStream = undefined;
   }
 
   public _read(size?: number): Promise<ArrayBuffer | null> {
@@ -33,6 +33,7 @@ export class NodeReadStream extends AbstractReadStream {
         var readStream = this.buildReadStream();
       } catch (e) {
         reject(e);
+        return;
       }
       const fso = this.fso;
       const onError = (err: Error) => {

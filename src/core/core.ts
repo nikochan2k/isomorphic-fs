@@ -171,10 +171,7 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<XmitError[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  readAll(
-    path: string,
-    options: OpenOptions
-  ): Promise<ArrayBuffer | Uint8Array | null>;
+  readAll(path: string, options: OpenOptions): Promise<ArrayBuffer>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<void>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
@@ -216,7 +213,7 @@ export interface File extends FileSystemObject {
   createReadStream(options?: OpenOptions): Promise<ReadStream>;
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
-  readAll(options: OpenOptions): Promise<ArrayBuffer | Uint8Array | null>;
+  readAll(options: OpenOptions): Promise<ArrayBuffer>;
   writeAll(
     buffer: ArrayBuffer | Uint8Array,
     options?: OpenWriteOptions
@@ -235,7 +232,7 @@ export interface Stream {
 
 export interface ReadStream extends Stream {
   pipe(ws: WriteStream): Promise<void>;
-  read(size?: number): Promise<ArrayBuffer | Uint8Array | null>;
+  read(size?: number): Promise<ArrayBuffer | null>;
 }
 export interface WriteStream extends Stream {
   setLength(len: number): Promise<void>;

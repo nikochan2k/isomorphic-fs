@@ -1,4 +1,4 @@
-import { toUint8Array } from "../util";
+import { EMPTY_ARRAY_BUFFER, toUint8Array } from "../util";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractStream } from "./AbstractStream";
 import { OpenOptions, ReadStream, WriteStream } from "./core";
@@ -37,13 +37,13 @@ export abstract class AbstractReadStream
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async read(size?: number): Promise<ArrayBuffer | Uint8Array | null> {
-    let buffer: ArrayBuffer;
+  public async read(size?: number): Promise<ArrayBuffer> {
+    let buffer: ArrayBuffer | null;
     if (size == null || size <= this.bufferSize) {
-      buffer = await this._read(size);
+      buffer = (await this._read(size)) as ArrayBuffer;
     } else {
       const stats = await this.fso.head();
-      const max = Math.min(size, stats.size);
+      const max = Math.min(size, stats.size as number);
       const buf = new ArrayBuffer(max);
       const u8 = new Uint8Array(buf);
       let pos = 0;
@@ -53,7 +53,8 @@ export abstract class AbstractReadStream
           next = max;
         }
         let chunkSize = next - pos;
-        const chunk = toUint8Array(await this._read(chunkSize));
+        const b = await this._read(chunkSize);
+        const chunk = toUint8Array(b || EMPTY_ARRAY_BUFFER);
         u8.set(chunk, pos);
         pos += chunkSize;
       } while (pos < max);

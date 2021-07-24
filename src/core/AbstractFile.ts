@@ -206,13 +206,13 @@ export abstract class AbstractFile
     }
   }
 
-  public async readAll(options: OpenOptions = {}): Promise<Uint8Array> {
+  public async readAll(options: OpenOptions = {}): Promise<ArrayBuffer> {
     const stats = await this.head();
-    const buffer = this._createBuffer(stats.size);
+    const buffer = this._createBuffer(stats.size as number);
     const rs = await this.createReadStream(options);
     try {
       let pos = 0;
-      let chunk: any;
+      let chunk: ArrayBuffer | null;
       while ((chunk = await rs.read()) != null) {
         const u8 = toUint8Array(chunk);
         buffer.set(u8, pos);
