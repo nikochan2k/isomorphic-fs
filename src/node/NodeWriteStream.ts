@@ -8,7 +8,6 @@ import { toBuffer } from "./buffer";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeWriteStream extends AbstractWriteStream {
-  private position = 0;
   private writeStream?: fs.WriteStream;
 
   constructor(file: AbstractFile, options: OpenWriteOptions) {
@@ -39,27 +38,19 @@ export class NodeWriteStream extends AbstractWriteStream {
     });
   }
 
-  public _write(buffer: ArrayBuffer | Uint8Array): Promise<void> {
-    const fso = this.fso;
-    if (!this.writeStream || this.writeStream.destroyed) {
-      try {
-        this.writeStream = fs.createWriteStream(
-          joinPaths(fso.fs.repository, fso.path),
-          {
-            flags: this.options.append ? "a" : "w",
-            highWaterMark: this.bufferSize,
-          }
-        );
-      } catch (e) {
-        throw convertError(fso.fs.repository, fso.path, e, true);
-      }
+  public async _write(buffer: ArrayBuffer | Uint8Array): Promise<void> {
+    if (this.options.append) {
+      await this.seek(0, SeekOrigin.End);
+    } else {
+      this._buildWriteStream();
     }
 
-    const writeStream = this.writeStream;
+    const writeStream = this.writeStream as fs.WriteStream;
     return new Promise<void>((resolve, reject) => {
       const nodeBuffer = toBuffer(buffer);
       writeStream.write(nodeBuffer, (err) => {
         if (err) {
+          const fso = this.fso;
           reject(convertError(fso.fs.repository, fso.path, err, true));
           return;
         }
@@ -69,33 +60,28 @@ export class NodeWriteStream extends AbstractWriteStream {
     });
   }
 
-  public async seek(offset: number, origin: SeekOrigin): Promise<void> {
+  protected async _seek(start: number): Promise<void> {
     await this.close();
+    this._buildWriteStream(start);
+  }
 
-    const fso = this.fso;
-    const flags = origin === SeekOrigin.End ? "a" : "w";
-    let start: number | undefined;
-    if (origin === SeekOrigin.Begin) {
-      start = offset;
-      this.position = start;
-    } else if (origin === SeekOrigin.Current) {
-      start = this.position + offset;
-      this.position = start;
-    } else {
-      start = undefined;
-      const stats = await fso.stat();
-      this.position = stats.size as number;
+  private _buildWriteStream(start?: number) {
+    if (this.writeStream && !this.writeStream.destroyed) {
+      return this.writeStream;
     }
 
+    const fso = this.fso;
     try {
       this.writeStream = fs.createWriteStream(
         joinPaths(fso.fs.repository, fso.path),
         {
-          flags,
+          flags: start ? "a" : "w",
           highWaterMark: this.bufferSize,
           start,
         }
       );
+      this.position = start || 0;
+      return this.writeStream;
     } catch (e) {
       throw convertError(fso.fs.repository, fso.path, e, true);
     }

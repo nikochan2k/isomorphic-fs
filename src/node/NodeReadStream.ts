@@ -1,12 +1,11 @@
 import * as fs from "fs";
 import { AbstractFile } from "../core";
 import { AbstractReadStream } from "../core/AbstractReadStream";
-import { OpenOptions, SeekOrigin } from "../core/core";
+import { OpenOptions } from "../core/core";
 import { joinPaths } from "../util/path";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeReadStream extends AbstractReadStream {
-  private position = 0;
   private readStream?: fs.ReadStream;
 
   constructor(file: AbstractFile, options: OpenOptions) {
@@ -14,10 +13,10 @@ export class NodeReadStream extends AbstractReadStream {
   }
 
   public async _close(): Promise<void> {
-    this.destory();
+    this._destory();
   }
 
-  private destory() {
+  private _destory() {
     if (!this.readStream) {
       return;
     }
@@ -30,7 +29,7 @@ export class NodeReadStream extends AbstractReadStream {
   public _read(size?: number): Promise<ArrayBuffer | null> {
     return new Promise<ArrayBuffer | null>((resolve, reject) => {
       try {
-        var readStream = this.buildReadStream();
+        var readStream = this._buildReadStream();
       } catch (e) {
         reject(e);
         return;
@@ -38,12 +37,12 @@ export class NodeReadStream extends AbstractReadStream {
       const fso = this.fso;
       const onError = (err: Error) => {
         reject(convertError(fso.fs.repository, fso.path, err, false));
-        this.destory();
+        this._destory();
       };
       readStream.on("error", onError);
       const onEnd = () => {
         resolve(null);
-        this.destory();
+        this._destory();
       };
       readStream.on("end", onEnd);
       const onReadable = () => {
@@ -64,22 +63,13 @@ export class NodeReadStream extends AbstractReadStream {
     });
   }
 
-  public async seek(offset: number, origin: SeekOrigin): Promise<void> {
-    let start: number | undefined;
-    if (origin === SeekOrigin.Begin) {
-      start = offset;
-    } else if (origin === SeekOrigin.Current) {
-      start = this.position + offset;
-    } else {
-      start = undefined;
-    }
-
-    this.destory();
-    this.buildReadStream(start);
-    this.position = start || 0;
+  public async _seek(start: number): Promise<void> {
+    this._destory();
+    this._buildReadStream(start);
+    this.position = start;
   }
 
-  private buildReadStream(start?: number) {
+  private _buildReadStream(start?: number) {
     if (this.readStream && !this.readStream.destroyed) {
       return this.readStream;
     }
