@@ -27,13 +27,8 @@ export class NodeReadStream extends AbstractReadStream {
   }
 
   public _read(size?: number): Promise<ArrayBuffer | null> {
+    const readStream = this._buildReadStream();
     return new Promise<ArrayBuffer | null>((resolve, reject) => {
-      try {
-        var readStream = this._buildReadStream();
-      } catch (e) {
-        reject(e);
-        return;
-      }
       const fso = this.fso;
       const onError = (err: Error) => {
         reject(convertError(fso.fs.repository, fso.path, err, false));
@@ -66,11 +61,10 @@ export class NodeReadStream extends AbstractReadStream {
   public async _seek(start: number): Promise<void> {
     this._destory();
     this._buildReadStream(start);
-    this.position = start;
   }
 
   private _buildReadStream(start?: number) {
-    if (this.readStream && !this.readStream.destroyed) {
+    if (!start && this.readStream && !this.readStream.destroyed) {
       return this.readStream;
     }
 
@@ -83,6 +77,7 @@ export class NodeReadStream extends AbstractReadStream {
         highWaterMark: this.bufferSize,
         start,
       });
+      this.position = start || 0;
       return this.readStream;
     } catch (e) {
       throw convertError(repository, path, e, false);

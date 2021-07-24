@@ -66,7 +66,7 @@ export class NodeWriteStream extends AbstractWriteStream {
   }
 
   private _buildWriteStream(start?: number) {
-    if (this.writeStream && !this.writeStream.destroyed) {
+    if (!start && this.writeStream && !this.writeStream.destroyed) {
       return this.writeStream;
     }
 
