@@ -37,8 +37,8 @@ export abstract class AbstractWriteStream
     }
   }
 
-  public async setLength(len: number): Promise<void> {
-    await this.setLength(len);
+  public async truncate(len: number): Promise<void> {
+    await this.truncate(len);
     this.handled = true;
   }
 
@@ -52,6 +52,6 @@ export abstract class AbstractWriteStream
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _setLength(len: number): Promise<void>;
+  public abstract _truncate(size: number): Promise<void>;
   public abstract _write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
 }

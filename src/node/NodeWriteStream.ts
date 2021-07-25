@@ -21,7 +21,7 @@ export class NodeWriteStream extends AbstractWriteStream {
     }
   }
 
-  public async _setLength(len: number): Promise<void> {
+  public async _truncate(len: number): Promise<void> {
     await this.close();
 
     return new Promise<void>((resolve, reject) => {

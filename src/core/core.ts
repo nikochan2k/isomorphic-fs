@@ -235,7 +235,7 @@ export interface ReadStream extends Stream {
   read(size?: number): Promise<ArrayBuffer | null>;
 }
 export interface WriteStream extends Stream {
-  setLength(len: number): Promise<void>;
+  truncate(size: number): Promise<void>;
   write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
 }
 
