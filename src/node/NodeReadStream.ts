@@ -1,29 +1,18 @@
 import * as fs from "fs";
-import { AbstractFile } from "../core";
 import { AbstractReadStream } from "../core/AbstractReadStream";
 import { OpenOptions } from "../core/core";
-import { joinPaths } from "../util/path";
+import { NodeFile } from "./NodeFile";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeReadStream extends AbstractReadStream {
   private readStream?: fs.ReadStream;
 
-  constructor(file: AbstractFile, options: OpenOptions) {
+  constructor(private file: NodeFile, options: OpenOptions) {
     super(file, options);
   }
 
   public async _close(): Promise<void> {
     this._destory();
-  }
-
-  private _destory() {
-    if (!this.readStream) {
-      return;
-    }
-
-    this.readStream.removeAllListeners();
-    this.readStream.destroy();
-    this.readStream = undefined;
   }
 
   public _read(size?: number): Promise<ArrayBuffer | null> {
@@ -64,15 +53,19 @@ export class NodeReadStream extends AbstractReadStream {
   }
 
   private _buildReadStream(start?: number) {
-    if (!start && this.readStream && !this.readStream.destroyed) {
-      return this.readStream;
+    if (this.readStream && !this.readStream.destroyed) {
+      if (start) {
+        this._destory();
+      } else {
+        return this.readStream;
+      }
     }
 
     const fso = this.fso;
     const repository = fso.fs.repository;
     const path = fso.path;
     try {
-      this.readStream = fs.createReadStream(joinPaths(repository, path), {
+      this.readStream = fs.createReadStream(this.file._getFullPath(), {
         flags: "r",
         highWaterMark: this.bufferSize,
         start,
@@ -82,5 +75,15 @@ export class NodeReadStream extends AbstractReadStream {
     } catch (e) {
       throw convertError(repository, path, e, false);
     }
+  }
+
+  private _destory() {
+    if (!this.readStream) {
+      return;
+    }
+
+    this.readStream.removeAllListeners();
+    this.readStream.destroy();
+    this.readStream = undefined;
   }
 }

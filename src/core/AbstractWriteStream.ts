@@ -37,8 +37,11 @@ export abstract class AbstractWriteStream
     }
   }
 
-  public async truncate(len: number): Promise<void> {
-    await this.truncate(len);
+  public async truncate(size: number): Promise<void> {
+    await this._truncate(size);
+    if (size < this.position) {
+      this.position = size;
+    }
     this.handled = true;
   }
 

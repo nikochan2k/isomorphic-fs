@@ -10,7 +10,7 @@ import { NodeReadStream } from "./NodeReadStream";
 import { NodeWriteStream } from "./NodeWriteStream";
 
 export class NodeFile extends AbstractFile {
-  public override toString = this.getFullPath;
+  public override toString = this._getFullPath;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -28,9 +28,13 @@ export class NodeFile extends AbstractFile {
     return new NodeWriteStream(this, options);
   }
 
+  public _getFullPath() {
+    return joinPaths(this.fs.repository, this.path);
+  }
+
   public _rm(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      fs.rm(this.getFullPath(), { force: true }, (err) => {
+      fs.rm(this._getFullPath(), { force: true }, (err) => {
         if (err) {
           reject(convertError(this.fs.repository, this.path, err, true));
         } else {
@@ -38,9 +42,5 @@ export class NodeFile extends AbstractFile {
         }
       });
     });
-  }
-
-  private getFullPath() {
-    return joinPaths(this.fs.repository, this.path);
   }
 }

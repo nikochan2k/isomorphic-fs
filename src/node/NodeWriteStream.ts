@@ -1,33 +1,29 @@
 import * as fs from "fs";
-import { AbstractFile } from "../core";
 import { AbstractWriteStream } from "../core/AbstractWriteStream";
 import { OpenWriteOptions, SeekOrigin } from "../core/core";
 import { InvalidModificationError } from "../core/errors";
-import { joinPaths } from "../util/path";
 import { toBuffer } from "./buffer";
+import { NodeFile } from "./NodeFile";
 import { convertError } from "./NodeFileSystem";
 
 export class NodeWriteStream extends AbstractWriteStream {
   private writeStream?: fs.WriteStream;
 
-  constructor(file: AbstractFile, options: OpenWriteOptions) {
+  constructor(private file: NodeFile, options: OpenWriteOptions) {
     super(file, options);
   }
 
   public async _close(): Promise<void> {
-    if (this.writeStream && !this.writeStream.destroyed) {
-      this.writeStream.destroy();
-      this.writeStream = undefined;
-    }
+    this._destory();
   }
 
   public async _truncate(len: number): Promise<void> {
-    await this.close();
+    this._destory();
 
     return new Promise<void>((resolve, reject) => {
-      const fso = this.fso;
-      fs.truncate(joinPaths(fso.fs.repository, fso.path), len, (err) => {
+      fs.truncate(this.file._getFullPath(), len, (err) => {
         if (err) {
+          const fso = this.fso;
           reject(
             new InvalidModificationError(fso.fs.repository, fso.path, err)
           );
@@ -61,29 +57,40 @@ export class NodeWriteStream extends AbstractWriteStream {
   }
 
   protected async _seek(start: number): Promise<void> {
-    await this.close();
     this._buildWriteStream(start);
   }
 
   private _buildWriteStream(start?: number) {
-    if (!start && this.writeStream && !this.writeStream.destroyed) {
-      return this.writeStream;
+    const writeStream = this.writeStream;
+    if (writeStream && !writeStream.destroyed) {
+      if (start) {
+        this._destory();
+      } else {
+        return writeStream;
+      }
     }
 
     const fso = this.fso;
     try {
-      this.writeStream = fs.createWriteStream(
-        joinPaths(fso.fs.repository, fso.path),
-        {
-          flags: start ? "a" : "w",
-          highWaterMark: this.bufferSize,
-          start,
-        }
-      );
+      this.writeStream = fs.createWriteStream(this.file._getFullPath(), {
+        flags: start ? "a" : "w",
+        highWaterMark: this.bufferSize,
+        start,
+      });
       this.position = start || 0;
       return this.writeStream;
     } catch (e) {
       throw convertError(fso.fs.repository, fso.path, e, true);
     }
+  }
+
+  private async _destory(): Promise<void> {
+    if (!this.writeStream) {
+      return;
+    }
+
+    this.writeStream.removeAllListeners();
+    this.writeStream.destroy();
+    this.writeStream = undefined;
   }
 }
