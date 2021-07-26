@@ -9,7 +9,7 @@ export abstract class AbstractWriteStream
   private afterPost?: (path: string) => Promise<void>;
   private afterPut?: (path: string) => Promise<void>;
 
-  protected handled = false;
+  protected changed = false;
 
   constructor(
     fso: AbstractFileSystemObject,
@@ -23,7 +23,8 @@ export abstract class AbstractWriteStream
 
   public async close(): Promise<void> {
     await this._close();
-    if (!this.handled) {
+    this.position = 0;
+    if (!this.changed) {
       return;
     }
     if (!this.options.ignoreHook && this.afterPost && this.options.create) {
@@ -42,7 +43,7 @@ export abstract class AbstractWriteStream
     if (size < this.position) {
       this.position = size;
     }
-    this.handled = true;
+    this.changed = true;
   }
 
   /**
@@ -51,7 +52,8 @@ export abstract class AbstractWriteStream
    */
   public async write(buffer: ArrayBuffer | Uint8Array): Promise<void> {
     await this._write(buffer);
-    this.handled = true;
+    this.position += buffer.byteLength;
+    this.changed = true;
   }
 
   public abstract _close(): Promise<void>;

@@ -32,7 +32,6 @@ export class NodeReadStream extends AbstractReadStream {
       const onReadable = () => {
         const b: Buffer = size ? readStream.read(size) : readStream.read();
         if (b) {
-          this.position += b.byteLength;
           const buffer = b.buffer.slice(
             b.byteOffset,
             b.byteOffset + b.byteLength
@@ -70,7 +69,6 @@ export class NodeReadStream extends AbstractReadStream {
         highWaterMark: this.bufferSize,
         start,
       });
-      this.position = start || 0;
       return this.readStream;
     } catch (e) {
       throw convertError(repository, path, e, false);

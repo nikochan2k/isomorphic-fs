@@ -226,6 +226,7 @@ export enum SeekOrigin {
   End,
 }
 export interface Stream {
+  position: number;
   close(): Promise<void>;
   seek(offset: number, origin: SeekOrigin): Promise<void>;
 }

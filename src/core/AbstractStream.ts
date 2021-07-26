@@ -4,7 +4,7 @@ import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 export abstract class AbstractStream implements Stream {
   protected readonly bufferSize = DEFAULT_BUFFER_SIZE;
 
-  protected position = 0;
+  public position = 0;
 
   constructor(protected fso: AbstractFileSystemObject, options: OpenOptions) {
     if (options.bufferSize) {
@@ -30,6 +30,7 @@ export abstract class AbstractStream implements Stream {
     } else if (size < start) {
       start = size;
     }
+    this.position = start;
 
     await this._seek(start);
   }

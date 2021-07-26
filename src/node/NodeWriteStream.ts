@@ -50,7 +50,6 @@ export class NodeWriteStream extends AbstractWriteStream {
           reject(convertError(fso.fs.repository, fso.path, err, true));
           return;
         }
-        this.position += nodeBuffer.byteLength;
         resolve();
       });
     });
@@ -77,7 +76,6 @@ export class NodeWriteStream extends AbstractWriteStream {
         highWaterMark: this.bufferSize,
         start,
       });
-      this.position = start || 0;
       return this.writeStream;
     } catch (e) {
       throw convertError(fso.fs.repository, fso.path, e, true);

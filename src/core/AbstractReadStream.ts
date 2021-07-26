@@ -21,6 +21,7 @@ export abstract class AbstractReadStream
 
   public async close(): Promise<void> {
     await this._close();
+    this.position = 0;
     if (!this.options.ignoreHook && this.afterGet) {
       this.afterGet(this.fso.path);
     }
@@ -41,6 +42,9 @@ export abstract class AbstractReadStream
     let buffer: ArrayBuffer | null;
     if (size == null || size <= this.bufferSize) {
       buffer = await this._read(size);
+      if (buffer) {
+        this.position += buffer.byteLength;
+      }
     } else {
       const stats = await this.fso.head();
       const max = Math.min(size, stats.size as number);
@@ -61,6 +65,7 @@ export abstract class AbstractReadStream
         u8.set(chunk, pos);
         pos += chunkSize;
       } while (pos < max);
+      this.position += pos;
       if (pos === max) {
         buffer = buf;
       } else {
