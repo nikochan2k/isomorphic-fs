@@ -1,8 +1,7 @@
-import "../polyfill";
 import { FileSystem, SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
-import { toBuffer } from "../node/buffer";
-import { toString } from "../node/text";
+import "../polyfill";
+import { toArrayBuffer, toString } from "../util";
 
 export const testAll = (fs: FileSystem) => {
   test("rootdir", async () => {
@@ -19,7 +18,7 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e).toBeInstanceOf(NotFoundError);
     }
-    const buffer = toBuffer("");
+    const buffer = toArrayBuffer("");
     const ws = await file.createWriteStream();
     await ws.write(buffer);
     await ws.close();
@@ -35,7 +34,7 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e).toBeInstanceOf(NotFoundError);
     }
-    const buffer = toBuffer("test");
+    const buffer = toArrayBuffer("test");
     const ws = await file.createWriteStream();
     await ws.write(buffer);
     await ws.close();
@@ -56,8 +55,8 @@ export const testAll = (fs: FileSystem) => {
     const file = await fs.getFile("/otani.txt");
 
     const ws = await file.createWriteStream();
-    await ws.write(toBuffer("大谷"));
-    await ws.write(toBuffer("翔平"));
+    await ws.write(toArrayBuffer("大谷"));
+    await ws.write(toArrayBuffer("翔平"));
 
     const rs = await file.createReadStream();
     let buffer = (await rs.read(6)) as ArrayBuffer;
@@ -70,7 +69,7 @@ export const testAll = (fs: FileSystem) => {
     expect(text).toBe("翔平");
 
     await ws.seek(0, SeekOrigin.End);
-    ws.write(toBuffer("ホームラン"));
+    ws.write(toArrayBuffer("ホームラン"));
 
     await rs.seek(0, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
@@ -123,7 +122,7 @@ export const testAll = (fs: FileSystem) => {
       expect(e).toBeInstanceOf(NotFoundError);
     }
     const ws = await file.createWriteStream();
-    const outBuf = toBuffer("Sample");
+    const outBuf = toArrayBuffer("Sample");
     const before = Date.now();
     await ws.write(outBuf);
     await ws.close();
