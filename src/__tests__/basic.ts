@@ -69,7 +69,7 @@ export const testAll = (fs: FileSystem) => {
     expect(text).toBe("翔平");
 
     await ws.seek(0, SeekOrigin.End);
-    ws.write(toArrayBuffer("ホームラン"));
+    await ws.write(toArrayBuffer("ホームラン"));
 
     await rs.seek(0, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
