@@ -73,7 +73,7 @@ export interface OpenWriteOptions extends OpenOptions {
    * If it is false, fail if it exists, truncated if it does not exist.
    * If it is undefined, the file is created if it does not exist, or truncated if it exists.
    */
-  create?: boolean;
+  create: boolean;
 }
 
 export interface MoveOptions extends Options {

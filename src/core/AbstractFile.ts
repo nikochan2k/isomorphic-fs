@@ -163,23 +163,21 @@ export abstract class AbstractFile
           `"${this.path}" is directory`
         );
       }
-      if (options.create === true) {
+      if (options.create) {
         throw new PathExistsError(
           this.fs.repository,
           this.path,
           `"${this.path}" has already exists`
         );
       }
-      options.create = false;
       if (!options.ignoreHook && this.beforePut) {
         ws = await this.beforePut(this.path, options);
       }
     } catch (e) {
       if (e instanceof NotFoundError) {
-        if (options.create === false) {
+        if (!options.create) {
           throw new InvalidModificationError(this.fs.repository, this.path);
         }
-        options.create = true;
         if (!options.ignoreHook && this.beforePost) {
           ws = await this.beforePost(this.path, options);
         }
