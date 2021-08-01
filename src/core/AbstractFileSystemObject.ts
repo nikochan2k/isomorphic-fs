@@ -76,7 +76,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public async move(
     to: FileSystemObject,
-    options: MoveOptions
+    options: MoveOptions = { force: false }
   ): Promise<XmitError[]> {
     await this.head(); // check existance
     const copyErrors: XmitError[] = [];

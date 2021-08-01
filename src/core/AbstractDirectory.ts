@@ -48,7 +48,9 @@ export abstract class AbstractDirectory
     }
   }
 
-  public async _delete(options: DeleteOptions): Promise<void> {
+  public async _delete(
+    options: DeleteOptions = { force: false, recursive: false }
+  ): Promise<void> {
     try {
       const stats = await this.head();
       if (stats.size != null) {

@@ -53,7 +53,9 @@ export abstract class AbstractFile
     }
   }
 
-  public async _delete(options: DeleteOptions): Promise<void> {
+  public async _delete(
+    options: DeleteOptions = { force: false, recursive: false }
+  ): Promise<void> {
     try {
       const stats = await this.head();
       if (stats.size == null) {
@@ -149,7 +151,7 @@ export abstract class AbstractFile
   }
 
   public async createWriteStream(
-    options: OpenWriteOptions = { append: false }
+    options: OpenWriteOptions = { append: false, create: true }
   ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
     try {
@@ -226,7 +228,7 @@ export abstract class AbstractFile
 
   public async writeAll(
     buffer: ArrayBuffer | Uint8Array,
-    options: OpenWriteOptions = { append: false }
+    options: OpenWriteOptions = { append: false, create: true }
   ): Promise<void> {
     const u8 = toUint8Array(buffer);
     const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;

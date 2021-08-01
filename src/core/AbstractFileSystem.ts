@@ -66,7 +66,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async createReadStream(
     path: string,
-    options?: OpenOptions
+    options: OpenOptions = {}
   ): Promise<ReadStream> {
     const file = await this.getFile(path);
     return file.createReadStream(options);
@@ -74,7 +74,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async createWriteStream(
     path: string,
-    options?: OpenWriteOptions
+    options: OpenWriteOptions = { create: true, append: false }
   ): Promise<WriteStream> {
     const file = await this.getFile(path);
     return file.createWriteStream(options);
@@ -88,7 +88,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     return fso.delete(options);
   }
 
-  public async hash(path: string, options?: OpenOptions): Promise<string> {
+  public async hash(path: string, options: OpenOptions = {}): Promise<string> {
     const file = await this.getFile(path);
     return file.hash(options);
   }
@@ -144,7 +144,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async readAll(
     path: string,
-    options: OpenOptions
+    options: OpenOptions = {}
   ): Promise<ArrayBuffer> {
     const file = await this.getFile(path);
     return file.readAll(options);
@@ -153,7 +153,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async writeAll(
     path: string,
     buffer: ArrayBuffer | Uint8Array,
-    options?: OpenWriteOptions
+    options: OpenWriteOptions = { create: true, append: false }
   ): Promise<void> {
     const file = await this.getFile(path);
     return file.writeAll(buffer, options);
