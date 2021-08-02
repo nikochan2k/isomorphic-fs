@@ -1,6 +1,6 @@
-import "../polyfill";
 import { FileSystem } from "../core";
-import { NotFoundError, NotReadableError } from "../core/errors";
+import { NotFoundError, TypeMismatchError } from "../core/errors";
+import "../polyfill";
 
 export const testAll = (fs: FileSystem) => {
   test("rootdir", async () => {
@@ -17,13 +17,13 @@ export const testAll = (fs: FileSystem) => {
     }
   });
 
-  test("file", async () => {
-    await fs.writeAll("/file", Buffer.alloc(1, 0).buffer);
+  test("file_list", async () => {
+    await fs.writeAll("/file_list", new ArrayBuffer(1));
     try {
-      await fs.list("/file");
+      await fs.list("/file_list");
       fail("/nothing exists");
     } catch (e) {
-      expect(e).toBeInstanceOf(NotReadableError);
+      expect(e).toBeInstanceOf(TypeMismatchError);
     }
   });
 };
