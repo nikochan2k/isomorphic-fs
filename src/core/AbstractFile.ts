@@ -59,20 +59,20 @@ export abstract class AbstractFile
       const stats = await this.head();
       if (stats.size == null) {
         throw createDOMException({
-          code: InvalidModificationError.code,
+          name: InvalidModificationError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a file`,
         });
       }
     } catch (e) {
-      if (e.code === NotFoundError.code) {
+      if (e.name === NotFoundError.name) {
         if (!options.force) {
           throw e;
         }
       } else {
         throw createDOMException({
-          code: NoModificationAllowedError.code,
+          name: NoModificationAllowedError.name,
           repository: this.fs.repository,
           path: this.path,
           e,
@@ -89,7 +89,7 @@ export abstract class AbstractFile
   ): Promise<void> {
     if (toFso instanceof AbstractDirectory) {
       throw createDOMException({
-        code: InvalidModificationError.code,
+        name: InvalidModificationError.name,
         repository: toFso.fs.repository,
         path: toFso.path,
         e: `"${toFso}" is not a file`,
@@ -100,15 +100,15 @@ export abstract class AbstractFile
       await to.head();
       if (!options.force) {
         throw createDOMException({
-          code: NoModificationAllowedError.code,
+          name: NoModificationAllowedError.name,
           repository: to.fs.repository,
           path: to.path,
         });
       }
     } catch (e) {
-      if (e.code !== NotFoundError.code) {
+      if (e.name !== NotFoundError.name) {
         throw createDOMException({
-          code: InvalidModificationError.code,
+          name: InvalidModificationError.name,
           repository: to.fs.repository,
           path: to.path,
           e,
@@ -123,11 +123,11 @@ export abstract class AbstractFile
         await to.stat();
         create = false;
       } catch (e) {
-        if (e.code === NotFoundError.code) {
+        if (e.name === NotFoundError.name) {
           create = true;
         } else {
           throw createDOMException({
-            code: NotSupportedError.code,
+            name: NotSupportedError.name,
             repository: toFso.fs.repository,
             path: toFso.path,
           });
@@ -177,7 +177,7 @@ export abstract class AbstractFile
       const stats = await this.head();
       if (stats.size == null) {
         throw createDOMException({
-          code: InvalidModificationError.code,
+          name: InvalidModificationError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is directory`,
@@ -185,7 +185,7 @@ export abstract class AbstractFile
       }
       if (options.create) {
         throw createDOMException({
-          code: NoModificationAllowedError.code,
+          name: NoModificationAllowedError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" has already exists`,
@@ -195,10 +195,10 @@ export abstract class AbstractFile
         ws = await this.beforePut(this.path, options);
       }
     } catch (e) {
-      if (e.code === NotFoundError.code) {
+      if (e.name === NotFoundError.name) {
         if (!options.create) {
           throw createDOMException({
-            code: InvalidModificationError.code,
+            name: InvalidModificationError.name,
             repository: this.fs.repository,
             path: this.path,
           });
@@ -208,7 +208,7 @@ export abstract class AbstractFile
         }
       } else {
         throw createDOMException({
-          code: NoModificationAllowedError.code,
+          name: NoModificationAllowedError.name,
           repository: this.fs.repository,
           path: this.path,
           e,

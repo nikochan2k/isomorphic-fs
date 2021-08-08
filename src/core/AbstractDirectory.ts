@@ -55,19 +55,24 @@ export abstract class AbstractDirectory
       const stats = await this.head();
       if (stats.size != null) {
         throw createDOMException({
-          code: InvalidModificationError.code,
+          name: InvalidModificationError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a directory`,
         });
       }
     } catch (e) {
-      if (e.code === NotFoundError.code) {
+      if (e.name === NotFoundError.name) {
         if (!options.force) {
           throw e;
         }
       } else {
-        throw e;
+        throw createDOMException({
+          name: NoModificationAllowedError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
       }
     }
     if (options.recursive) {
@@ -88,7 +93,7 @@ export abstract class AbstractDirectory
   ): Promise<void> {
     if (to instanceof AbstractFile) {
       throw createDOMException({
-        code: InvalidModificationError.code,
+        name: InvalidModificationError.name,
         repository: this.fs.repository,
         path: this.path,
         e: `"${this.path}" is not a directory`,
@@ -157,7 +162,7 @@ export abstract class AbstractDirectory
       const stats = await this.head();
       if (stats.size != null) {
         throw createDOMException({
-          code: InvalidModificationError.code,
+          name: InvalidModificationError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a directory`,
@@ -165,7 +170,7 @@ export abstract class AbstractDirectory
       }
       if (!options.force) {
         throw createDOMException({
-          code: NoModificationAllowedError.code,
+          name: NoModificationAllowedError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" has already existed`,
@@ -173,14 +178,14 @@ export abstract class AbstractDirectory
       }
       return;
     } catch (e) {
-      if (e.code === NotFoundError.code) {
+      if (e.name === NotFoundError.name) {
         if (options.recursive) {
           const parent = await this.getParent();
           await parent.mkcol({ force: true, recursive: true });
         }
       } else {
         throw createDOMException({
-          code: NoModificationAllowedError.code,
+          name: NoModificationAllowedError.name,
           repository: this.fs.repository,
           path: this.path,
           e,

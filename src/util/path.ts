@@ -10,7 +10,7 @@ function getPathParts(path: string) {
       // Go up one level.
       if (pathParts.length === 0) {
         throw createDOMException({
-          code: SyntaxError.code,
+          name: SyntaxError.name,
           repository: "",
           path,
         });
