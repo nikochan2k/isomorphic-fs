@@ -184,11 +184,15 @@ export function createDOMException(options: {
   let stack: any | undefined;
   let tmp: string;
   const e = options.e;
-  if (typeof e === "object") {
+  if (typeof e.code === "number" && e.name) {
     code = e.code;
     name = e.name;
     stack = e.stack;
     tmp = e.message;
+  } else if (typeof e === "object") {
+    stack = e.stack;
+    delete e.stack;
+    tmp = JSON.stringify(e);
   } else {
     tmp = e;
   }
