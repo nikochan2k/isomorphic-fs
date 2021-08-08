@@ -12,7 +12,7 @@ export const testAll = (fs: FileSystem) => {
       await fs.stat("/nothing");
       fail("/nothing exists");
     } catch (e) {
-      expect(e.code).toBe(NotFoundError.code);
+      expect(e.name).toBe(NotFoundError.name);
     }
   });
 

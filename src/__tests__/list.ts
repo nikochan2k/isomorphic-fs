@@ -13,7 +13,7 @@ export const testAll = (fs: FileSystem) => {
       await fs.list("/nothing");
       fail("/nothing exists");
     } catch (e) {
-      expect(e.code).toBe(NotFoundError.code);
+      expect(e.name).toBe(NotFoundError.name);
     }
   });
 
@@ -23,7 +23,7 @@ export const testAll = (fs: FileSystem) => {
       await fs.list("/file_list");
       fail("/nothing exists");
     } catch (e) {
-      expect(e.code).toBe(NotSupportedError.code);
+      expect(e.name).toBe(NotSupportedError.name);
     }
   });
 };

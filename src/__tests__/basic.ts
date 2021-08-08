@@ -16,7 +16,7 @@ export const testAll = (fs: FileSystem) => {
       await file.stat();
       fail("Found file: " + file.path);
     } catch (e) {
-      expect(e.code).toBe(NotFoundError.code);
+      expect(e.name).toBe(NotFoundError.name);
     }
     const buffer = toArrayBuffer("");
     const ws = await file.createWriteStream();
@@ -32,7 +32,7 @@ export const testAll = (fs: FileSystem) => {
       await file.stat();
       fail("Found file: " + file.path);
     } catch (e) {
-      expect(e.code).toBe(NotFoundError.code);
+      expect(e.name).toBe(NotFoundError.name);
     }
     const buffer = toArrayBuffer("test");
     const ws = await file.createWriteStream();
@@ -100,7 +100,7 @@ export const testAll = (fs: FileSystem) => {
       await folder.stat();
       fail("Found folder: " + folder.path);
     } catch (e) {
-      expect(e.code).toBe(NotFoundError.code);
+      expect(e.name).toBe(NotFoundError.name);
     }
     await folder.mkdir();
     await folder.stat();
@@ -119,7 +119,7 @@ export const testAll = (fs: FileSystem) => {
       await file.stat();
       fail("Found file: " + file.path);
     } catch (e) {
-      expect(e.code).toBe(NotFoundError.code);
+      expect(e.name).toBe(NotFoundError.name);
     }
     const ws = await file.createWriteStream();
     const outBuf = toArrayBuffer("Sample");
