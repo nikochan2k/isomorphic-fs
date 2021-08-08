@@ -18,12 +18,11 @@ import {
   XmitOptions,
 } from "./core";
 import {
+  createDOMException,
   InvalidModificationError,
   NoModificationAllowedError,
   NotFoundError,
-  NotReadableError,
-  PathExistsError,
-  TypeMismatchError,
+  NotSupportedError,
 } from "./errors";
 
 export abstract class AbstractFile
@@ -59,19 +58,25 @@ export abstract class AbstractFile
     try {
       const stats = await this.head();
       if (stats.size == null) {
-        throw new TypeMismatchError(
-          this.fs.repository,
-          this.path,
-          `"${this.path}" is not a file`
-        );
+        throw createDOMException({
+          code: InvalidModificationError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" is not a file`,
+        });
       }
     } catch (e) {
-      if (e instanceof NotFoundError) {
+      if (e.code === NotFoundError.code) {
         if (!options.force) {
           throw e;
         }
       } else {
-        throw e;
+        throw createDOMException({
+          code: NoModificationAllowedError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
       }
     }
     return this._rm();
@@ -83,21 +88,31 @@ export abstract class AbstractFile
     options: XmitOptions
   ): Promise<void> {
     if (toFso instanceof AbstractDirectory) {
-      throw new TypeMismatchError(
-        toFso.fs.repository,
-        toFso.path,
-        `"${toFso}" is not a file`
-      );
+      throw createDOMException({
+        code: InvalidModificationError.code,
+        repository: toFso.fs.repository,
+        path: toFso.path,
+        e: `"${toFso}" is not a file`,
+      });
     }
     const to = toFso as AbstractFile;
     try {
       await to.head();
       if (!options.force) {
-        throw new PathExistsError(to.fs.repository, to.path);
+        throw createDOMException({
+          code: NoModificationAllowedError.code,
+          repository: to.fs.repository,
+          path: to.path,
+        });
       }
     } catch (e) {
-      if (!(e instanceof NotFoundError)) {
-        throw new InvalidModificationError(to.fs.repository, to.path);
+      if (e.code !== NotFoundError.code) {
+        throw createDOMException({
+          code: InvalidModificationError.code,
+          repository: to.fs.repository,
+          path: to.path,
+          e,
+        });
       }
     }
 
@@ -108,10 +123,14 @@ export abstract class AbstractFile
         await to.stat();
         create = false;
       } catch (e) {
-        if (e instanceof NotFoundError) {
+        if (e.code === NotFoundError.code) {
           create = true;
         } else {
-          throw new NotReadableError(this.fs.repository, this.path);
+          throw createDOMException({
+            code: NotSupportedError.code,
+            repository: toFso.fs.repository,
+            path: toFso.path,
+          });
         }
       }
       const ws = await to.createWriteStream({
@@ -157,32 +176,43 @@ export abstract class AbstractFile
     try {
       const stats = await this.head();
       if (stats.size == null) {
-        throw new PathExistsError(
-          this.fs.repository,
-          this.path,
-          `"${this.path}" is directory`
-        );
+        throw createDOMException({
+          code: InvalidModificationError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" is directory`,
+        });
       }
       if (options.create) {
-        throw new PathExistsError(
-          this.fs.repository,
-          this.path,
-          `"${this.path}" has already exists`
-        );
+        throw createDOMException({
+          code: NoModificationAllowedError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" has already exists`,
+        });
       }
       if (!options.ignoreHook && this.beforePut) {
         ws = await this.beforePut(this.path, options);
       }
     } catch (e) {
-      if (e instanceof NotFoundError) {
+      if (e.code === NotFoundError.code) {
         if (!options.create) {
-          throw new InvalidModificationError(this.fs.repository, this.path);
+          throw createDOMException({
+            code: InvalidModificationError.code,
+            repository: this.fs.repository,
+            path: this.path,
+          });
         }
         if (!options.ignoreHook && this.beforePost) {
           ws = await this.beforePost(this.path, options);
         }
       } else {
-        throw new NoModificationAllowedError(this.fs.repository, this.path);
+        throw createDOMException({
+          code: NoModificationAllowedError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
       }
     }
     if (!ws) {

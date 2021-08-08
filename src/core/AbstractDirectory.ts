@@ -12,10 +12,10 @@ import {
   XmitOptions,
 } from "./core";
 import {
+  createDOMException,
+  InvalidModificationError,
   NoModificationAllowedError,
   NotFoundError,
-  PathExistsError,
-  TypeMismatchError,
 } from "./errors";
 
 export abstract class AbstractDirectory
@@ -54,14 +54,15 @@ export abstract class AbstractDirectory
     try {
       const stats = await this.head();
       if (stats.size != null) {
-        throw new TypeMismatchError(
-          this.fs.repository,
-          this.path,
-          `"${this.path}" is not a directory`
-        );
+        throw createDOMException({
+          code: InvalidModificationError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" is not a directory`,
+        });
       }
     } catch (e) {
-      if (e instanceof NotFoundError) {
+      if (e.code === NotFoundError.code) {
         if (!options.force) {
           throw e;
         }
@@ -86,11 +87,12 @@ export abstract class AbstractDirectory
     options: XmitOptions
   ): Promise<void> {
     if (to instanceof AbstractFile) {
-      throw new TypeMismatchError(
-        to.fs.repository,
-        to.path,
-        `"${to}" is not a directory`
-      );
+      throw createDOMException({
+        code: InvalidModificationError.code,
+        repository: this.fs.repository,
+        path: this.path,
+        e: `"${this.path}" is not a directory`,
+      });
     }
 
     const toDir = to as Directory;
@@ -154,28 +156,35 @@ export abstract class AbstractDirectory
     try {
       const stats = await this.head();
       if (stats.size != null) {
-        throw new TypeMismatchError(
-          this.fs.repository,
-          this.path,
-          `"${this.path}" is not a directory`
-        );
+        throw createDOMException({
+          code: InvalidModificationError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" is not a directory`,
+        });
       }
       if (!options.force) {
-        throw new PathExistsError(
-          this.fs.repository,
-          this.path,
-          `"${this.path}" has already existed`
-        );
+        throw createDOMException({
+          code: NoModificationAllowedError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" has already existed`,
+        });
       }
       return;
     } catch (e) {
-      if (e instanceof NotFoundError) {
+      if (e.code === NotFoundError.code) {
         if (options.recursive) {
           const parent = await this.getParent();
           await parent.mkcol({ force: true, recursive: true });
         }
       } else {
-        throw new NoModificationAllowedError(this.fs.repository, this.path);
+        throw createDOMException({
+          code: NoModificationAllowedError.code,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
       }
     }
     if (!options.ignoreHook && this.beforeMkcol) {

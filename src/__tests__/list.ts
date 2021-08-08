@@ -1,6 +1,6 @@
-import { FileSystem } from "../core";
-import { NotFoundError, TypeMismatchError } from "../core/errors";
 import "../polyfill";
+import { FileSystem } from "../core";
+import { NotFoundError, NotSupportedError } from "../core/errors";
 
 export const testAll = (fs: FileSystem) => {
   test("rootdir", async () => {
@@ -13,7 +13,7 @@ export const testAll = (fs: FileSystem) => {
       await fs.list("/nothing");
       fail("/nothing exists");
     } catch (e) {
-      expect(e).toBeInstanceOf(NotFoundError);
+      expect(e.code).toBe(NotFoundError.code);
     }
   });
 
@@ -23,7 +23,7 @@ export const testAll = (fs: FileSystem) => {
       await fs.list("/file_list");
       fail("/nothing exists");
     } catch (e) {
-      expect(e).toBeInstanceOf(TypeMismatchError);
+      expect(e.code).toBe(NotSupportedError.code);
     }
   });
 };
