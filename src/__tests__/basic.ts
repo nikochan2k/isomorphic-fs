@@ -47,7 +47,7 @@ export const testAll = (fs: FileSystem) => {
     const rs = await file.createReadStream();
     const buffer = (await rs.read()) as ArrayBuffer;
     expect(buffer.byteLength).toBe(4);
-    const text = toString(buffer);
+    const text = await toString(buffer);
     expect(text).toBe("test");
   });
 
@@ -60,12 +60,12 @@ export const testAll = (fs: FileSystem) => {
 
     const rs = await file.createReadStream();
     let buffer = (await rs.read(6)) as ArrayBuffer;
-    let text = toString(buffer);
+    let text = await toString(buffer);
     expect(text).toBe("大谷");
 
     await rs.seek(6, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
-    text = toString(buffer);
+    text = await toString(buffer);
     expect(text).toBe("翔平");
 
     await ws.seek(0, SeekOrigin.End);
@@ -73,14 +73,14 @@ export const testAll = (fs: FileSystem) => {
 
     await rs.seek(0, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
-    text = toString(buffer);
+    text = await toString(buffer);
     expect(text).toBe("大谷翔平ホームラン");
 
     await rs.seek(0, SeekOrigin.Begin);
     await rs.read(6);
     await rs.seek(6, SeekOrigin.Current);
     buffer = (await rs.read()) as ArrayBuffer;
-    text = toString(buffer);
+    text = await toString(buffer);
     expect(text).toBe("ホームラン");
 
     await ws.close();
@@ -134,7 +134,7 @@ export const testAll = (fs: FileSystem) => {
 
     const rs = await file.createReadStream();
     const inBuf = (await rs.read()) as ArrayBuffer;
-    const text = toString(inBuf);
+    const text = await toString(inBuf);
     expect(text).toBe("Sample");
     rs.close();
 
