@@ -12,7 +12,7 @@ import {
   XmitOptions,
 } from "./core";
 import {
-  createDOMException,
+  createError,
   NotFoundError,
   NotReadableError,
   SecurityError,
@@ -55,7 +55,7 @@ export abstract class AbstractDirectory
     try {
       const stats = await this.head();
       if (stats.size != null) {
-        throw createDOMException({
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -68,7 +68,7 @@ export abstract class AbstractDirectory
           throw e;
         }
       } else {
-        throw createDOMException({
+        throw createError({
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -93,7 +93,7 @@ export abstract class AbstractDirectory
     options: XmitOptions
   ): Promise<void> {
     if (to instanceof AbstractFile) {
-      throw createDOMException({
+      throw createError({
         name: TypeMismatchError.name,
         repository: this.fs.repository,
         path: this.path,
@@ -162,7 +162,7 @@ export abstract class AbstractDirectory
     try {
       const stats = await this.head();
       if (stats.size != null) {
-        throw createDOMException({
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -170,7 +170,7 @@ export abstract class AbstractDirectory
         });
       }
       if (!options.force) {
-        throw createDOMException({
+        throw createError({
           name: SecurityError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -185,7 +185,7 @@ export abstract class AbstractDirectory
           await parent.mkcol({ force: true, recursive: true });
         }
       } else {
-        throw createDOMException({
+        throw createError({
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,

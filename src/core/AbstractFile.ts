@@ -18,7 +18,7 @@ import {
   XmitOptions,
 } from "./core";
 import {
-  createDOMException,
+  createError,
   NotFoundError,
   NotReadableError,
   SecurityError,
@@ -58,7 +58,7 @@ export abstract class AbstractFile
     try {
       const stats = await this.head();
       if (stats.size == null) {
-        throw createDOMException({
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -71,7 +71,7 @@ export abstract class AbstractFile
           throw e;
         }
       } else {
-        throw createDOMException({
+        throw createError({
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -88,7 +88,7 @@ export abstract class AbstractFile
     options: XmitOptions
   ): Promise<void> {
     if (toFso instanceof AbstractDirectory) {
-      throw createDOMException({
+      throw createError({
         name: TypeMismatchError.name,
         repository: toFso.fs.repository,
         path: toFso.path,
@@ -99,7 +99,7 @@ export abstract class AbstractFile
     try {
       await to.head();
       if (!options.force) {
-        throw createDOMException({
+        throw createError({
           name: SecurityError.name,
           repository: to.fs.repository,
           path: to.path,
@@ -107,7 +107,7 @@ export abstract class AbstractFile
       }
     } catch (e) {
       if (e.name !== NotFoundError.name) {
-        throw createDOMException({
+        throw createError({
           name: NotReadableError.name,
           repository: to.fs.repository,
           path: to.path,
@@ -126,7 +126,7 @@ export abstract class AbstractFile
         if (e.name === NotFoundError.name) {
           create = true;
         } else {
-          throw createDOMException({
+          throw createError({
             name: NotReadableError.name,
             repository: toFso.fs.repository,
             path: toFso.path,
@@ -177,7 +177,7 @@ export abstract class AbstractFile
     try {
       const stats = await this.head();
       if (stats.size == null) {
-        throw createDOMException({
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -185,7 +185,7 @@ export abstract class AbstractFile
         });
       }
       if (options.create) {
-        throw createDOMException({
+        throw createError({
           name: SecurityError.name,
           repository: this.fs.repository,
           path: this.path,
@@ -201,7 +201,7 @@ export abstract class AbstractFile
           ws = await this.beforePost(this.path, options);
         }
       } else {
-        throw createDOMException({
+        throw createError({
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,

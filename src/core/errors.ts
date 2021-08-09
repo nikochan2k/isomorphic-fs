@@ -245,7 +245,7 @@ function isDOMException(e: any) {
   return false;
 }
 
-export function createDOMException(options: {
+export function createError(options: {
   repository: string;
   path: string;
   e?: any;

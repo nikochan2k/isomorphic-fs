@@ -1,4 +1,4 @@
-import { createDOMException, SyntaxError } from "../core";
+import { createError, SyntaxError } from "../core";
 
 export const DIR_SEPARATOR = "/";
 
@@ -9,7 +9,7 @@ function getPathParts(path: string) {
     if (part === "..") {
       // Go up one level.
       if (pathParts.length === 0) {
-        throw createDOMException({
+        throw createError({
           name: SyntaxError.name,
           repository: "",
           path,
