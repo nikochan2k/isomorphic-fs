@@ -180,7 +180,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 
   protected async getFileSystemObject(path: string): Promise<FileSystemObject> {
-    const stats = await this.stat(path);
+    const stats = await this.head(path);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 

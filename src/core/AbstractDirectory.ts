@@ -13,9 +13,10 @@ import {
 } from "./core";
 import {
   createDOMException,
-  InvalidModificationError,
-  NoModificationAllowedError,
   NotFoundError,
+  NotReadableError,
+  SecurityError,
+  TypeMismatchError,
 } from "./errors";
 
 export abstract class AbstractDirectory
@@ -55,7 +56,7 @@ export abstract class AbstractDirectory
       const stats = await this.head();
       if (stats.size != null) {
         throw createDOMException({
-          name: InvalidModificationError.name,
+          name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a directory`,
@@ -68,7 +69,7 @@ export abstract class AbstractDirectory
         }
       } else {
         throw createDOMException({
-          name: NoModificationAllowedError.name,
+          name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
           e,
@@ -93,7 +94,7 @@ export abstract class AbstractDirectory
   ): Promise<void> {
     if (to instanceof AbstractFile) {
       throw createDOMException({
-        name: InvalidModificationError.name,
+        name: TypeMismatchError.name,
         repository: this.fs.repository,
         path: this.path,
         e: `"${this.path}" is not a directory`,
@@ -162,7 +163,7 @@ export abstract class AbstractDirectory
       const stats = await this.head();
       if (stats.size != null) {
         throw createDOMException({
-          name: InvalidModificationError.name,
+          name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a directory`,
@@ -170,7 +171,7 @@ export abstract class AbstractDirectory
       }
       if (!options.force) {
         throw createDOMException({
-          name: NoModificationAllowedError.name,
+          name: SecurityError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" has already existed`,
@@ -185,7 +186,7 @@ export abstract class AbstractDirectory
         }
       } else {
         throw createDOMException({
-          name: NoModificationAllowedError.name,
+          name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
           e,

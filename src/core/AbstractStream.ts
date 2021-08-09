@@ -13,7 +13,7 @@ export abstract class AbstractStream implements Stream {
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
-    const stats = await this.fso.stat();
+    const stats = await this.fso.head();
     const size = stats.size as number;
 
     let start: number | undefined;
