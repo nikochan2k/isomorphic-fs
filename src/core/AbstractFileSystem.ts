@@ -1,3 +1,4 @@
+import { normalizePath } from "../util";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -94,6 +95,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
+    path = normalizePath(path);
     let stats: Stats | null | undefined;
     if (!options.ignoreHook && this.beforeHead) {
       stats = await this.beforeHead(path, options);
@@ -131,6 +133,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     props: Props,
     options: PatchOptions = {}
   ): Promise<void> {
+    path = normalizePath(path);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
         return;

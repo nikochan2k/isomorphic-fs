@@ -13,7 +13,7 @@ import {
   XmitOptions,
 } from "./core";
 import { AbstractFileSystem } from "./AbstractFileSystem";
-import { getParentPath } from "../util/path";
+import { getParentPath, normalizePath } from "../util/path";
 
 export abstract class AbstractFileSystemObject implements FileSystemObject {
   private afterDelete?: (path: string) => Promise<void>;
@@ -29,6 +29,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   public stat = this.head;
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
+    this.path = normalizePath(path);
     const hook = fs.options.hook;
     if (hook) {
       this.beforeDelete = hook?.beforeDelete;
