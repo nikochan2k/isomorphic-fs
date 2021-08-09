@@ -219,9 +219,10 @@ export abstract class AbstractFile
     const rs = await this.createReadStream(options);
     try {
       const hash = createHash();
-      let buffer: ArrayBuffer | Uint8Array | null;
-      while ((buffer = await rs.read()) != null) {
-        hash.update(toUint8Array(buffer));
+      let result: ArrayBuffer | Uint8Array | null;
+      while ((result = await rs.read()) != null) {
+        const buffer = await toUint8Array(result);
+        hash.update(buffer);
       }
 
       return toHex(hash.digest());
@@ -238,7 +239,7 @@ export abstract class AbstractFile
       let pos = 0;
       let chunk: ArrayBuffer | null;
       while ((chunk = await rs.read()) != null) {
-        const u8 = toUint8Array(chunk);
+        const u8 = await toUint8Array(chunk);
         buffer.set(u8, pos);
         pos += u8.byteLength;
       }
@@ -252,7 +253,7 @@ export abstract class AbstractFile
     buffer: ArrayBuffer | Uint8Array,
     options: OpenWriteOptions = { append: false, create: true }
   ): Promise<void> {
-    const u8 = toUint8Array(buffer);
+    const u8 = await toUint8Array(buffer);
     const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
     const ws = await this.createWriteStream(options);
     try {

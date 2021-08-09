@@ -61,7 +61,7 @@ export abstract class AbstractReadStream
         if (!b) {
           break;
         }
-        const chunk = toUint8Array(b);
+        const chunk = await toUint8Array(b);
         u8.set(chunk, pos);
         pos += chunkSize;
       } while (pos < max);

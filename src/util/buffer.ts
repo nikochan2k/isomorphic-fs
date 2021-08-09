@@ -1,4 +1,5 @@
-import { decode } from "base64-arraybuffer";
+import * as ba from "base64-arraybuffer";
+import { DEFAULT_BUFFER_SIZE } from "../core";
 
 export const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
 export const EMPTY_U8 = new Uint8Array(0);
@@ -6,6 +7,10 @@ export const EMPTY_U8 = new Uint8Array(0);
 export const textEncoder = new TextEncoder();
 
 const hasArrayBuffer = typeof ArrayBuffer === "function";
+
+async function decode(base64: string) {
+  return ba.decode(base64);
+}
 
 export function isArrayBuffer(value: unknown): value is ArrayBuffer {
   return (
@@ -15,10 +20,10 @@ export function isArrayBuffer(value: unknown): value is ArrayBuffer {
   );
 }
 
-export function toArrayBuffer(
+export async function toArrayBuffer(
   value: ArrayBuffer | Uint8Array | string,
   encoding: "utf8" | "base64" = "utf8"
-): ArrayBuffer {
+): Promise<ArrayBuffer> {
   if (!value) {
     return EMPTY_ARRAY_BUFFER;
   }
@@ -27,23 +32,35 @@ export function toArrayBuffer(
     if (encoding === "utf8") {
       value = textEncoder.encode(value);
     } else {
-      return decode(value);
+      let byteLength = 0;
+      const chunks: Uint8Array[] = [];
+      for (
+        let from = 0, end = value.length;
+        from < end;
+        from += DEFAULT_BUFFER_SIZE
+      ) {
+        const base64Chunk = value.substr(from, DEFAULT_BUFFER_SIZE);
+        const chunk = await decode(base64Chunk);
+        byteLength += chunk.byteLength;
+        chunks.push(new Uint8Array(chunk));
+      }
+
+      let pos = 0;
+      const u8 = new Uint8Array(byteLength);
+      for (const chunk of chunks) {
+        u8.set(chunk, pos);
+        pos += chunk.byteLength;
+      }
+      return u8.buffer;
     }
   }
 
-  if (isUint8Array(value)) {
-    const viewLength = value.length;
-    const buffer = value.buffer;
-    if (viewLength === buffer.byteLength) {
-      return buffer;
-    }
+  if (value.byteLength === 0) {
+    return EMPTY_ARRAY_BUFFER;
+  }
 
-    const newBuffer = new ArrayBuffer(viewLength);
-    const newView = new Uint8Array(newBuffer);
-    for (let i = 0; i < viewLength; i++) {
-      newView[i] = value[i] || 0;
-    }
-    return newBuffer;
+  if (isUint8Array(value)) {
+    return value.slice(value.byteOffset, value.byteLength + value.byteOffset);
   }
 
   return value;
@@ -59,10 +76,10 @@ export function isUint8Array(value: unknown): value is Uint8Array {
   );
 }
 
-export function toUint8Array(
+export async function toUint8Array(
   value: ArrayBuffer | Uint8Array | string,
   encoding: "utf8" | "base64" = "utf8"
-): Uint8Array {
+): Promise<Uint8Array> {
   if (!value) {
     return EMPTY_U8;
   }
@@ -75,7 +92,7 @@ export function toUint8Array(
     if (encoding === "utf8") {
       return textEncoder.encode(value);
     } else {
-      value = decode(value);
+      value = await decode(value);
     }
   }
 

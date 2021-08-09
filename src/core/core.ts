@@ -240,4 +240,4 @@ export interface WriteStream extends Stream {
   write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
 }
 
-export const DEFAULT_BUFFER_SIZE = 64 * 1024;
+export const DEFAULT_BUFFER_SIZE = 96 * 1024;
