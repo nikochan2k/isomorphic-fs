@@ -1,7 +1,8 @@
 import "../polyfill";
 import { FileSystem, SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
-import { toArrayBuffer, toString } from "../util";
+import { toArrayBuffer } from "../util/buffer";
+import { toString } from "../util/text";
 
 export const testAll = (fs: FileSystem) => {
   test("rootdir", async () => {
