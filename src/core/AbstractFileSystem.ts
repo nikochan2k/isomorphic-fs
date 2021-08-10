@@ -1,4 +1,4 @@
-import { normalizePath } from "../util";
+import { normalizePath } from "../util/path";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
