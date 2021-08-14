@@ -1,5 +1,4 @@
-import { Converter } from "../util/Converter";
-import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
+import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
 import { OpenOptions, ReadStream, WriteStream } from "./core";
 
@@ -11,12 +10,9 @@ export abstract class AbstractReadStream
 
   protected handled = false;
 
-  constructor(
-    fso: AbstractFileSystemObject,
-    protected readonly options: OpenOptions
-  ) {
-    super(fso, options);
-    this.afterGet = fso.fs.options.hook?.afterGet;
+  constructor(file: AbstractFile, protected readonly options: OpenOptions) {
+    super(file, options);
+    this.afterGet = file.fs.options.hook?.afterGet;
   }
 
   public async close(): Promise<void> {
@@ -46,7 +42,6 @@ export abstract class AbstractReadStream
         this.position += buffer.byteLength;
       }
     } else {
-      const c = new Converter({ awaitingSize: this.options.awaitingSize });
       const stats = await this.fso.head();
       const max = Math.min(size, stats.size as number);
       const buf = new ArrayBuffer(max);
@@ -58,11 +53,10 @@ export abstract class AbstractReadStream
           next = max;
         }
         let chunkSize = next - pos;
-        const b = await this._read(chunkSize);
-        if (!b) {
+        const chunk = await this._read(chunkSize);
+        if (!chunk) {
           break;
         }
-        const chunk = await c.toUint8Array(b);
         u8.set(chunk, pos);
         pos += chunkSize;
       } while (pos < max);
@@ -79,5 +73,5 @@ export abstract class AbstractReadStream
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _read(size?: number): Promise<ArrayBuffer | null>;
+  public abstract _read(size?: number): Promise<Uint8Array | null>;
 }

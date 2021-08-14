@@ -1,4 +1,4 @@
-import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
+import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
 import { OpenWriteOptions, WriteStream } from "./core";
 
@@ -12,11 +12,11 @@ export abstract class AbstractWriteStream
   protected changed = false;
 
   constructor(
-    fso: AbstractFileSystemObject,
+    file: AbstractFile,
     protected readonly options: OpenWriteOptions
   ) {
-    super(fso, options);
-    const hook = fso.fs.options.hook;
+    super(file, options);
+    const hook = file.fs.options.hook;
     this.afterPost = hook?.afterPost;
     this.afterPut = hook?.afterPut;
   }

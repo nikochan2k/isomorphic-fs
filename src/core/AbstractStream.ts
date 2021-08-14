@@ -1,3 +1,4 @@
+import { Converter } from "../util/Converter";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 
@@ -5,11 +6,13 @@ export abstract class AbstractStream implements Stream {
   protected readonly bufferSize = DEFAULT_BUFFER_SIZE;
 
   public position = 0;
+  protected converter: Converter;
 
   constructor(protected fso: AbstractFileSystemObject, options: OpenOptions) {
     if (options.bufferSize) {
       this.bufferSize = options.bufferSize;
     }
+    this.converter = new Converter({ awaitingSize: options.awaitingSize });
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {

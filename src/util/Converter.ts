@@ -89,7 +89,7 @@ export class Converter {
       if (navigator && navigator.product === "ReactNative") {
         return this.toArrayBuffer(await this._blobToBase64(value), "Base64");
       } else {
-        return this._blobToArrayBufferUsingReadAsArrayBuffer(value);
+        return this._blobToArrayBuffer(value);
       }
     }
     if (typeof value === "string") {
@@ -304,7 +304,7 @@ export class Converter {
     return Buffer.from(base64, "base64");
   }
 
-  protected async _blobToArrayBufferUsingReadAsArrayBuffer(blob: Blob) {
+  protected async _blobToArrayBuffer(blob: Blob) {
     if (blob.size === 0) {
       return new ArrayBuffer(0);
     }
