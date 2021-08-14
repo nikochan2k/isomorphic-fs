@@ -1,4 +1,4 @@
-import { Converter } from "../util/Converter";
+import { Converter } from "../util/conv";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 

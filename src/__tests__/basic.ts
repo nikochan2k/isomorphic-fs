@@ -1,7 +1,7 @@
 import "../polyfill";
 import { FileSystem, SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
-import { Converter } from "../util/Converter";
+import { Converter } from "../util/conv";
 
 const c = new Converter();
 

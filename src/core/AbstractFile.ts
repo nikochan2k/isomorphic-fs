@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter } from "../util/Converter";
+import { Converter } from "../util/conv";
 import { toHex } from "../util/misc";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";
