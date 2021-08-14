@@ -10,7 +10,7 @@ import { toBase64, toText } from "../util/text";
 
 test("util/binary ArrayBuffer", async () => {
   const expected = "大谷翔平ホームラン";
-  const ab = await toArrayBuffer(expected, "utf8");
+  const ab = await toArrayBuffer(expected, "text");
 
   {
     const actual = await toText(ab);
@@ -44,7 +44,7 @@ test("util/binary ArrayBuffer", async () => {
 
 test("util/binary Uint8Array", async () => {
   const expected = "大谷翔平ホームラン";
-  const u8 = await toUint8Array(expected);
+  const u8 = await toUint8Array(expected, "text");
 
   {
     const actual = await toText(u8);
@@ -82,7 +82,7 @@ test("util/binary Buffer", async () => {
   }
 
   const expected = "大谷翔平ホームラン";
-  const buffer = await toBuffer(expected);
+  const buffer = await toBuffer(expected, "text");
 
   {
     const actual = await toText(buffer);

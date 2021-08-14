@@ -66,5 +66,9 @@ export async function toText(
     });
   }
 
-  return textDecoder.decode(await toUint8Array(value, "base64"));
+  return textDecoder.decode(
+    await (typeof value === "string"
+      ? toUint8Array(value, "base64")
+      : toUint8Array(value))
+  );
 }

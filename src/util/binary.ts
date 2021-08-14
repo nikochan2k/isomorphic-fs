@@ -1,19 +1,20 @@
 import { decode } from "base64-arraybuffer";
 import { DEFAULT_BUFFER_SIZE } from "../core";
 
+type EncodingType = "base64" | "text";
+
+type ValueType =
+  | [ArrayBuffer | Uint8Array | Buffer | Blob]
+  | [string, EncodingType];
+
 export const textEncoder = new TextEncoder();
 
-export const hasArrayBuffer = typeof ArrayBuffer === "function";
-
-if (hasArrayBuffer) {
-  var EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
-}
+export const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
 
 export function isArrayBuffer(value: unknown): value is ArrayBuffer {
   return (
-    hasArrayBuffer &&
-    (value instanceof ArrayBuffer ||
-      toString.call(value) === "[object ArrayBuffer]")
+    value instanceof ArrayBuffer ||
+    toString.call(value) === "[object ArrayBuffer]"
   );
 }
 
@@ -22,13 +23,9 @@ async function base64ToArrayBuffer(base64: string) {
 }
 
 export async function toArrayBuffer(
-  value: ArrayBuffer | Uint8Array | Buffer | Blob | string,
-  encoding: "utf8" | "base64" = "utf8"
+  ...params: ValueType
 ): Promise<ArrayBuffer> {
-  if (!hasArrayBuffer) {
-    throw new Error("ArrayBuffer is not supported");
-  }
-
+  const value = params[0];
   if (!value) {
     return EMPTY_ARRAY_BUFFER;
   }
@@ -50,7 +47,8 @@ export async function toArrayBuffer(
     }
   }
   if (typeof value === "string") {
-    if (encoding === "utf8") {
+    const encoding = params[1];
+    if (encoding === "text") {
       const u8 = textEncoder.encode(value);
       return u8.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
     } else {
@@ -80,29 +78,18 @@ export async function toArrayBuffer(
   return value;
 }
 
-export const hasUint8Array = typeof Uint8Array === "function";
-
-if (hasUint8Array) {
-  var EMPTY_U8 = new Uint8Array(0);
-}
+export const EMPTY_U8 = new Uint8Array(0);
 
 export function isUint8Array(value: unknown): value is Uint8Array {
   return (
-    hasUint8Array &&
-    (value instanceof Uint8Array ||
-      toString.call(value) === "[object Uint8Array]" ||
-      toString.call(value) === "[object Buffer]")
+    value instanceof Uint8Array ||
+    toString.call(value) === "[object Uint8Array]" ||
+    toString.call(value) === "[object Buffer]"
   );
 }
 
-export async function toUint8Array(
-  value: ArrayBuffer | Uint8Array | Buffer | Blob | string,
-  encoding: "utf8" | "base64" = "utf8"
-): Promise<Uint8Array> {
-  if (!hasUint8Array) {
-    throw new Error("Uint8Array is not suppoted.");
-  }
-
+export async function toUint8Array(...params: ValueType): Promise<Uint8Array> {
+  let value = params[0];
   if (!value) {
     return EMPTY_U8;
   }
@@ -117,10 +104,11 @@ export async function toUint8Array(
     return new Uint8Array(await toArrayBuffer(value));
   }
   if (typeof value === "string") {
-    if (encoding === "utf8") {
+    const encoding = params[1];
+    if (encoding === "text") {
       return textEncoder.encode(value);
     } else {
-      value = await base64ToArrayBuffer(value);
+      return new Uint8Array(await base64ToArrayBuffer(value));
     }
   }
 
@@ -144,14 +132,12 @@ async function base64ToBuffer(base64: string) {
   return Buffer.from(base64, "base64");
 }
 
-export async function toBuffer(
-  value: ArrayBuffer | Uint8Array | Buffer | Blob | string,
-  encoding: "utf8" | "base64" = "utf8"
-): Promise<Buffer> {
+export async function toBuffer(...params: ValueType): Promise<Buffer> {
   if (!hasBuffer) {
     throw new Error("Buffer is not suppoted.");
   }
 
+  const value = params[0];
   if (!value) {
     return EMPTY_BUFFER;
   }
@@ -172,7 +158,8 @@ export async function toBuffer(
     return Buffer.from(await toArrayBuffer(value));
   }
   if (typeof value === "string") {
-    if (encoding === "utf8") {
+    const encoding = params[1];
+    if (encoding === "text") {
       const u8 = textEncoder.encode(value);
       return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength);
     } else {
@@ -286,14 +273,12 @@ async function blobToArrayBufferUsingReadAsArrayBuffer(blob: Blob) {
   return u8.buffer;
 }
 
-export async function toBlob(
-  value: ArrayBuffer | Uint8Array | Buffer | Blob | string,
-  encoding: "utf8" | "base64" = "utf8"
-): Promise<Blob> {
+export async function toBlob(...params: ValueType): Promise<Blob> {
   if (!hasBlob) {
     throw new Error("Blob is not supported");
   }
 
+  const value = params[0];
   if (!value) {
     return EMPTY_BLOB;
   }
@@ -305,6 +290,7 @@ export async function toBlob(
     return new Blob([value]);
   }
   if (typeof value === "string") {
+    const encoding = params[1] as EncodingType;
     return new Blob([await toArrayBuffer(value, encoding)]);
   }
 
