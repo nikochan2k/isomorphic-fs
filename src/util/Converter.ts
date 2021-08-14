@@ -1,9 +1,7 @@
 import { decode, encode } from "base64-arraybuffer";
-import { DEFAULT_BUFFER_SIZE } from "../core";
+import { BinaryType, DEFAULT_BUFFER_SIZE, EncodingType } from "../core";
 
-type BinaryType = ArrayBuffer | Uint8Array | Buffer | Blob;
-type EncodingType = "Base64" | "Text";
-type ValueType = [BinaryType] | [string, EncodingType];
+type ParamsType = [BinaryType] | [string, EncodingType];
 
 export const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
 
@@ -72,7 +70,7 @@ export class Converter {
     this.awaitingSize = options?.awaitingSize || DEFAULT_BUFFER_SIZE;
   }
 
-  public async toArrayBuffer(...params: ValueType): Promise<ArrayBuffer> {
+  public async toArrayBuffer(...params: ParamsType): Promise<ArrayBuffer> {
     const value = params[0];
     if (!value) {
       return EMPTY_ARRAY_BUFFER;
@@ -161,7 +159,7 @@ export class Converter {
     return chunks.join("");
   }
 
-  public async toBlob(...params: ValueType): Promise<Blob> {
+  public async toBlob(...params: ParamsType): Promise<Blob> {
     if (!hasBlob) {
       throw new Error("Blob is not supported");
     }
@@ -185,7 +183,7 @@ export class Converter {
     return value;
   }
 
-  public async toBuffer(...params: ValueType): Promise<Buffer> {
+  public async toBuffer(...params: ParamsType): Promise<Buffer> {
     if (!hasBuffer) {
       throw new Error("Buffer is not suppoted.");
     }
@@ -267,7 +265,7 @@ export class Converter {
     return this._uint8ArrayToText(u8);
   }
 
-  public async toUint8Array(...params: ValueType): Promise<Uint8Array> {
+  public async toUint8Array(...params: ParamsType): Promise<Uint8Array> {
     let value = params[0];
     if (!value) {
       return EMPTY_U8;

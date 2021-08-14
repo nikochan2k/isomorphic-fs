@@ -17,6 +17,10 @@ export interface FileSystemOptions {
   hook?: Hook;
 }
 
+export type BinaryType = ArrayBuffer | Uint8Array | Buffer | Blob;
+export type ValueType = string | BinaryType;
+export type EncodingType = "Base64" | "Text";
+
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface Options {
@@ -63,6 +67,10 @@ export interface OpenOptions extends Options {
   bufferSize?: number;
 }
 
+export interface OpenReadOptions extends Options {
+  encodingType?: EncodingType;
+}
+
 export interface OpenWriteOptions extends OpenOptions {
   /**
    * Open file for appending.
@@ -106,7 +114,7 @@ export interface Hook {
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
   beforeGet?: (
     path: string,
-    options: OpenOptions
+    options: OpenReadOptions
   ) => Promise<ReadStream | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
@@ -146,7 +154,10 @@ export interface FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<XmitError[]>;
-  createReadStream(path: string, options?: OpenOptions): Promise<ReadStream>;
+  createReadStream(
+    path: string,
+    options?: OpenReadOptions
+  ): Promise<ReadStream>;
   createWriteStream(
     path: string,
     options?: OpenWriteOptions
@@ -172,7 +183,7 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<XmitError[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  readAll(path: string, options?: OpenOptions): Promise<ArrayBuffer>;
+  readAll(path: string, options?: OpenReadOptions): Promise<ArrayBuffer>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<void>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
@@ -211,7 +222,7 @@ export interface Directory extends FileSystemObject {
 }
 
 export interface File extends FileSystemObject {
-  createReadStream(options?: OpenOptions): Promise<ReadStream>;
+  createReadStream(options?: OpenReadOptions): Promise<ReadStream>;
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
   readAll(options?: OpenOptions): Promise<ArrayBuffer>;
