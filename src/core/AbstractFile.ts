@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { toUint8Array } from "../util/buffer";
+import { toUint8Array } from "../util/binary";
 import { toHex } from "../util/misc";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";

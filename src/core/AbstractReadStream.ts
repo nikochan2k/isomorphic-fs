@@ -1,4 +1,4 @@
-import { toUint8Array } from "../util/buffer";
+import { toUint8Array } from "../util/binary";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractStream } from "./AbstractStream";
 import { OpenOptions, ReadStream, WriteStream } from "./core";
