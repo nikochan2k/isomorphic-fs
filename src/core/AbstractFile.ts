@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { toUint8Array } from "../util/binary";
+import { Converter } from "../util/Converter";
 import { toHex } from "../util/misc";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -218,10 +218,11 @@ export abstract class AbstractFile
   public async hash(options: OpenOptions = {}): Promise<string> {
     const rs = await this.createReadStream(options);
     try {
+      const c = new Converter({ awaitingSize: options.awaitingSize });
       const hash = createHash();
       let result: ArrayBuffer | Uint8Array | null;
       while ((result = await rs.read()) != null) {
-        const buffer = await toUint8Array(result);
+        const buffer = await c.toUint8Array(result);
         hash.update(buffer);
       }
 
@@ -236,10 +237,11 @@ export abstract class AbstractFile
     const buffer = this._createBuffer(stats.size as number);
     const rs = await this.createReadStream(options);
     try {
+      const c = new Converter({ awaitingSize: options.awaitingSize });
       let pos = 0;
       let chunk: ArrayBuffer | null;
       while ((chunk = await rs.read()) != null) {
-        const u8 = await toUint8Array(chunk);
+        const u8 = await c.toUint8Array(chunk);
         buffer.set(u8, pos);
         pos += u8.byteLength;
       }
@@ -253,7 +255,8 @@ export abstract class AbstractFile
     buffer: ArrayBuffer | Uint8Array,
     options: OpenWriteOptions = { append: false, create: true }
   ): Promise<void> {
-    const u8 = await toUint8Array(buffer);
+    const c = new Converter({ awaitingSize: options.awaitingSize });
+    const u8 = await c.toUint8Array(buffer);
     const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
     const ws = await this.createWriteStream(options);
     try {

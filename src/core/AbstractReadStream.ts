@@ -1,4 +1,4 @@
-import { toUint8Array } from "../util/binary";
+import { Converter } from "../util/Converter";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractStream } from "./AbstractStream";
 import { OpenOptions, ReadStream, WriteStream } from "./core";
@@ -46,6 +46,7 @@ export abstract class AbstractReadStream
         this.position += buffer.byteLength;
       }
     } else {
+      const c = new Converter({ awaitingSize: this.options.awaitingSize });
       const stats = await this.fso.head();
       const max = Math.min(size, stats.size as number);
       const buf = new ArrayBuffer(max);
@@ -61,7 +62,7 @@ export abstract class AbstractReadStream
         if (!b) {
           break;
         }
-        const chunk = await toUint8Array(b);
+        const chunk = await c.toUint8Array(b);
         u8.set(chunk, pos);
         pos += chunkSize;
       } while (pos < max);

@@ -1,8 +1,9 @@
 import "../polyfill";
 import { FileSystem, SeekOrigin } from "../core/core";
 import { NotFoundError } from "../core/errors";
-import { toArrayBuffer } from "../util/binary";
-import { toText } from "../util/text";
+import { Converter } from "../util/Converter";
+
+const c = new Converter();
 
 export const testAll = (fs: FileSystem) => {
   test("rootdir", async () => {
@@ -19,7 +20,7 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-    const buffer = await toArrayBuffer("", "text");
+    const buffer = await c.toArrayBuffer("", "text");
     const ws = await file.createWriteStream();
     await ws.write(buffer);
     await ws.close();
@@ -35,7 +36,7 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-    const buffer = await toArrayBuffer("test", "text");
+    const buffer = await c.toArrayBuffer("test", "text");
     const ws = await file.createWriteStream();
     await ws.write(buffer);
     await ws.close();
@@ -48,7 +49,7 @@ export const testAll = (fs: FileSystem) => {
     const rs = await file.createReadStream();
     const buffer = (await rs.read()) as ArrayBuffer;
     expect(buffer.byteLength).toBe(4);
-    const text = await toText(buffer);
+    const text = await c.toText(buffer);
     expect(text).toBe("test");
   });
 
@@ -56,32 +57,32 @@ export const testAll = (fs: FileSystem) => {
     const file = await fs.getFile("/otani.txt");
 
     const ws = await file.createWriteStream();
-    await ws.write(await toArrayBuffer("大谷", "text"));
-    await ws.write(await toArrayBuffer("翔平", "text"));
+    await ws.write(await c.toArrayBuffer("大谷", "text"));
+    await ws.write(await c.toArrayBuffer("翔平", "text"));
 
     const rs = await file.createReadStream();
     let buffer = (await rs.read(6)) as ArrayBuffer;
-    let text = await toText(buffer);
+    let text = await c.toText(buffer);
     expect(text).toBe("大谷");
 
     await rs.seek(6, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
-    text = await toText(buffer);
+    text = await c.toText(buffer);
     expect(text).toBe("翔平");
 
     await ws.seek(0, SeekOrigin.End);
-    await ws.write(await toArrayBuffer("ホームラン", "text"));
+    await ws.write(await c.toArrayBuffer("ホームラン", "text"));
 
     await rs.seek(0, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
-    text = await toText(buffer);
+    text = await c.toText(buffer);
     expect(text).toBe("大谷翔平ホームラン");
 
     await rs.seek(0, SeekOrigin.Begin);
     await rs.read(6);
     await rs.seek(6, SeekOrigin.Current);
     buffer = (await rs.read()) as ArrayBuffer;
-    text = await toText(buffer);
+    text = await c.toText(buffer);
     expect(text).toBe("ホームラン");
 
     await ws.close();
@@ -123,7 +124,7 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const ws = await file.createWriteStream();
-    const outBuf = await toArrayBuffer("Sample", "text");
+    const outBuf = await c.toArrayBuffer("Sample", "text");
     const before = Date.now();
     await ws.write(outBuf);
     await ws.close();
@@ -135,7 +136,7 @@ export const testAll = (fs: FileSystem) => {
 
     const rs = await file.createReadStream();
     const inBuf = (await rs.read()) as ArrayBuffer;
-    const text = await toText(inBuf);
+    const text = await c.toText(inBuf);
     expect(text).toBe("Sample");
     rs.close();
 

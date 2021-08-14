@@ -59,6 +59,7 @@ export interface MkcolOptions extends Options {
 }
 
 export interface OpenOptions extends Options {
+  awaitingSize?: number;
   bufferSize?: number;
 }
 
