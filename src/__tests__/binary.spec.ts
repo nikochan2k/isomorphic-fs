@@ -31,7 +31,7 @@ test("util/binary ArrayBuffer", async () => {
 
   {
     const base64 = await c.toBase64(ab);
-    const actual = await c.toText(base64);
+    const actual = await c.toText(base64, "Base64");
     expect(actual).toBe(expected);
   }
 });
@@ -65,7 +65,7 @@ test("util/binary Uint8Array", async () => {
 
   {
     const base64 = await c.toBase64(u8);
-    const actual = await c.toText(base64);
+    const actual = await c.toText(base64, "Base64");
     expect(actual).toBe(expected);
   }
 });
@@ -103,7 +103,7 @@ test("util/binary Buffer", async () => {
 
   {
     const base64 = await c.toBase64(buffer);
-    const actual = await c.toText(base64);
+    const actual = await c.toText(base64, "Base64");
     expect(actual).toBe(expected);
   }
 });
@@ -114,10 +114,10 @@ test("util/binary Base64", async () => {
   }
 
   const expected = "大谷翔平ホームラン";
-  const base64 = await c.toBase64(expected);
+  const base64 = await c.toBase64(expected, "Text");
 
   {
-    const actual = await c.toText(base64);
+    const actual = await c.toText(base64, "Base64");
     expect(actual).toBe(expected);
   }
 

@@ -80,58 +80,32 @@ export class Converter {
       if (value.byteLength === 0) {
         return EMPTY_ARRAY_BUFFER;
       }
-      return value.slice(value.byteOffset, value.byteOffset + value.byteLength);
+      const u8 = value.slice(
+        value.byteOffset,
+        value.byteOffset + value.byteLength
+      );
+      return u8.buffer;
     }
     if (isBlob(value)) {
       if (value.size === 0) {
         return EMPTY_ARRAY_BUFFER;
       }
-      if (navigator && navigator.product === "ReactNative") {
-        return this.toArrayBuffer(await this._blobToBase64(value), "Base64");
-      } else {
-        return this._blobToArrayBuffer(value);
-      }
+      const u8 = await this.toUint8Array(value);
+      return u8.buffer;
     }
     if (typeof value === "string") {
-      const encoding = params[1];
-      if (encoding === "Text") {
-        const u8 = await this._textToUint8Array(value);
-        return u8.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-      } else {
-        const awaitingSize = this.awaitingSize;
-        let byteLength = 0;
-        const chunks: Uint8Array[] = [];
-        for (
-          let from = 0, end = value.length;
-          from < end;
-          from += awaitingSize
-        ) {
-          const base64Chunk = value.substr(from, awaitingSize);
-          const chunk = await this._base64ToArrayBuffer(base64Chunk);
-          byteLength += chunk.byteLength;
-          chunks.push(new Uint8Array(chunk));
-        }
-
-        let pos = 0;
-        const u8 = new Uint8Array(byteLength);
-        for (const chunk of chunks) {
-          u8.set(chunk, pos);
-          pos += chunk.byteLength;
-        }
-        return u8.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-      }
+      const encoding = params[1] as EncodingType;
+      const u8 = await this.toUint8Array(value, encoding);
+      return u8.buffer;
     }
 
     return value;
   }
 
-  public async toBase64(
-    value: ArrayBuffer | Uint8Array | Buffer | Blob | string
-  ): Promise<string> {
+  public async toBase64(...params: ParamsType): Promise<string> {
+    let value = params[0];
     const awaitingSize = this.awaitingSize;
-    if (typeof value === "string") {
-      value = await this.toUint8Array(value, "Text");
-    } else if (isBuffer(value)) {
+    if (isBuffer(value)) {
       const chunks: string[] = [];
       for (
         let start = 0, end = value.byteLength;
@@ -145,7 +119,17 @@ export class Converter {
       return chunks.join("");
     }
 
-    const u8 = await this.toUint8Array(value);
+    let u8: Uint8Array;
+    if (typeof value === "string") {
+      const encoding = params[1] as EncodingType;
+      if (encoding === "Base64") {
+        return value;
+      }
+      u8 = await this.toUint8Array(value, encoding);
+    } else {
+      u8 = await this.toUint8Array(value);
+    }
+
     const chunks: string[] = [];
     for (
       let begin = 0, end = u8.byteLength;
@@ -177,7 +161,11 @@ export class Converter {
     }
     if (typeof value === "string") {
       const encoding = params[1] as EncodingType;
-      return new Blob([await this.toArrayBuffer(value, encoding)]);
+      if (encoding === "BinaryString") {
+        return new Blob([value]);
+      } else {
+        return new Blob([await this.toArrayBuffer(value, encoding)]);
+      }
     }
 
     return value;
@@ -209,7 +197,7 @@ export class Converter {
       return Buffer.from(await this.toArrayBuffer(value));
     }
     if (typeof value === "string") {
-      const encoding = params[1];
+      const encoding = params[1] as EncodingType;
       if (encoding === "Text") {
         const u8 = await this._textToUint8Array(value);
         return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength);
@@ -222,8 +210,10 @@ export class Converter {
           start < end;
           start += awaitingSize
         ) {
-          const base64 = value.slice(start, start + awaitingSize);
-          const chunk = await this._base64ToBuffer(base64);
+          const str = value.slice(start, start + awaitingSize);
+          const chunk = await (encoding === "Base64"
+            ? this._base64ToBuffer(str)
+            : this._binaryStringToBuffer(str));
           byteLength += chunk.byteLength;
           chunks.push(chunk);
         }
@@ -240,9 +230,8 @@ export class Converter {
     return Buffer.from(value);
   }
 
-  public async toText(
-    value: ArrayBuffer | Uint8Array | Buffer | Blob | string
-  ): Promise<string> {
+  public async toText(...params: ParamsType): Promise<string> {
+    const value = params[0];
     if (isBuffer(value)) {
       return value.toString("utf8");
     }
@@ -259,9 +248,18 @@ export class Converter {
       });
     }
 
-    const u8 = await (typeof value === "string"
-      ? this.toUint8Array(value, "Base64")
-      : this.toUint8Array(value));
+    let u8: Uint8Array;
+    if (typeof value === "string") {
+      const encoding = params[1] as EncodingType;
+      if (encoding === "Text") {
+        return value;
+      } else {
+        u8 = await this.toUint8Array(value, encoding);
+      }
+    } else {
+      u8 = await this.toUint8Array(value);
+    }
+
     return this._uint8ArrayToText(u8);
   }
 
@@ -278,14 +276,20 @@ export class Converter {
       if (value.size === 0) {
         return EMPTY_U8;
       }
-      return new Uint8Array(await this.toArrayBuffer(value));
+      if (navigator && navigator.product === "ReactNative") {
+        return this.toUint8Array(await this._blobToBase64(value), "Base64");
+      } else {
+        return this._blobToUint8Array(value);
+      }
     }
     if (typeof value === "string") {
       const encoding = params[1];
       if (encoding === "Text") {
         return await this._textToUint8Array(value);
-      } else {
+      } else if (encoding === "Base64") {
         return new Uint8Array(await this._base64ToArrayBuffer(value));
+      } else {
+        return Uint8Array.from(value.split(""), (e) => e.charCodeAt(0));
       }
     }
 
@@ -304,9 +308,13 @@ export class Converter {
     return Buffer.from(base64, "base64");
   }
 
-  protected async _blobToArrayBuffer(blob: Blob) {
+  protected async _binaryStringToBuffer(bin: string) {
+    return Buffer.from(bin, "binary");
+  }
+
+  protected async _blobToUint8Array(blob: Blob) {
     if (blob.size === 0) {
-      return new ArrayBuffer(0);
+      return EMPTY_U8;
     }
 
     const awaitingSize = this.awaitingSize;
@@ -335,7 +343,7 @@ export class Converter {
       u8.set(new Uint8Array(chunk), pos);
       pos += chunk.byteLength;
     }
-    return u8.buffer;
+    return u8;
   }
 
   protected async _blobToBase64(blob: Blob): Promise<string> {
