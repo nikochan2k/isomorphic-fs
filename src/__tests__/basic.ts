@@ -20,7 +20,7 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-    const buffer = await c.toArrayBuffer("", "text");
+    const buffer = await c.toArrayBuffer("", "Text");
     const ws = await file.createWriteStream();
     await ws.write(buffer);
     await ws.close();
@@ -36,7 +36,7 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-    const buffer = await c.toArrayBuffer("test", "text");
+    const buffer = await c.toArrayBuffer("test", "Text");
     const ws = await file.createWriteStream();
     await ws.write(buffer);
     await ws.close();
@@ -57,8 +57,8 @@ export const testAll = (fs: FileSystem) => {
     const file = await fs.getFile("/otani.txt");
 
     const ws = await file.createWriteStream();
-    await ws.write(await c.toArrayBuffer("大谷", "text"));
-    await ws.write(await c.toArrayBuffer("翔平", "text"));
+    await ws.write(await c.toArrayBuffer("大谷", "Text"));
+    await ws.write(await c.toArrayBuffer("翔平", "Text"));
 
     const rs = await file.createReadStream();
     let buffer = (await rs.read(6)) as ArrayBuffer;
@@ -71,7 +71,7 @@ export const testAll = (fs: FileSystem) => {
     expect(text).toBe("翔平");
 
     await ws.seek(0, SeekOrigin.End);
-    await ws.write(await c.toArrayBuffer("ホームラン", "text"));
+    await ws.write(await c.toArrayBuffer("ホームラン", "Text"));
 
     await rs.seek(0, SeekOrigin.Begin);
     buffer = (await rs.read()) as ArrayBuffer;
@@ -124,7 +124,7 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const ws = await file.createWriteStream();
-    const outBuf = await c.toArrayBuffer("Sample", "text");
+    const outBuf = await c.toArrayBuffer("Sample", "Text");
     const before = Date.now();
     await ws.write(outBuf);
     await ws.close();

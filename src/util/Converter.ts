@@ -2,7 +2,7 @@ import { decode, encode } from "base64-arraybuffer";
 import { DEFAULT_BUFFER_SIZE } from "../core";
 
 type BinaryType = ArrayBuffer | Uint8Array | Buffer | Blob;
-type EncodingType = "base64" | "text";
+type EncodingType = "Base64" | "Text";
 type ValueType = [BinaryType] | [string, EncodingType];
 
 export const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
@@ -89,14 +89,14 @@ export class Converter {
         return EMPTY_ARRAY_BUFFER;
       }
       if (navigator && navigator.product === "ReactNative") {
-        return this.toArrayBuffer(await this._blobToBase64(value), "base64");
+        return this.toArrayBuffer(await this._blobToBase64(value), "Base64");
       } else {
         return this._blobToArrayBufferUsingReadAsArrayBuffer(value);
       }
     }
     if (typeof value === "string") {
       const encoding = params[1];
-      if (encoding === "text") {
+      if (encoding === "Text") {
         const u8 = await this._textToUint8Array(value);
         return u8.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
       } else {
@@ -132,7 +132,7 @@ export class Converter {
   ): Promise<string> {
     const awaitingSize = this.awaitingSize;
     if (typeof value === "string") {
-      value = await this.toUint8Array(value, "text");
+      value = await this.toUint8Array(value, "Text");
     } else if (isBuffer(value)) {
       const chunks: string[] = [];
       for (
@@ -212,7 +212,7 @@ export class Converter {
     }
     if (typeof value === "string") {
       const encoding = params[1];
-      if (encoding === "text") {
+      if (encoding === "Text") {
         const u8 = await this._textToUint8Array(value);
         return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength);
       } else {
@@ -262,7 +262,7 @@ export class Converter {
     }
 
     const u8 = await (typeof value === "string"
-      ? this.toUint8Array(value, "base64")
+      ? this.toUint8Array(value, "Base64")
       : this.toUint8Array(value));
     return this._uint8ArrayToText(u8);
   }
@@ -284,7 +284,7 @@ export class Converter {
     }
     if (typeof value === "string") {
       const encoding = params[1];
-      if (encoding === "text") {
+      if (encoding === "Text") {
         return await this._textToUint8Array(value);
       } else {
         return new Uint8Array(await this._base64ToArrayBuffer(value));
