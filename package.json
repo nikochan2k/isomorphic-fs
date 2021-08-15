@@ -1,6 +1,6 @@
 {
   "name": "isomorphic-fs",
-  "version": "0.0.52",
+  "version": "0.0.53",
   "description": "Isomorphic Filesystem",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
