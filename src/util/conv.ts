@@ -3,7 +3,7 @@ import {
   BinaryType,
   DEFAULT_BUFFER_SIZE,
   EncodingType,
-  ParamsType,
+  InputParamsType,
 } from "../core";
 
 export const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
@@ -87,7 +87,7 @@ export class Converter {
     value: string,
     encoding: EncodingType
   ): Promise<ArrayBuffer>;
-  public async toArrayBuffer(...params: ParamsType): Promise<ArrayBuffer> {
+  public async toArrayBuffer(...params: InputParamsType): Promise<ArrayBuffer> {
     const value = params[0];
     if (!value) {
       return EMPTY_ARRAY_BUFFER;
@@ -121,7 +121,7 @@ export class Converter {
 
   public async toBase64(value: BinaryType): Promise<string>;
   public async toBase64(value: string, encoding: EncodingType): Promise<string>;
-  public async toBase64(...params: ParamsType): Promise<string> {
+  public async toBase64(...params: InputParamsType): Promise<string> {
     let value = params[0];
     const awaitingSize = this.awaitingSize;
     if (isBuffer(value)) {
@@ -167,7 +167,7 @@ export class Converter {
     value: string,
     encoding: EncodingType
   ): Promise<string>;
-  public async toBinaryString(...params: ParamsType): Promise<string> {
+  public async toBinaryString(...params: InputParamsType): Promise<string> {
     let value = params[0];
     const awaitingSize = this.awaitingSize;
     if (isBuffer(value)) {
@@ -213,7 +213,7 @@ export class Converter {
 
   public async toBlob(value: BinaryType): Promise<Blob>;
   public async toBlob(value: string, encoding: EncodingType): Promise<Blob>;
-  public async toBlob(...params: ParamsType): Promise<Blob> {
+  public async toBlob(...params: InputParamsType): Promise<Blob> {
     if (!hasBlob) {
       throw new Error("Blob is not supported");
     }
@@ -240,7 +240,7 @@ export class Converter {
 
   public async toBuffer(value: BinaryType): Promise<Buffer>;
   public async toBuffer(value: string, encoding: EncodingType): Promise<Buffer>;
-  public async toBuffer(...params: ParamsType): Promise<Buffer> {
+  public async toBuffer(...params: InputParamsType): Promise<Buffer> {
     if (!hasBuffer) {
       throw new Error("Buffer is not suppoted.");
     }
@@ -301,7 +301,7 @@ export class Converter {
 
   public async toText(value: BinaryType): Promise<string>;
   public async toText(value: string, encoding: EncodingType): Promise<string>;
-  public async toText(...params: ParamsType): Promise<string> {
+  public async toText(...params: InputParamsType): Promise<string> {
     const value = params[0];
     if (isBuffer(value)) {
       return value.toString("utf8");
@@ -338,7 +338,7 @@ export class Converter {
     value: string,
     encoding: EncodingType
   ): Promise<Uint8Array>;
-  public async toUint8Array(...params: ParamsType): Promise<Uint8Array> {
+  public async toUint8Array(...params: InputParamsType): Promise<Uint8Array> {
     let value = params[0];
     if (!value) {
       return EMPTY_U8;

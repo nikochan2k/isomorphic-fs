@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter } from "../util/conv";
+import { Converter, isBlob } from "../util/conv";
 import { toHex } from "../util/misc";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -9,10 +9,12 @@ import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
   DEFAULT_BUFFER_SIZE,
   DeleteOptions,
+  EncodingType,
   File,
   OpenOptions,
   OpenWriteOptions,
   ReadStream,
+  WriteParamsType,
   WriteStream,
   XmitError,
   XmitOptions,
@@ -251,12 +253,40 @@ export abstract class AbstractFile
     }
   }
 
-  public async writeAll(
-    buffer: ArrayBuffer | Uint8Array,
-    options: OpenWriteOptions = { append: false, create: true }
-  ): Promise<void> {
-    const c = new Converter({ awaitingSize: options.awaitingSize });
-    const u8 = await c.toUint8Array(buffer);
+  public async writeAll(...params: WriteParamsType): Promise<void> {
+    const value = params[0];
+    if (isBlob(value)) {
+      const options = params[1] as OpenWriteOptions;
+      const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
+      const ws = await this.createWriteStream(options);
+      try {
+        let pos = 0;
+        let chunk: Blob;
+        do {
+          chunk = value.slice(pos, pos + bufferSize);
+          pos += bufferSize;
+          if (0 < chunk.size) {
+            await ws.write(chunk);
+          }
+        } while (chunk.size === bufferSize);
+      } finally {
+        await ws.close();
+      }
+      return;
+    }
+
+    let options: OpenWriteOptions;
+    let u8: Uint8Array;
+    if (typeof value === "string") {
+      const encoding = params[1] as EncodingType;
+      options = params[2] as OpenWriteOptions;
+      const c = new Converter({ awaitingSize: options.awaitingSize });
+      u8 = await c.toUint8Array(value, encoding);
+    } else {
+      options = params[1] as OpenWriteOptions;
+      const c = new Converter({ awaitingSize: options.awaitingSize });
+      u8 = await c.toUint8Array(value);
+    }
     const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
     const ws = await this.createWriteStream(options);
     try {

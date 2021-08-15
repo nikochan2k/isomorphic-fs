@@ -20,7 +20,17 @@ export interface FileSystemOptions {
 export type BinaryType = ArrayBuffer | Uint8Array | Buffer | Blob;
 export type ValueType = string | BinaryType;
 export type EncodingType = "Base64" | "Text" | "BinaryString";
-export type ParamsType = [BinaryType] | [string, EncodingType];
+export type OutputType =
+  | EncodingType
+  | "ArrayBuffer"
+  | "Uint8Array"
+  | "Buffer"
+  | "Blob";
+
+export type InputParamsType = [BinaryType] | [string, EncodingType];
+export type WriteParamsType =
+  | [BinaryType, OpenWriteOptions]
+  | [string, EncodingType, OpenWriteOptions];
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -220,10 +230,13 @@ export interface File extends FileSystemObject {
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
   readAll(options?: OpenOptions): Promise<ArrayBuffer>;
+  writeAll(value: BinaryType, options: OpenWriteOptions): Promise<void>;
   writeAll(
-    buffer: ArrayBuffer | Uint8Array,
-    options?: OpenWriteOptions
+    value: string,
+    encoding: EncodingType,
+    options: OpenWriteOptions
   ): Promise<void>;
+  writeAll(...params: WriteParamsType): Promise<void>;
 }
 
 export enum SeekOrigin {
@@ -243,7 +256,9 @@ export interface ReadStream extends Stream {
 }
 export interface WriteStream extends Stream {
   truncate(size: number): Promise<void>;
-  write(buffer: ArrayBuffer | Uint8Array): Promise<void>;
+  write(value: BinaryType): Promise<void>;
+  write(value: string, encoding: EncodingType): Promise<void>;
+  write(...params: InputParamsType): Promise<void>;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;
