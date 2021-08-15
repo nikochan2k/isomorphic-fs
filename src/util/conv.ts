@@ -70,6 +70,11 @@ export class Converter {
     this.awaitingSize = options?.awaitingSize || DEFAULT_BUFFER_SIZE;
   }
 
+  public async toArrayBuffer(value: BinaryType): Promise<ArrayBuffer>;
+  public async toArrayBuffer(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<ArrayBuffer>;
   public async toArrayBuffer(...params: ParamsType): Promise<ArrayBuffer> {
     const value = params[0];
     if (!value) {
@@ -102,6 +107,11 @@ export class Converter {
     return value;
   }
 
+  public async toBase64(value: BinaryType): Promise<string>;
+  public async toBase64(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<string>;
   public async toBase64(...params: ParamsType): Promise<string> {
     let value = params[0];
     const awaitingSize = this.awaitingSize;
@@ -143,6 +153,57 @@ export class Converter {
     return chunks.join("");
   }
 
+  public async toBinaryString(value: BinaryType): Promise<string>;
+  public async toBinaryString(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<string>;
+  public async toBinaryString(...params: ParamsType): Promise<string> {
+    let value = params[0];
+    const awaitingSize = this.awaitingSize;
+    if (isBuffer(value)) {
+      const chunks: string[] = [];
+      for (
+        let start = 0, end = value.byteLength;
+        start < end;
+        start += awaitingSize
+      ) {
+        const buf = value.slice(start, start + awaitingSize);
+        const chunk = await this._bufferToBinaryString(buf);
+        chunks.push(chunk);
+      }
+      return chunks.join("");
+    }
+
+    let u8: Uint8Array;
+    if (typeof value === "string") {
+      const encoding = params[1] as EncodingType;
+      if (encoding === "BinaryString") {
+        return value;
+      }
+      u8 = await this.toUint8Array(value, encoding);
+    } else {
+      u8 = await this.toUint8Array(value);
+    }
+
+    const chunks: string[] = [];
+    for (
+      let begin = 0, end = u8.byteLength;
+      begin < end;
+      begin += awaitingSize
+    ) {
+      const u8Chunk = u8.slice(begin, begin + awaitingSize);
+      const chunk = await this._uint8ArrayToBinaryString(u8Chunk);
+      chunks.push(chunk);
+    }
+    return chunks.join("");
+  }
+
+  public async toBlob(value: BinaryType): Promise<Blob>;
+  public async toBlob(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<Blob>;
   public async toBlob(...params: ParamsType): Promise<Blob> {
     if (!hasBlob) {
       throw new Error("Blob is not supported");
@@ -171,6 +232,11 @@ export class Converter {
     return value;
   }
 
+  public async toBuffer(value: BinaryType): Promise<Buffer>;
+  public async toBuffer(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<Buffer>;
   public async toBuffer(...params: ParamsType): Promise<Buffer> {
     if (!hasBuffer) {
       throw new Error("Buffer is not suppoted.");
@@ -230,6 +296,11 @@ export class Converter {
     return Buffer.from(value);
   }
 
+  public async toText(value: BinaryType): Promise<string>;
+  public async toText(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<string>;
   public async toText(...params: ParamsType): Promise<string> {
     const value = params[0];
     if (isBuffer(value)) {
@@ -253,9 +324,8 @@ export class Converter {
       const encoding = params[1] as EncodingType;
       if (encoding === "Text") {
         return value;
-      } else {
-        u8 = await this.toUint8Array(value, encoding);
       }
+      u8 = await this.toUint8Array(value, encoding);
     } else {
       u8 = await this.toUint8Array(value);
     }
@@ -263,6 +333,11 @@ export class Converter {
     return this._uint8ArrayToText(u8);
   }
 
+  public async toUint8Array(value: BinaryType): Promise<Uint8Array>;
+  public async toUint8Array(
+    value: string,
+    inputEncoding: EncodingType
+  ): Promise<Uint8Array>;
   public async toUint8Array(...params: ParamsType): Promise<Uint8Array> {
     let value = params[0];
     if (!value) {
@@ -312,6 +387,31 @@ export class Converter {
     return Buffer.from(bin, "binary");
   }
 
+  protected async _blobToBase64(blob: Blob): Promise<string> {
+    if (blob.size === 0) {
+      return "";
+    }
+
+    const awaitingSize = this.awaitingSize;
+    const chunks: string[] = [];
+    for (let start = 0, end = blob.size; start < end; start += awaitingSize) {
+      const blobChunk = blob.slice(start, start + awaitingSize);
+      const chunk = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = function (ev) {
+          reject(reader.error || ev);
+        };
+        reader.onload = function () {
+          const base64 = dataUrlToBase64(reader.result as string);
+          resolve(base64);
+        };
+        reader.readAsDataURL(blobChunk);
+      });
+      chunks.push(chunk);
+    }
+    return chunks.join("");
+  }
+
   protected async _blobToUint8Array(blob: Blob) {
     if (blob.size === 0) {
       return EMPTY_U8;
@@ -346,33 +446,16 @@ export class Converter {
     return u8;
   }
 
-  protected async _blobToBase64(blob: Blob): Promise<string> {
-    if (blob.size === 0) {
-      return "";
-    }
-
-    const awaitingSize = this.awaitingSize;
-    const chunks: string[] = [];
-    for (let start = 0, end = blob.size; start < end; start += awaitingSize) {
-      const blobChunk = blob.slice(start, start + awaitingSize);
-      const chunk = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = function (ev) {
-          reject(reader.error || ev);
-        };
-        reader.onload = function () {
-          const base64 = dataUrlToBase64(reader.result as string);
-          resolve(base64);
-        };
-        reader.readAsDataURL(blobChunk);
-      });
-      chunks.push(chunk);
-    }
-    return chunks.join("");
-  }
-
   protected async _bufferToBase64(buffer: Buffer) {
     return buffer.toString("base64");
+  }
+
+  protected async _bufferToBinaryString(buffer: Buffer) {
+    return buffer.toString("binary");
+  }
+
+  protected async _uint8ArrayToBinaryString(u8: Uint8Array) {
+    return Array.from(u8, (e) => String.fromCharCode(e)).join("");
   }
 
   protected async _uint8ArrayToText(u8: Uint8Array) {
