@@ -20,6 +20,7 @@ export interface FileSystemOptions {
 export type BinaryType = ArrayBuffer | Uint8Array | Buffer | Blob;
 export type ValueType = string | BinaryType;
 export type EncodingType = "Base64" | "Text" | "BinaryString";
+export type ParamsType = [BinaryType] | [string, EncodingType];
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 

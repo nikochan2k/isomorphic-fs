@@ -1,5 +1,5 @@
 import { Converter } from "../util/conv";
-import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
+import { AbstractFile } from "./AbstractFile";
 import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 
 export abstract class AbstractStream implements Stream {
@@ -8,7 +8,7 @@ export abstract class AbstractStream implements Stream {
   public position = 0;
   protected converter: Converter;
 
-  constructor(protected fso: AbstractFileSystemObject, options: OpenOptions) {
+  constructor(protected file: AbstractFile, options: OpenOptions) {
     if (options.bufferSize) {
       this.bufferSize = options.bufferSize;
     }
@@ -16,7 +16,7 @@ export abstract class AbstractStream implements Stream {
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {
-    const stats = await this.fso.head();
+    const stats = await this.file.head();
     const size = stats.size as number;
 
     let start: number | undefined;

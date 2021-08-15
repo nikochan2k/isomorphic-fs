@@ -8,6 +8,7 @@ export abstract class AbstractReadStream
 {
   private afterGet?: (path: string) => Promise<void>;
 
+  protected fileSize?: number;
   protected handled = false;
 
   constructor(file: AbstractFile, protected readonly options: OpenOptions) {
@@ -19,7 +20,7 @@ export abstract class AbstractReadStream
     await this._close();
     this.position = 0;
     if (!this.options.ignoreHook && this.afterGet) {
-      this.afterGet(this.fso.path);
+      this.afterGet(this.file.path);
     }
   }
 
@@ -42,8 +43,8 @@ export abstract class AbstractReadStream
         this.position += buffer.byteLength;
       }
     } else {
-      const stats = await this.fso.head();
-      const max = Math.min(size, stats.size as number);
+      const fileSize = await this._getFileSize();
+      const max = Math.min(size, fileSize);
       const buf = new ArrayBuffer(max);
       const u8 = new Uint8Array(buf);
       let pos = 0;
@@ -74,4 +75,14 @@ export abstract class AbstractReadStream
 
   public abstract _close(): Promise<void>;
   public abstract _read(size?: number): Promise<Uint8Array | null>;
+
+  protected async _getFileSize() {
+    if (this.fileSize) {
+      return this.fileSize;
+    }
+    const stats = await this.file.head({ ignoreHook: true });
+    const fileSize = stats.size as number;
+    this.fileSize = fileSize;
+    return fileSize;
+  }
 }

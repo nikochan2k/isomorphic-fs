@@ -28,13 +28,13 @@ export abstract class AbstractWriteStream
       return;
     }
     if (!this.options.ignoreHook && this.afterPost && this.options.create) {
-      await this.afterPost(this.fso.path);
+      await this.afterPost(this.file.path);
     } else if (
       !this.options.ignoreHook &&
       this.afterPut &&
       !this.options.create
     ) {
-      await this.afterPut(this.fso.path);
+      await this.afterPut(this.file.path);
     }
   }
 
