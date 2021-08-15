@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter, getSize, isBlob } from "../util/conv";
+import { Converter, getSize, isBlob, validateBufferSize } from "../util/conv";
 import { toHex } from "../util/misc";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -7,7 +7,6 @@ import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
 import { AbstractReadStream } from "./AbstractReadStream";
 import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
-  DEFAULT_BUFFER_SIZE,
   DeleteOptions,
   File,
   OpenOptions,
@@ -303,6 +302,7 @@ export abstract class AbstractFile
   public async readAll(
     options: OpenReadOptions = { sourceType: "Uint8Array" }
   ): Promise<Source> {
+    validateBufferSize(options);
     const rs = (await this.createReadStream(options)) as AbstractReadStream;
     const type = options.sourceType as SourceType;
     const converter = rs.converter;
@@ -325,7 +325,7 @@ export abstract class AbstractFile
     src: Source,
     options: OpenWriteOptions = { append: false, create: true }
   ): Promise<number> {
-    const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
+    const bufferSize = validateBufferSize(options);
     const ws = (await this.createWriteStream(options)) as AbstractWriteStream;
 
     if (isBlob(src)) {

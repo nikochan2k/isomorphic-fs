@@ -113,6 +113,20 @@ export function dataUrlToBase64(dataUrl: string) {
   return dataUrl;
 }
 
+export function validateBufferSize(options: { bufferSize?: number }) {
+  if (!options.bufferSize) {
+    options.bufferSize = DEFAULT_BUFFER_SIZE;
+  }
+  const rem = options.bufferSize % 6;
+  if (rem !== 0) {
+    options.bufferSize -= rem;
+    console.info(
+      `"bufferSize" was modified to ${options.bufferSize}. ("bufferSize" must be divisible by 6.)`
+    );
+  }
+  return options.bufferSize;
+}
+
 export interface ConverterOptions {
   bufferSize?: number;
 }
@@ -121,7 +135,10 @@ export class Converter {
   private bufferSize: number;
 
   constructor(options?: ConverterOptions) {
-    this.bufferSize = options?.bufferSize || DEFAULT_BUFFER_SIZE;
+    if (!options) {
+      options = {};
+    }
+    this.bufferSize = validateBufferSize(options);
   }
 
   public async toArrayBuffer(src: Source): Promise<ArrayBuffer> {

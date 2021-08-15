@@ -1,4 +1,4 @@
-import { Converter } from "../util/conv";
+import { Converter, validateBufferSize } from "../util/conv";
 import { AbstractFile } from "./AbstractFile";
 import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 
@@ -9,9 +9,7 @@ export abstract class AbstractStream implements Stream {
   public converter: Converter;
 
   constructor(protected file: AbstractFile, options: OpenOptions) {
-    if (options.bufferSize) {
-      this.bufferSize = options.bufferSize;
-    }
+    validateBufferSize(options);
     this.converter = new Converter({ bufferSize: options.bufferSize });
   }
 
