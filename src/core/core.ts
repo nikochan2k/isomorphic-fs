@@ -17,9 +17,13 @@ export interface FileSystemOptions {
   hook?: Hook;
 }
 
-export type BinaryType = ArrayBuffer | Uint8Array | Buffer | Blob;
-export type ValueType = string | BinaryType;
+export type BinarySource = ArrayBuffer | Uint8Array | Buffer | Blob;
 export type EncodingType = "Base64" | "Text" | "BinaryString";
+export interface StringSource {
+  value: string;
+  encoding: EncodingType;
+}
+export type Source = BinarySource | StringSource;
 export type OutputType =
   | EncodingType
   | "ArrayBuffer"
@@ -27,9 +31,9 @@ export type OutputType =
   | "Buffer"
   | "Blob";
 
-export type InputParamsType = [BinaryType] | [string, EncodingType];
+export type InputParamsType = [BinarySource] | [string, EncodingType];
 export type WriteParamsType =
-  | [BinaryType, OpenWriteOptions]
+  | [BinarySource, OpenWriteOptions]
   | [string, EncodingType, OpenWriteOptions];
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -194,9 +198,9 @@ export interface FileSystem {
   toURL(path: string, urlType?: URLType): Promise<string>;
   writeAll(
     path: string,
-    buffer: ArrayBuffer | Uint8Array,
+    value: Source,
     options?: OpenWriteOptions
-  ): Promise<void>;
+  ): Promise<number>;
 }
 
 export interface FileSystemObject {
@@ -230,13 +234,7 @@ export interface File extends FileSystemObject {
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
   readAll(options?: OpenOptions): Promise<ArrayBuffer>;
-  writeAll(value: BinaryType, options: OpenWriteOptions): Promise<void>;
-  writeAll(
-    value: string,
-    encoding: EncodingType,
-    options: OpenWriteOptions
-  ): Promise<void>;
-  writeAll(...params: WriteParamsType): Promise<void>;
+  writeAll(value: Source, options: OpenWriteOptions): Promise<number>;
 }
 
 export enum SeekOrigin {
@@ -256,9 +254,7 @@ export interface ReadStream extends Stream {
 }
 export interface WriteStream extends Stream {
   truncate(size: number): Promise<void>;
-  write(value: BinaryType): Promise<void>;
-  write(value: string, encoding: EncodingType): Promise<void>;
-  write(...params: InputParamsType): Promise<void>;
+  write(value: Source): Promise<number>;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;

@@ -9,12 +9,11 @@ import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
   DEFAULT_BUFFER_SIZE,
   DeleteOptions,
-  EncodingType,
   File,
   OpenOptions,
   OpenWriteOptions,
   ReadStream,
-  WriteParamsType,
+  Source,
   WriteStream,
   XmitError,
   XmitOptions,
@@ -253,17 +252,19 @@ export abstract class AbstractFile
     }
   }
 
-  public async writeAll(...params: WriteParamsType): Promise<void> {
-    const value = params[0];
-    if (isBlob(value)) {
-      const options = params[1] as OpenWriteOptions;
-      const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
-      const ws = await this.createWriteStream(options);
+  public async writeAll(
+    src: Source,
+    options: OpenWriteOptions = { append: false, create: true }
+  ): Promise<number> {
+    const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
+    const ws = await this.createWriteStream(options);
+
+    if (isBlob(src)) {
       try {
         let pos = 0;
         let chunk: Blob;
         do {
-          chunk = value.slice(pos, pos + bufferSize);
+          chunk = src.slice(pos, pos + bufferSize);
           pos += bufferSize;
           if (0 < chunk.size) {
             await ws.write(chunk);
@@ -272,23 +273,11 @@ export abstract class AbstractFile
       } finally {
         await ws.close();
       }
-      return;
+      return src.size;
     }
 
-    let options: OpenWriteOptions;
-    let u8: Uint8Array;
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
-      options = params[2] as OpenWriteOptions;
-      const c = new Converter({ awaitingSize: options.awaitingSize });
-      u8 = await c.toUint8Array(value, encoding);
-    } else {
-      options = params[1] as OpenWriteOptions;
-      const c = new Converter({ awaitingSize: options.awaitingSize });
-      u8 = await c.toUint8Array(value);
-    }
-    const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
-    const ws = await this.createWriteStream(options);
+    const c = new Converter({ awaitingSize: options?.awaitingSize });
+    const u8 = await c.toUint8Array(src);
     try {
       let pos = 0;
       let chunk: Uint8Array;
@@ -302,6 +291,7 @@ export abstract class AbstractFile
     } finally {
       await ws.close();
     }
+    return u8.byteLength;
   }
 
   public abstract _createReadStream(

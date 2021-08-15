@@ -1,6 +1,6 @@
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
-import { InputParamsType, OpenWriteOptions, WriteStream } from "./core";
+import { OpenWriteOptions, Source, WriteStream } from "./core";
 
 export abstract class AbstractWriteStream
   extends AbstractStream
@@ -50,13 +50,14 @@ export abstract class AbstractWriteStream
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async write(...params: InputParamsType): Promise<void> {
-    const written = await this._write(...params);
+  public async write(value: Source): Promise<number> {
+    const written = await this._write(value);
     this.position += written;
     this.changed = true;
+    return written;
   }
 
   public abstract _close(): Promise<void>;
   public abstract _truncate(size: number): Promise<void>;
-  public abstract _write(...params: InputParamsType): Promise<number>;
+  public abstract _write(value: Source): Promise<number>;
 }

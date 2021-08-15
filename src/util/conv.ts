@@ -1,27 +1,26 @@
 import { decode, encode } from "base64-arraybuffer";
 import {
-  BinaryType,
   DEFAULT_BUFFER_SIZE,
   EncodingType,
-  InputParamsType,
+  Source,
+  StringSource,
 } from "../core";
 
 export const EMPTY_ARRAY_BUFFER = new ArrayBuffer(0);
 
-export function isArrayBuffer(value: unknown): value is ArrayBuffer {
+export function isArrayBuffer(src: unknown): src is ArrayBuffer {
   return (
-    value instanceof ArrayBuffer ||
-    toString.call(value) === "[object ArrayBuffer]"
+    src instanceof ArrayBuffer || toString.call(src) === "[object ArrayBuffer]"
   );
 }
 
 export const EMPTY_U8 = new Uint8Array(0);
 
-export function isUint8Array(value: unknown): value is Uint8Array {
+export function isUint8Array(src: unknown): src is Uint8Array {
   return (
-    value instanceof Uint8Array ||
-    toString.call(value) === "[object Uint8Array]" ||
-    toString.call(value) === "[object Buffer]"
+    src instanceof Uint8Array ||
+    toString.call(src) === "[object Uint8Array]" ||
+    toString.call(src) === "[object Buffer]"
   );
 }
 
@@ -31,10 +30,10 @@ if (hasBuffer) {
   var EMPTY_BUFFER = Buffer.from([]);
 }
 
-export function isBuffer(value: any): value is Buffer {
+export function isBuffer(src: any): src is Buffer {
   return (
     hasBuffer &&
-    (value instanceof Buffer || toString.call(value) === "[object Buffer]")
+    (src instanceof Buffer || toString.call(src) === "[object Buffer]")
   );
 }
 
@@ -44,10 +43,22 @@ if (hasBlob) {
   var EMPTY_BLOB = new Blob([]);
 }
 
-export function isBlob(value: unknown): value is Blob {
+export function isBlob(src: unknown): src is Blob {
   return (
-    hasBlob &&
-    (value instanceof Blob || toString.call(value) === "[object Blob]")
+    hasBlob && (src instanceof Blob || toString.call(src) === "[object Blob]")
+  );
+}
+
+export function isStringSource(src: any): src is StringSource {
+  if (src == null) {
+    return false;
+  }
+  if (typeof src.value !== "string") {
+    return false;
+  }
+  const encoding = src.encoding as EncodingType;
+  return (
+    encoding === "Text" || encoding === "Base64" || encoding === "BinaryString"
   );
 }
 
@@ -82,73 +93,61 @@ export class Converter {
     this.awaitingSize = options?.awaitingSize || DEFAULT_BUFFER_SIZE;
   }
 
-  public async toArrayBuffer(value: BinaryType): Promise<ArrayBuffer>;
-  public async toArrayBuffer(
-    value: string,
-    encoding: EncodingType
-  ): Promise<ArrayBuffer>;
-  public async toArrayBuffer(...params: InputParamsType): Promise<ArrayBuffer> {
-    const value = params[0];
-    if (!value) {
+  public async toArrayBuffer(src: Source): Promise<ArrayBuffer> {
+    if (!src) {
       return EMPTY_ARRAY_BUFFER;
     }
 
-    if (isUint8Array(value)) {
-      if (value.byteLength === 0) {
+    if (isUint8Array(src)) {
+      if (src.byteLength === 0) {
         return EMPTY_ARRAY_BUFFER;
       }
-      const u8 = value.slice(
-        value.byteOffset,
-        value.byteOffset + value.byteLength
-      );
+      const u8 = src.slice(src.byteOffset, src.byteOffset + src.byteLength);
       return u8.buffer;
     }
-    if (isBlob(value)) {
-      if (value.size === 0) {
+    if (isBlob(src)) {
+      if (src.size === 0) {
         return EMPTY_ARRAY_BUFFER;
       }
-      const u8 = await this.toUint8Array(value);
+      const u8 = await this.toUint8Array(src);
       return u8.buffer;
     }
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
-      const u8 = await this.toUint8Array(value, encoding);
+    if (isStringSource(src)) {
+      const u8 = await this.toUint8Array(src);
       return u8.buffer;
     }
 
-    return value;
+    return src;
   }
 
-  public async toBase64(value: BinaryType): Promise<string>;
-  public async toBase64(value: string, encoding: EncodingType): Promise<string>;
-  public async toBase64(...params: InputParamsType): Promise<string> {
-    let value = params[0];
+  public async toBase64(src: Source): Promise<string> {
     const awaitingSize = this.awaitingSize;
-    if (isBuffer(value)) {
+    if (isBuffer(src)) {
       const chunks: string[] = [];
       for (
-        let start = 0, end = value.byteLength;
+        let start = 0, end = src.byteLength;
         start < end;
         start += awaitingSize
       ) {
-        const buf = value.slice(start, start + awaitingSize);
+        const buf = src.slice(start, start + awaitingSize);
         const chunk = await this._bufferToBase64(buf);
         chunks.push(chunk);
       }
       return chunks.join("");
     }
+    if (isStringSource(src)) {
+      const value = src.value;
+      if (!value) {
+        return "";
+      }
 
-    let u8: Uint8Array;
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
+      const encoding = src.encoding;
       if (encoding === "Base64") {
         return value;
       }
-      u8 = await this.toUint8Array(value, encoding);
-    } else {
-      u8 = await this.toUint8Array(value);
     }
 
+    const u8 = await this.toUint8Array(src);
     const chunks: string[] = [];
     for (
       let begin = 0, end = u8.byteLength;
@@ -162,42 +161,35 @@ export class Converter {
     return chunks.join("");
   }
 
-  public async toBinaryString(value: BinaryType): Promise<string>;
-  public async toBinaryString(
-    value: string,
-    encoding: EncodingType
-  ): Promise<string>;
-  public async toBinaryString(...params: InputParamsType): Promise<string> {
-    let value = params[0];
+  public async toBinaryString(src: Source): Promise<string> {
     const awaitingSize = this.awaitingSize;
-    if (isBuffer(value)) {
+    if (isBuffer(src)) {
       const chunks: string[] = [];
       for (
-        let start = 0, end = value.byteLength;
+        let start = 0, end = src.byteLength;
         start < end;
         start += awaitingSize
       ) {
-        const buf = value.slice(start, start + awaitingSize);
+        const buf = src.slice(start, start + awaitingSize);
         const chunk = await this._bufferToBinaryString(buf);
         chunks.push(chunk);
       }
       return chunks.join("");
     }
-    if (isBlob(value) && hasReadAsBinaryString) {
-      return this._blobToBinaryString(value);
+    if (isBlob(src) && hasReadAsBinaryString) {
+      return this._blobToBinaryString(src);
     }
-
-    let u8: Uint8Array;
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
-      if (encoding === "BinaryString") {
+    if (isStringSource(src)) {
+      const value = src.value;
+      if (!value) {
+        return "";
+      }
+      if (src.encoding === "BinaryString") {
         return value;
       }
-      u8 = await this.toUint8Array(value, encoding);
-    } else {
-      u8 = await this.toUint8Array(value);
     }
 
+    const u8 = await this.toUint8Array(src);
     const chunks: string[] = [];
     for (
       let begin = 0, end = u8.byteLength;
@@ -211,66 +203,57 @@ export class Converter {
     return chunks.join("");
   }
 
-  public async toBlob(value: BinaryType): Promise<Blob>;
-  public async toBlob(value: string, encoding: EncodingType): Promise<Blob>;
-  public async toBlob(...params: InputParamsType): Promise<Blob> {
+  public async toBlob(src: Source): Promise<Blob> {
     if (!hasBlob) {
       throw new Error("Blob is not supported");
     }
 
-    const value = params[0];
-    if (!value) {
+    if (!src) {
       return EMPTY_BLOB;
     }
 
-    if (isUint8Array(value)) {
-      return new Blob([await this.toArrayBuffer(value)]);
+    if (isBlob(src)) {
+      return src;
     }
-    if (isArrayBuffer(value)) {
-      return new Blob([value]);
-    }
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
-      const ab = await this.toArrayBuffer(value, encoding);
-      return new Blob([ab]);
+    if (isArrayBuffer(src)) {
+      return new Blob([src]);
     }
 
-    return value;
+    const ab = await this.toArrayBuffer(src);
+    return new Blob([ab]);
   }
 
-  public async toBuffer(value: BinaryType): Promise<Buffer>;
-  public async toBuffer(value: string, encoding: EncodingType): Promise<Buffer>;
-  public async toBuffer(...params: InputParamsType): Promise<Buffer> {
+  public async toBuffer(src: Source): Promise<Buffer> {
     if (!hasBuffer) {
       throw new Error("Buffer is not suppoted.");
     }
 
-    const value = params[0];
-    if (!value) {
+    if (!src) {
       return EMPTY_BUFFER;
     }
 
-    if (isBuffer(value)) {
-      return value;
+    if (isBuffer(src)) {
+      return src;
     }
-    if (isUint8Array(value)) {
-      if (value.byteLength === 0) {
+    if (isUint8Array(src)) {
+      if (src.byteLength === 0) {
         return EMPTY_BUFFER;
       }
-      return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+      return Buffer.from(src.buffer, src.byteOffset, src.byteLength);
     }
-    if (isBlob(value)) {
-      if (value.size === 0) {
+    if (isBlob(src)) {
+      if (src.size === 0) {
         return EMPTY_BUFFER;
       }
-      return Buffer.from(await this.toArrayBuffer(value));
+      return Buffer.from(await this.toArrayBuffer(src));
     }
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
+    if (isStringSource(src)) {
+      const encoding = src.encoding;
       if (encoding === "Text") {
-        const u8 = await this._textToUint8Array(value);
+        const u8 = await this._textToUint8Array(src.value);
         return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength);
       } else {
+        const value = src.value;
         const awaitingSize = this.awaitingSize;
         let byteLength = 0;
         const chunks: Buffer[] = [];
@@ -296,17 +279,14 @@ export class Converter {
       }
     }
 
-    return Buffer.from(value);
+    return Buffer.from(src);
   }
 
-  public async toText(value: BinaryType): Promise<string>;
-  public async toText(value: string, encoding: EncodingType): Promise<string>;
-  public async toText(...params: InputParamsType): Promise<string> {
-    const value = params[0];
-    if (isBuffer(value)) {
-      return value.toString("utf8");
+  public async toText(src: Source): Promise<string> {
+    if (isBuffer(src)) {
+      return src.toString("utf8");
     }
-    if (isBlob(value)) {
+    if (isBlob(src)) {
       return await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = function (ev) {
@@ -315,50 +295,52 @@ export class Converter {
         reader.onload = function () {
           resolve(reader.result as string);
         };
-        reader.readAsText(value);
+        reader.readAsText(src);
       });
     }
-
-    let u8: Uint8Array;
-    if (typeof value === "string") {
-      const encoding = params[1] as EncodingType;
+    if (isStringSource(src)) {
+      const value = src.value;
+      if (!value) {
+        return "";
+      }
+      const encoding = src.encoding;
       if (encoding === "Text") {
         return value;
       }
-      u8 = await this.toUint8Array(value, encoding);
-    } else {
-      u8 = await this.toUint8Array(value);
     }
 
+    const u8 = await this.toUint8Array(src);
     return this._uint8ArrayToText(u8);
   }
 
-  public async toUint8Array(value: BinaryType): Promise<Uint8Array>;
-  public async toUint8Array(
-    value: string,
-    encoding: EncodingType
-  ): Promise<Uint8Array>;
-  public async toUint8Array(...params: InputParamsType): Promise<Uint8Array> {
-    let value = params[0];
-    if (!value) {
+  public async toUint8Array(src: Source): Promise<Uint8Array> {
+    if (!src) {
       return EMPTY_U8;
     }
 
-    if (isUint8Array(value)) {
-      return value;
+    if (isUint8Array(src)) {
+      return src;
     }
-    if (isBlob(value)) {
-      if (value.size === 0) {
+    if (isBlob(src)) {
+      if (src.size === 0) {
         return EMPTY_U8;
       }
       if (hasReadAsArrayBufer) {
-        return this._blobToUint8Array(value);
+        return this._blobToUint8Array(src);
       } else {
-        return this.toUint8Array(await this._blobToBase64(value), "Base64");
+        return this.toUint8Array({
+          value: await this._blobToBase64(src),
+          encoding: "Base64",
+        });
       }
     }
-    if (typeof value === "string") {
-      const encoding = params[1];
+    if (isStringSource(src)) {
+      const value = src.value;
+      if (!value) {
+        return EMPTY_U8;
+      }
+
+      const encoding = src.encoding;
       if (encoding === "Text") {
         return await this._textToUint8Array(value);
       } else if (encoding === "Base64") {
@@ -368,7 +350,7 @@ export class Converter {
       }
     }
 
-    return new Uint8Array(value);
+    return new Uint8Array(src);
   }
 
   protected async _arrayBufferToBase64(buffer: ArrayBuffer) {

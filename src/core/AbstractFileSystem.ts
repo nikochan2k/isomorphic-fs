@@ -19,6 +19,7 @@ import {
   ReadStream,
   Stats,
   URLType,
+  Source,
   WriteStream,
   XmitError,
 } from "./core";
@@ -155,11 +156,11 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async writeAll(
     path: string,
-    buffer: ArrayBuffer | Uint8Array,
+    value: Source,
     options: OpenWriteOptions = { create: true, append: false }
-  ): Promise<void> {
+  ): Promise<number> {
     const file = await this.getFile(path);
-    return file.writeAll(buffer, options);
+    return file.writeAll(value, options);
   }
 
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
