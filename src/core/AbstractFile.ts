@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter, isBlob } from "../util/conv";
+import { Converter, getSize, isBlob } from "../util/conv";
 import { toHex } from "../util/misc";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -11,6 +11,7 @@ import {
   DeleteOptions,
   File,
   OpenOptions,
+  OpenReadOptions,
   OpenWriteOptions,
   ReadStream,
   Source,
@@ -299,20 +300,22 @@ export abstract class AbstractFile
     }
   }
 
-  public async readAll(options: OpenOptions = {}): Promise<ArrayBuffer> {
-    const stats = await this.head();
-    const buffer = this._createBuffer(stats.size as number);
-    const rs = await this.createReadStream(options);
+  public async readAll(
+    options: OpenReadOptions = { sourceType: "Uint8Array" }
+  ): Promise<Source> {
+    const rs = (await this.createReadStream(options)) as AbstractReadStream;
+    const type = options.sourceType as SourceType;
+    const converter = rs.converter;
     try {
-      const c = new Converter({ bufferSize: options.bufferSize });
       let pos = 0;
+      const chunks: Source[] = [];
       let chunk: Source | null;
       while ((chunk = await rs.read()) != null) {
-        const u8 = await c.toUint8Array(chunk);
-        buffer.set(u8, pos);
-        pos += u8.byteLength;
+        pos += getSize(chunk);
+        const converted = await this._convert(chunk, type, converter);
+        chunks.push(converted);
       }
-      return buffer;
+      return this._joinChunks(chunks, pos, type);
     } finally {
       await rs.close();
     }
@@ -323,7 +326,7 @@ export abstract class AbstractFile
     options: OpenWriteOptions = { append: false, create: true }
   ): Promise<number> {
     const bufferSize = options.bufferSize || DEFAULT_BUFFER_SIZE;
-    const ws = await this.createWriteStream(options);
+    const ws = (await this.createWriteStream(options)) as AbstractWriteStream;
 
     if (isBlob(src)) {
       try {
@@ -342,8 +345,7 @@ export abstract class AbstractFile
       return src.size;
     }
 
-    const c = new Converter({ bufferSize: options.bufferSize });
-    const u8 = await c.toUint8Array(src);
+    const u8 = await ws.converter.toUint8Array(src);
     try {
       let pos = 0;
       let chunk: Uint8Array;

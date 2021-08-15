@@ -13,13 +13,14 @@ import {
   MkcolOptions,
   MoveOptions,
   OpenOptions,
+  OpenReadOptions,
   OpenWriteOptions,
   PatchOptions,
   Props,
   ReadStream,
+  Source,
   Stats,
   URLType,
-  Source,
   WriteStream,
   XmitError,
 } from "./core";
@@ -68,7 +69,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async createReadStream(
     path: string,
-    options: OpenOptions = {}
+    options: OpenReadOptions = {}
   ): Promise<ReadStream> {
     const file = await this.getFile(path);
     return file.createReadStream(options);
@@ -148,7 +149,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async readAll(
     path: string,
-    options: OpenOptions = {}
+    options: OpenReadOptions = {}
   ): Promise<Source> {
     const file = await this.getFile(path);
     return file.readAll(options);

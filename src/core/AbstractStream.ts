@@ -6,7 +6,7 @@ export abstract class AbstractStream implements Stream {
   protected readonly bufferSize = DEFAULT_BUFFER_SIZE;
 
   public position = 0;
-  protected converter: Converter;
+  public converter: Converter;
 
   constructor(protected file: AbstractFile, options: OpenOptions) {
     if (options.bufferSize) {
