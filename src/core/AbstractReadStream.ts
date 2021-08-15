@@ -71,8 +71,8 @@ export abstract class AbstractReadStream
         if (!chunk) {
           break;
         }
+        pos += getSize(chunk);
         const converted = await af._convert(chunk, souceType, converter);
-        pos += getSize(converted);
         chunks.push(converted);
       } while (pos < max);
       if (0 < chunks.length) {

@@ -133,6 +133,7 @@ export abstract class AbstractFile
               ? new Uint8Array(chunk as ArrayBuffer)
               : (chunk as Uint8Array);
           u8.set(u8Chunk, u8Pos);
+          u8Pos += u8Chunk.byteLength;
         }
         return type === "ArrayBuffer" ? u8.buffer : u8;
       case "Blob":
