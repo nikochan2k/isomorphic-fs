@@ -51,6 +51,15 @@ export function isBlob(value: unknown): value is Blob {
   );
 }
 
+let hasReadAsArrayBufer = false;
+let hasReadAsBinaryString = false;
+if (hasBlob) {
+  if (navigator?.product !== "ReactNative") {
+    hasReadAsArrayBufer = FileReader.prototype.readAsArrayBuffer != null;
+    hasReadAsBinaryString = FileReader.prototype.readAsBinaryString != null;
+  }
+}
+
 export function dataUrlToBase64(dataUrl: string) {
   const index = dataUrl.indexOf(",");
   if (0 <= index) {
@@ -174,6 +183,9 @@ export class Converter {
       }
       return chunks.join("");
     }
+    if (isBlob(value) && hasReadAsBinaryString) {
+      return this._blobToBinaryString(value);
+    }
 
     let u8: Uint8Array;
     if (typeof value === "string") {
@@ -219,11 +231,8 @@ export class Converter {
     }
     if (typeof value === "string") {
       const encoding = params[1] as EncodingType;
-      if (encoding === "BinaryString") {
-        return new Blob([value]);
-      } else {
-        return new Blob([await this.toArrayBuffer(value, encoding)]);
-      }
+      const ab = await this.toArrayBuffer(value, encoding);
+      return new Blob([ab]);
     }
 
     return value;
@@ -297,7 +306,7 @@ export class Converter {
     if (isBuffer(value)) {
       return value.toString("utf8");
     }
-    if (isBlob(value) && !(navigator && navigator.product === "ReactNative")) {
+    if (isBlob(value)) {
       return await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onerror = function (ev) {
@@ -342,10 +351,10 @@ export class Converter {
       if (value.size === 0) {
         return EMPTY_U8;
       }
-      if (navigator && navigator.product === "ReactNative") {
-        return this.toUint8Array(await this._blobToBase64(value), "Base64");
-      } else {
+      if (hasReadAsArrayBufer) {
         return this._blobToUint8Array(value);
+      } else {
+        return this.toUint8Array(await this._blobToBase64(value), "Base64");
       }
     }
     if (typeof value === "string") {
@@ -397,6 +406,30 @@ export class Converter {
           resolve(base64);
         };
         reader.readAsDataURL(blobChunk);
+      });
+      chunks.push(chunk);
+    }
+    return chunks.join("");
+  }
+
+  protected async _blobToBinaryString(blob: Blob): Promise<string> {
+    if (blob.size === 0) {
+      return "";
+    }
+
+    const awaitingSize = this.awaitingSize;
+    const chunks: string[] = [];
+    for (let start = 0, end = blob.size; start < end; start += awaitingSize) {
+      const blobChunk = blob.slice(start, start + awaitingSize);
+      const chunk = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = function (ev) {
+          reject(reader.error || ev);
+        };
+        reader.onload = function () {
+          resolve(reader.result as string);
+        };
+        reader.readAsBinaryString(blobChunk);
       });
       chunks.push(chunk);
     }
