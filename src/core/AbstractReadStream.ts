@@ -85,7 +85,7 @@ export abstract class AbstractReadStream
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _read(size?: number): Promise<Source>;
+  public abstract _read(size?: number): Promise<Source | null>;
 
   protected async _getFileSize() {
     if (this.fileSize) {
