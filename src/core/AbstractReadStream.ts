@@ -21,7 +21,7 @@ export abstract class AbstractReadStream
   constructor(file: AbstractFile, protected readonly options: OpenReadOptions) {
     super(file, options);
     if (!options.sourceType) {
-      options.sourceType = "Uint8Array";
+      options.sourceType = this.getDefaultSourceType();
     }
     this.afterGet = file.fs.options.hook?.afterGet;
   }
@@ -96,4 +96,6 @@ export abstract class AbstractReadStream
     this.fileSize = fileSize;
     return fileSize;
   }
+
+  protected abstract getDefaultSourceType(): SourceType;
 }
