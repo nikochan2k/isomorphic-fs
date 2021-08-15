@@ -71,6 +71,40 @@ if (hasBlob) {
   }
 }
 
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
+export function getSize(src: Source) {
+  if (!src) {
+    return 0;
+  }
+  if (isUint8Array(src)) {
+    return src.byteLength;
+  }
+  if (isBlob(src)) {
+    return src.size;
+  }
+  if (isStringSource(src)) {
+    const value = src.value;
+    const encoding = src.encoding;
+    switch (encoding) {
+      case "BinaryString":
+        return value.length;
+      case "Base64":
+        const len = value.length;
+        const baseLen = (len * 3) / 4;
+        let padding = 0;
+        for (let i = len - 1; value[i] === "="; i--) {
+          padding++;
+        }
+        return baseLen - padding;
+      case "Text":
+        return textEncoder.encode(value).byteLength;
+    }
+  }
+  return src.byteLength;
+}
+
 export function dataUrlToBase64(dataUrl: string) {
   const index = dataUrl.indexOf(",");
   if (0 <= index) {
@@ -79,18 +113,15 @@ export function dataUrlToBase64(dataUrl: string) {
   return dataUrl;
 }
 
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
-
 export interface ConverterOptions {
-  awaitingSize?: number;
+  bufferSize?: number;
 }
 
 export class Converter {
-  private awaitingSize: number;
+  private bufferSize: number;
 
   constructor(options?: ConverterOptions) {
-    this.awaitingSize = options?.awaitingSize || DEFAULT_BUFFER_SIZE;
+    this.bufferSize = options?.bufferSize || DEFAULT_BUFFER_SIZE;
   }
 
   public async toArrayBuffer(src: Source): Promise<ArrayBuffer> {
@@ -121,7 +152,7 @@ export class Converter {
   }
 
   public async toBase64(src: Source): Promise<string> {
-    const awaitingSize = this.awaitingSize;
+    const awaitingSize = this.bufferSize;
     if (isBuffer(src)) {
       const chunks: string[] = [];
       for (
@@ -162,7 +193,7 @@ export class Converter {
   }
 
   public async toBinaryString(src: Source): Promise<string> {
-    const awaitingSize = this.awaitingSize;
+    const awaitingSize = this.bufferSize;
     if (isBuffer(src)) {
       const chunks: string[] = [];
       for (
@@ -254,7 +285,7 @@ export class Converter {
         return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength);
       } else {
         const value = src.value;
-        const awaitingSize = this.awaitingSize;
+        const awaitingSize = this.bufferSize;
         let byteLength = 0;
         const chunks: Buffer[] = [];
         for (
@@ -374,7 +405,7 @@ export class Converter {
       return "";
     }
 
-    const awaitingSize = this.awaitingSize;
+    const awaitingSize = this.bufferSize;
     const chunks: string[] = [];
     for (let start = 0, end = blob.size; start < end; start += awaitingSize) {
       const blobChunk = blob.slice(start, start + awaitingSize);
@@ -399,7 +430,7 @@ export class Converter {
       return "";
     }
 
-    const awaitingSize = this.awaitingSize;
+    const awaitingSize = this.bufferSize;
     const chunks: string[] = [];
     for (let start = 0, end = blob.size; start < end; start += awaitingSize) {
       const blobChunk = blob.slice(start, start + awaitingSize);
@@ -423,7 +454,7 @@ export class Converter {
       return EMPTY_U8;
     }
 
-    const awaitingSize = this.awaitingSize;
+    const awaitingSize = this.bufferSize;
     let byteLength = 0;
     const chunks: ArrayBuffer[] = [];
     for (let start = 0, end = blob.size; start < end; start += awaitingSize) {

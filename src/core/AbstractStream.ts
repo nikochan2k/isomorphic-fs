@@ -12,7 +12,7 @@ export abstract class AbstractStream implements Stream {
     if (options.bufferSize) {
       this.bufferSize = options.bufferSize;
     }
-    this.converter = new Converter({ awaitingSize: options.awaitingSize });
+    this.converter = new Converter({ bufferSize: options.bufferSize });
   }
 
   public async seek(offset: number, origin: SeekOrigin): Promise<void> {

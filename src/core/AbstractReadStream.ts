@@ -1,6 +1,13 @@
+import { getSize } from "../util/conv";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
-import { OpenOptions, ReadStream, WriteStream } from "./core";
+import {
+  OpenReadOptions,
+  ReadStream,
+  Source,
+  SourceType,
+  WriteStream,
+} from "./core";
 
 export abstract class AbstractReadStream
   extends AbstractStream
@@ -11,8 +18,11 @@ export abstract class AbstractReadStream
   protected fileSize?: number;
   protected handled = false;
 
-  constructor(file: AbstractFile, protected readonly options: OpenOptions) {
+  constructor(file: AbstractFile, protected readonly options: OpenReadOptions) {
     super(file, options);
+    if (!options.sourceType) {
+      options.sourceType = "Uint8Array";
+    }
     this.afterGet = file.fs.options.hook?.afterGet;
   }
 
@@ -35,19 +45,22 @@ export abstract class AbstractReadStream
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async read(size?: number): Promise<ArrayBuffer | null> {
-    let buffer: ArrayBuffer | null;
+  public async read(size?: number): Promise<Source | null> {
+    const af = this.file;
+    const converter = this.converter;
+    const souceType = this.options.sourceType as SourceType;
+    let result: Source | null = null;
+    let pos = 0;
     if (size == null || size <= this.bufferSize) {
-      buffer = await this._read(size);
-      if (buffer) {
-        this.position += buffer.byteLength;
+      const chunk = await this._read(size);
+      if (chunk) {
+        pos = getSize(chunk);
+        result = await af._convert(chunk, souceType, converter);
       }
     } else {
+      const chunks: Source[] = [];
       const fileSize = await this._getFileSize();
       const max = Math.min(size, fileSize);
-      const buf = new ArrayBuffer(max);
-      const u8 = new Uint8Array(buf);
-      let pos = 0;
       do {
         let next = pos + this.bufferSize;
         if (max < next) {
@@ -58,23 +71,21 @@ export abstract class AbstractReadStream
         if (!chunk) {
           break;
         }
-        u8.set(chunk, pos);
-        pos += chunkSize;
+        const converted = await af._convert(chunk, souceType, converter);
+        pos += getSize(converted);
+        chunks.push(converted);
       } while (pos < max);
-      this.position += pos;
-      if (pos === max) {
-        buffer = buf;
-      } else {
-        buffer = buf.slice(0, pos);
+      if (0 < chunks.length) {
+        result = await af._joinChunks(chunks, pos, souceType);
       }
     }
-
+    this.position += pos;
     this.handled = true;
-    return buffer;
+    return result;
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _read(size?: number): Promise<Uint8Array | null>;
+  public abstract _read(size?: number): Promise<Source>;
 
   protected async _getFileSize() {
     if (this.fileSize) {

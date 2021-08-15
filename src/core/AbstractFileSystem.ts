@@ -149,7 +149,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async readAll(
     path: string,
     options: OpenOptions = {}
-  ): Promise<ArrayBuffer> {
+  ): Promise<Source> {
     const file = await this.getFile(path);
     return file.readAll(options);
   }

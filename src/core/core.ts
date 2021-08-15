@@ -24,12 +24,14 @@ export interface StringSource {
   encoding: EncodingType;
 }
 export type Source = BinarySource | StringSource;
-export type OutputType =
-  | EncodingType
+export type SourceType =
   | "ArrayBuffer"
   | "Uint8Array"
   | "Buffer"
-  | "Blob";
+  | "Blob"
+  | "Base64"
+  | "BinaryString"
+  | "Text";
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
@@ -73,8 +75,11 @@ export interface MkcolOptions extends Options {
 }
 
 export interface OpenOptions extends Options {
-  awaitingSize?: number;
   bufferSize?: number;
+}
+
+export interface OpenReadOptions extends OpenOptions {
+  sourceType?: SourceType;
 }
 
 export interface OpenWriteOptions extends OpenOptions {
@@ -160,7 +165,10 @@ export interface FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<XmitError[]>;
-  createReadStream(path: string, options?: OpenOptions): Promise<ReadStream>;
+  createReadStream(
+    path: string,
+    options?: OpenReadOptions
+  ): Promise<ReadStream>;
   createWriteStream(
     path: string,
     options?: OpenWriteOptions
@@ -186,7 +194,7 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<XmitError[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  readAll(path: string, options?: OpenOptions): Promise<ArrayBuffer>;
+  readAll(path: string, options?: OpenReadOptions): Promise<Source>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<void>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
@@ -225,10 +233,10 @@ export interface Directory extends FileSystemObject {
 }
 
 export interface File extends FileSystemObject {
-  createReadStream(options?: OpenOptions): Promise<ReadStream>;
+  createReadStream(options?: OpenReadOptions): Promise<ReadStream>;
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
-  readAll(options?: OpenOptions): Promise<ArrayBuffer>;
+  readAll(options?: OpenReadOptions): Promise<Source>;
   writeAll(src: Source, options: OpenWriteOptions): Promise<number>;
 }
 
@@ -245,7 +253,7 @@ export interface Stream {
 
 export interface ReadStream extends Stream {
   pipe(ws: WriteStream): Promise<void>;
-  read(size?: number): Promise<ArrayBuffer | null>;
+  read(size?: number): Promise<Source | null>;
 }
 export interface WriteStream extends Stream {
   truncate(size: number): Promise<void>;

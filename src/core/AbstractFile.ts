@@ -14,6 +14,7 @@ import {
   OpenWriteOptions,
   ReadStream,
   Source,
+  SourceType,
   WriteStream,
   XmitError,
   XmitOptions,
@@ -53,6 +54,32 @@ export abstract class AbstractFile
     }
   }
 
+  public async _convert(
+    chunk: Source,
+    type: SourceType,
+    converter: Converter
+  ): Promise<Source> {
+    switch (type) {
+      case "ArrayBuffer":
+        return converter.toArrayBuffer(chunk);
+      case "Uint8Array":
+        return converter.toUint8Array(chunk);
+      case "Buffer":
+        return converter.toBuffer(chunk);
+      case "Blob":
+        return converter.toBlob(chunk);
+      case "Base64":
+        const base64 = await converter.toBase64(chunk);
+        return { value: base64, encoding: "Base64" };
+      case "BinaryString":
+        const binaryString = await converter.toBinaryString(chunk);
+        return { value: binaryString, encoding: "BinaryString" };
+      case "Text":
+        const text = await converter.toBinaryString(chunk);
+        return { value: text, encoding: "Text" };
+    }
+  }
+
   public async _delete(
     options: DeleteOptions = { force: false, recursive: false }
   ): Promise<void> {
@@ -81,6 +108,44 @@ export abstract class AbstractFile
       }
     }
     return this._rm();
+  }
+
+  public async _joinChunks(
+    chunks: Source[],
+    length: number,
+    type: SourceType
+  ): Promise<Source> {
+    switch (type) {
+      case "ArrayBuffer":
+      case "Uint8Array":
+      case "Buffer":
+        let u8: Uint8Array;
+        if (type === "Buffer") {
+          u8 = Buffer.alloc(length);
+        } else {
+          const ab = new ArrayBuffer(length);
+          u8 = new Uint8Array(ab);
+        }
+        let u8Pos = 0;
+        for (const chunk of chunks) {
+          const u8Chunk =
+            type === "ArrayBuffer"
+              ? new Uint8Array(chunk as ArrayBuffer)
+              : (chunk as Uint8Array);
+          u8.set(u8Chunk, u8Pos);
+        }
+        return type === "ArrayBuffer" ? u8.buffer : u8;
+      case "Blob":
+        const blobs: Blob[] = [];
+        for (const chunk of chunks) {
+          blobs.push(chunk as Blob);
+        }
+        return new Blob(blobs);
+      case "Base64":
+      case "BinaryString":
+      case "Text":
+        return { value: chunks.join(""), encoding: type };
+    }
   }
 
   public async _xmit(
@@ -219,9 +284,9 @@ export abstract class AbstractFile
   public async hash(options: OpenOptions = {}): Promise<string> {
     const rs = await this.createReadStream(options);
     try {
-      const c = new Converter({ awaitingSize: options.awaitingSize });
+      const c = new Converter({ bufferSize: options.bufferSize });
       const hash = createHash();
-      let result: ArrayBuffer | Uint8Array | null;
+      let result: Source | null;
       while ((result = await rs.read()) != null) {
         const buffer = await c.toUint8Array(result);
         hash.update(buffer);
@@ -238,9 +303,9 @@ export abstract class AbstractFile
     const buffer = this._createBuffer(stats.size as number);
     const rs = await this.createReadStream(options);
     try {
-      const c = new Converter({ awaitingSize: options.awaitingSize });
+      const c = new Converter({ bufferSize: options.bufferSize });
       let pos = 0;
-      let chunk: ArrayBuffer | null;
+      let chunk: Source | null;
       while ((chunk = await rs.read()) != null) {
         const u8 = await c.toUint8Array(chunk);
         buffer.set(u8, pos);
@@ -276,7 +341,7 @@ export abstract class AbstractFile
       return src.size;
     }
 
-    const c = new Converter({ awaitingSize: options?.awaitingSize });
+    const c = new Converter({ bufferSize: options.bufferSize });
     const u8 = await c.toUint8Array(src);
     try {
       let pos = 0;
