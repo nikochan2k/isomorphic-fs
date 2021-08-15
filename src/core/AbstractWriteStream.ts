@@ -50,8 +50,8 @@ export abstract class AbstractWriteStream
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async write(value: Source): Promise<number> {
-    const written = await this._write(value);
+  public async write(src: Source): Promise<number> {
+    const written = await this._write(src);
     this.position += written;
     this.changed = true;
     return written;

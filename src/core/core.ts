@@ -31,11 +31,6 @@ export type OutputType =
   | "Buffer"
   | "Blob";
 
-export type InputParamsType = [BinarySource] | [string, EncodingType];
-export type WriteParamsType =
-  | [BinarySource, OpenWriteOptions]
-  | [string, EncodingType, OpenWriteOptions];
-
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface Options {
@@ -198,7 +193,7 @@ export interface FileSystem {
   toURL(path: string, urlType?: URLType): Promise<string>;
   writeAll(
     path: string,
-    value: Source,
+    src: Source,
     options?: OpenWriteOptions
   ): Promise<number>;
 }
@@ -234,7 +229,7 @@ export interface File extends FileSystemObject {
   createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
   readAll(options?: OpenOptions): Promise<ArrayBuffer>;
-  writeAll(value: Source, options: OpenWriteOptions): Promise<number>;
+  writeAll(src: Source, options: OpenWriteOptions): Promise<number>;
 }
 
 export enum SeekOrigin {
@@ -254,7 +249,7 @@ export interface ReadStream extends Stream {
 }
 export interface WriteStream extends Stream {
   truncate(size: number): Promise<void>;
-  write(value: Source): Promise<number>;
+  write(src: Source): Promise<number>;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;
