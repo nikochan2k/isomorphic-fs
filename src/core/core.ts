@@ -20,8 +20,8 @@ export interface FileSystemOptions {
 export type BinarySource = ArrayBuffer | Uint8Array | Buffer | Blob;
 export type EncodingType = "Base64" | "Text" | "BinaryString";
 export interface StringSource {
-  value: string;
   encoding: EncodingType;
+  value: string;
 }
 export type Source = BinarySource | StringSource;
 export type SourceType =
@@ -219,9 +219,12 @@ export interface FileSystemObject {
   move(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
   mv(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
   patch(props: Props, options?: PatchOptions): Promise<void>;
+  ren(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
+  rename(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
   rm(options?: DeleteOptions): Promise<void>;
   stat(options?: HeadOptions): Promise<Stats>;
   toURL(urlType?: URLType): Promise<string>;
+  unlink(options?: DeleteOptions): Promise<void>;
 }
 
 export interface Directory extends FileSystemObject {
@@ -247,6 +250,7 @@ export enum SeekOrigin {
 }
 export interface Stream {
   position: number;
+
   close(): Promise<void>;
   seek(offset: number, origin: SeekOrigin): Promise<void>;
 }

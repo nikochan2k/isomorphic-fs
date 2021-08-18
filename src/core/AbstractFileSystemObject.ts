@@ -25,8 +25,11 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
   public cp = this.copy;
   public del = this.delete;
   public mv = this.move;
+  public ren = this.move;
+  public rename = this.move;
   public rm = this.delete;
   public stat = this.head;
+  public unlink = this.delete;
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
     this.path = normalizePath(path);
