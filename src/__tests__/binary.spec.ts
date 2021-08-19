@@ -1,4 +1,4 @@
-import { Converter, hasBlob, hasBuffer } from "../util/conv";
+import { Converter, hasBlob, hasBuffer } from "univ-conv";
 
 const c = new Converter();
 

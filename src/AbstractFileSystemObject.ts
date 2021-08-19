@@ -13,7 +13,7 @@ import {
   XmitOptions,
 } from "./core";
 import { AbstractFileSystem } from "./AbstractFileSystem";
-import { getParentPath, normalizePath } from "../util/path";
+import { getParentPath, normalizePath } from "./util";
 
 export abstract class AbstractFileSystemObject implements FileSystemObject {
   private afterDelete?: (path: string) => Promise<void>;

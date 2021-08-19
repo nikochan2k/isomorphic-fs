@@ -1,6 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter, getSize, isBlob, validateBufferSize } from "../util/conv";
-import { toHex } from "../util/misc";
+import { Converter, getSize, isBlob, validateBufferSize } from "univ-conv";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";
@@ -26,6 +25,7 @@ import {
   SecurityError,
   TypeMismatchError,
 } from "./errors";
+import { toHex } from "./util";
 
 export abstract class AbstractFile
   extends AbstractFileSystemObject

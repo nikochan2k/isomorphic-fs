@@ -1,4 +1,4 @@
-import { getName, joinPaths } from "../util/path";
+import { getName, joinPaths } from "./util";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import { AbstractFileSystemObject } from "./AbstractFileSystemObject";

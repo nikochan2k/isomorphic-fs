@@ -1,7 +1,7 @@
 import "../polyfill";
-import { FileSystem, SeekOrigin } from "../core/core";
-import { NotFoundError } from "../core/errors";
-import { Converter } from "../util/conv";
+import { FileSystem, SeekOrigin } from "../core";
+import { NotFoundError } from "../errors";
+import { Converter } from "univ-conv";
 
 const c = new Converter();
 

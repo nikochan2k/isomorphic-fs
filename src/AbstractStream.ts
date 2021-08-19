@@ -1,4 +1,4 @@
-import { Converter, validateBufferSize } from "../util/conv";
+import { Converter, validateBufferSize } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import { DEFAULT_BUFFER_SIZE, OpenOptions, SeekOrigin, Stream } from "./core";
 

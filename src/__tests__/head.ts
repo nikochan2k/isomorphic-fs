@@ -1,5 +1,6 @@
 import "../polyfill";
-import { FileSystem, NotFoundError } from "../core";
+import { FileSystem } from "../core";
+import { NotFoundError } from "../errors";
 
 export const testAll = (fs: FileSystem) => {
   test("rootdir", async () => {

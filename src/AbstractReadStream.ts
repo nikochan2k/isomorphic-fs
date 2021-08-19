@@ -1,4 +1,4 @@
-import { getSize } from "../util/conv";
+import { getSize } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
 import {
