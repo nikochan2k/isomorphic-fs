@@ -1,4 +1,11 @@
 import "tslib";
-import "./polyfill";
+export * from "./AbstractDirectory";
+export * from "./AbstractFile";
+export * from "./AbstractFileSystem";
+export * from "./AbstractFileSystemObject";
+export * from "./AbstractReadStream";
+export * from "./AbstractStream";
+export * from "./AbstractWriteStream";
 export * from "./core";
+export * from "./errors";
 export * from "./util";
