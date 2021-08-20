@@ -1,6 +1,6 @@
 {
   "name": "univ-fs",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Universal Filesystem",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
