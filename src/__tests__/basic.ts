@@ -1,4 +1,3 @@
-import "../polyfill";
 import { FileSystem, SeekOrigin } from "../core";
 import { NotFoundError } from "../errors";
 import { Converter } from "univ-conv";

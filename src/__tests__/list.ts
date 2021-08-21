@@ -1,4 +1,3 @@
-import "../polyfill";
 import { FileSystem } from "../core";
 import { NotFoundError, TypeMismatchError } from "../errors";
 
