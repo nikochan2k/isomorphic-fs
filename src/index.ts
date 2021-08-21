@@ -1,4 +1,3 @@
-import "tslib";
 export * from "./AbstractDirectory";
 export * from "./AbstractFile";
 export * from "./AbstractFileSystem";
