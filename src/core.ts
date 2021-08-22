@@ -93,7 +93,7 @@ export interface OpenWriteOptions extends OpenOptions {
    * If it is false, fail if it exists, truncated if it does not exist.
    * If it is undefined, the file is created if it does not exist, or truncated if it exists.
    */
-  create: boolean;
+  create?: boolean;
 }
 
 export interface MoveOptions extends Options {
@@ -106,12 +106,23 @@ export interface CopyOptions extends Options {
   force: boolean;
   recursive: boolean;
 }
+
+export interface UnlinkOptions extends DeleteOptions {
+  deleted: number;
+  errors: ErrorLike[];
+}
 export interface XmitOptions extends Options {
   bufferSize?: number;
   force: boolean;
   move: boolean;
   recursive: boolean;
+  copied: number;
+  moved: number;
+  errors: ErrorLike[];
 }
+
+export type Ret<T> = [T, never] | [never, ErrorLike];
+export type Ret2<T> = [T, ErrorLike[]];
 
 export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
@@ -122,33 +133,35 @@ export interface Hook {
   afterPatch?: (path: string) => Promise<void>;
   afterPost?: (path: string) => Promise<void>;
   afterPut?: (path: string) => Promise<void>;
-  beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
-  beforeGet?: (
+  beforeDelete?: (
     path: string,
-    options: OpenOptions
-  ) => Promise<ReadStream | null>;
-  beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
-  beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
-  beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
+    options: DeleteOptions
+  ) => Promise<Ret2<number>>;
+  beforeGet?: (path: string, options: OpenOptions) => Promise<Ret<ReadStream>>;
+  beforeHead?: (path: string, options: HeadOptions) => Promise<Ret<Stats>>;
+  beforeList?: (path: string, options: ListOptions) => Promise<Ret<string[]>>;
+  beforeMkcol?: (path: string, options: MkcolOptions) => Promise<Ret<boolean>>;
   beforePatch?: (
     path: string,
     props: Props,
     options: PatchOptions
-  ) => Promise<boolean>;
+  ) => Promise<Ret<boolean>>;
   beforePost?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+  ) => Promise<Ret<WriteStream>>;
   beforePut?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+  ) => Promise<Ret<WriteStream>>;
 }
 
-export interface XmitError {
-  error: Error;
-  from: string;
-  to: string;
+export interface ErrorLike {
+  code?: number;
+  name?: string;
+  message?: string;
+  stack?: string;
+  [key: string]: any;
 }
 
 export interface FileSystem {
@@ -159,89 +172,91 @@ export interface FileSystem {
     fromPath: string,
     toPath: string,
     options?: CopyOptions
-  ): Promise<XmitError[]>;
+  ): Promise<Ret2<number>>;
   cp(
     fromPath: string,
     toPath: string,
     options?: CopyOptions
-  ): Promise<XmitError[]>;
+  ): Promise<Ret2<number>>;
   createReadStream(
     path: string,
     options?: OpenReadOptions
-  ): Promise<ReadStream>;
+  ): Promise<Ret<ReadStream>>;
   createWriteStream(
     path: string,
     options?: OpenWriteOptions
-  ): Promise<WriteStream>;
-  del(path: string, options?: DeleteOptions): Promise<Error[]>;
-  delete(path: string, options?: DeleteOptions): Promise<Error[]>;
-  getDirectory(path: string): Promise<Directory>;
-  getFile(path: string): Promise<File>;
-  hash(path: string, options?: OpenOptions): Promise<string>;
-  head(path: string, options?: HeadOptions): Promise<Stats>;
-  list(path: string, options?: ListOptions): Promise<string[]>;
-  ls(path: string, options?: ListOptions): Promise<string[]>;
-  mkcol(path: string, options?: MkcolOptions): Promise<void>;
-  mkdir(path: string, options?: MkcolOptions): Promise<void>;
+  ): Promise<Ret<WriteStream>>;
+  del(path: string, options?: DeleteOptions): Promise<Ret2<number>>;
+  delete(path: string, options?: DeleteOptions): Promise<Ret2<number>>;
+  getDirectory(path: string): Promise<Ret<Directory>>;
+  getFile(path: string): Promise<Ret<File>>;
+  hash(path: string, options?: OpenOptions): Promise<Ret<string>>;
+  head(path: string, options?: HeadOptions): Promise<Ret<Stats>>;
+  list(path: string, options?: ListOptions): Promise<Ret<string[]>>;
+  ls(path: string, options?: ListOptions): Promise<Ret<string[]>>;
+  mkcol(path: string, options?: MkcolOptions): Promise<Ret<boolean>>;
+  mkdir(path: string, options?: MkcolOptions): Promise<Ret<boolean>>;
   move(
     fromPath: string,
     toPath: string,
     options?: MoveOptions
-  ): Promise<XmitError[]>;
+  ): Promise<Ret2<number>>;
   mv(
     fromPath: string,
     toPath: string,
     options?: MoveOptions
-  ): Promise<XmitError[]>;
-  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  readAll(path: string, options?: OpenReadOptions): Promise<Source>;
-  readdir(path: string, options?: ListOptions): Promise<string[]>;
-  rm(path: string, options?: DeleteOptions): Promise<Error[]>;
-  stat(path: string, options?: HeadOptions): Promise<Stats>;
-  toURL(path: string, urlType?: URLType): Promise<string>;
+  ): Promise<Ret2<number>>;
+  patch(
+    path: string,
+    props: Props,
+    options?: PatchOptions
+  ): Promise<Ret<boolean>>;
+  readAll(path: string, options?: OpenReadOptions): Promise<Ret<Source>>;
+  readdir(path: string, options?: ListOptions): Promise<Ret<string[]>>;
+  rm(path: string, options?: DeleteOptions): Promise<Ret2<number>>;
+  stat(path: string, options?: HeadOptions): Promise<Ret<Stats>>;
+  toURL(path: string, urlType?: URLType): Promise<Ret<string>>;
   writeAll(
     path: string,
     src: Source,
     options?: OpenWriteOptions
-  ): Promise<number>;
-  unlink(path: string, options?: DeleteOptions): Promise<Error[]>;
+  ): Promise<Ret<number>>;
+  unlink(path: string, options?: DeleteOptions): Promise<Ret2<number>>;
 }
 
-export interface FileSystemObject {
+export interface Entry {
   fs: FileSystem;
   path: string;
 
-  copy(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
-  cp(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
-  del(options?: DeleteOptions): Promise<Error[]>;
-  delete(options?: DeleteOptions): Promise<Error[]>;
-  getParent(): Promise<Directory>;
-  head(options?: HeadOptions): Promise<Stats>;
-  move(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
-  mv(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
-  patch(props: Props, options?: PatchOptions): Promise<void>;
-  ren(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
-  rename(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
-  rm(options?: DeleteOptions): Promise<Error[]>;
-  stat(options?: HeadOptions): Promise<Stats>;
-  toURL(urlType?: URLType): Promise<string>;
-  unlink(options?: DeleteOptions): Promise<Error[]>;
+  copy(entry: Entry, options?: CopyOptions): Promise<Ret2<number>>;
+  cp(entry: Entry, options?: CopyOptions): Promise<Ret2<number>>;
+  del(options?: DeleteOptions): Promise<Ret2<number>>;
+  delete(options?: DeleteOptions): Promise<Ret2<number>>;
+  getParent(): Promise<Ret<Directory>>;
+  head(options?: HeadOptions): Promise<Ret<Stats>>;
+  move(entry: Entry, options?: MoveOptions): Promise<Ret2<number>>;
+  mv(entry: Entry, options?: MoveOptions): Promise<Ret2<number>>;
+  patch(props: Props, options?: PatchOptions): Promise<Ret<boolean>>;
+  rm(options?: DeleteOptions): Promise<Ret2<number>>;
+  stat(options?: HeadOptions): Promise<Ret<Stats>>;
+  toURL(urlType?: URLType): Promise<Ret<string>>;
+  unlink(options?: DeleteOptions): Promise<Ret2<number>>;
 }
 
-export interface Directory extends FileSystemObject {
-  list(options?: ListOptions): Promise<string[]>;
-  ls(options?: ListOptions): Promise<string[]>;
-  mkcol(options?: MkcolOptions): Promise<void>;
-  mkdir(options?: MkcolOptions): Promise<void>;
-  readdir(options?: ListOptions): Promise<string[]>;
+export interface Directory extends Entry {
+  list(options?: ListOptions): Promise<Ret<string[]>>;
+  ls(options?: ListOptions): Promise<Ret<string[]>>;
+  mkcol(options?: MkcolOptions): Promise<Ret<boolean>>;
+  mkdir(options?: MkcolOptions): Promise<Ret<boolean>>;
+  readdir(options?: ListOptions): Promise<Ret<string[]>>;
 }
 
-export interface File extends FileSystemObject {
-  createReadStream(options?: OpenReadOptions): Promise<ReadStream>;
-  createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
-  hash(options?: OpenOptions): Promise<string>;
-  readAll(options?: OpenReadOptions): Promise<Source>;
-  writeAll(src: Source, options: OpenWriteOptions): Promise<number>;
+export interface File extends Entry {
+  createReadStream(options?: OpenReadOptions): Promise<Ret<ReadStream>>;
+  createWriteStream(options?: OpenWriteOptions): Promise<Ret<WriteStream>>;
+  hash(options?: OpenOptions): Promise<Ret<string>>;
+  readAll(options?: OpenReadOptions): Promise<Ret<Source>>;
+  writeAll(src: Source, options: OpenWriteOptions): Promise<Ret<number>>;
 }
 
 export enum SeekOrigin {
@@ -257,7 +272,7 @@ export interface Stream {
 }
 
 export interface ReadStream extends Stream {
-  pipe(ws: WriteStream): Promise<void>;
+  pipe(ws: WriteStream): Promise<ErrorLike | void>;
   read(size?: number): Promise<Source | null>;
 }
 export interface WriteStream extends Stream {
