@@ -1,4 +1,3 @@
-import { normalizePath } from "./util";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -24,6 +23,7 @@ import {
   WriteStream,
   XmitError,
 } from "./core";
+import { normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -46,6 +46,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public readdir = this.list;
   public rm = this.delete;
   public stat = this.head;
+  public unlink = this.delete;
 
   constructor(
     public readonly repository: string,
@@ -63,7 +64,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options: CopyOptions = { force: false, recursive: false }
   ): Promise<XmitError[]> {
-    const { from, to } = await this._prepareXmit(fromPath, toPath);
+    const { from, to } = await this._prepareXmit(
+      fromPath,
+      toPath,
+      options.ignoreHook
+    );
     return from.copy(to, options);
   }
 
@@ -86,8 +91,8 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async delete(
     path: string,
     options: DeleteOptions = { force: false, recursive: false }
-  ): Promise<void> {
-    const fso = await this.getFileSystemObject(path);
+  ): Promise<Error[]> {
+    const fso = await this.getFileSystemObject(path, options.ignoreHook);
     return fso.delete(options);
   }
 
@@ -126,7 +131,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options: MoveOptions = { force: false }
   ): Promise<XmitError[]> {
-    const { from, to } = await this._prepareXmit(fromPath, toPath);
+    const { from, to } = await this._prepareXmit(
+      fromPath,
+      toPath,
+      options.ignoreHook
+    );
     return from.move(to, options);
   }
 
@@ -184,13 +193,20 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract getFile(path: string): Promise<File>;
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 
-  protected async getFileSystemObject(path: string): Promise<FileSystemObject> {
-    const stats = await this.head(path);
+  protected async getFileSystemObject(
+    path: string,
+    ignoreHook?: boolean
+  ): Promise<FileSystemObject> {
+    const stats = await this.head(path, { ignoreHook });
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 
-  private async _prepareXmit(fromPath: string, toPath: string) {
-    const from = await this.getFileSystemObject(fromPath);
+  private async _prepareXmit(
+    fromPath: string,
+    toPath: string,
+    ignoreHook?: boolean
+  ) {
+    const from = await this.getFileSystemObject(fromPath, ignoreHook);
     const to = await (from instanceof AbstractFile
       ? this.getFile(toPath)
       : this.getDirectory(toPath));

@@ -82,9 +82,9 @@ export abstract class AbstractFile
 
   public async _delete(
     options: DeleteOptions = { force: false, recursive: false }
-  ): Promise<void> {
+  ): Promise<Error[]> {
     try {
-      const stats = await this.head();
+      const stats = await this.head({ ignoreHook: options.ignoreHook });
       if (stats.size == null) {
         throw createError({
           name: TypeMismatchError.name,
@@ -107,7 +107,8 @@ export abstract class AbstractFile
         });
       }
     }
-    return this._rm();
+    await this._rm();
+    return [];
   }
 
   public async _joinChunks(
@@ -219,7 +220,7 @@ export abstract class AbstractFile
       try {
         await this.delete();
       } catch (error) {
-        copyErrors.push({ from: this, to, error });
+        copyErrors.push({ from: this.path, to: toFso.path, error });
       }
     }
   }
@@ -242,7 +243,7 @@ export abstract class AbstractFile
   ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
     try {
-      const stats = await this.head();
+      const stats = await this.head({ ignoreHook: options.ignoreHook });
       if (stats.size == null) {
         throw createError({
           name: TypeMismatchError.name,

@@ -147,8 +147,8 @@ export interface Hook {
 
 export interface XmitError {
   error: Error;
-  from: FileSystemObject;
-  to: FileSystemObject;
+  from: string;
+  to: string;
 }
 
 export interface FileSystem {
@@ -173,8 +173,8 @@ export interface FileSystem {
     path: string,
     options?: OpenWriteOptions
   ): Promise<WriteStream>;
-  del(path: string, options?: DeleteOptions): Promise<void>;
-  delete(path: string, options?: DeleteOptions): Promise<void>;
+  del(path: string, options?: DeleteOptions): Promise<Error[]>;
+  delete(path: string, options?: DeleteOptions): Promise<Error[]>;
   getDirectory(path: string): Promise<Directory>;
   getFile(path: string): Promise<File>;
   hash(path: string, options?: OpenOptions): Promise<string>;
@@ -196,7 +196,7 @@ export interface FileSystem {
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
   readAll(path: string, options?: OpenReadOptions): Promise<Source>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
-  rm(path: string, options?: DeleteOptions): Promise<void>;
+  rm(path: string, options?: DeleteOptions): Promise<Error[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
   writeAll(
@@ -204,6 +204,7 @@ export interface FileSystem {
     src: Source,
     options?: OpenWriteOptions
   ): Promise<number>;
+  unlink(path: string, options?: DeleteOptions): Promise<Error[]>;
 }
 
 export interface FileSystemObject {
@@ -212,8 +213,8 @@ export interface FileSystemObject {
 
   copy(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
   cp(fso: FileSystemObject, options?: CopyOptions): Promise<XmitError[]>;
-  del(options?: DeleteOptions): Promise<void>;
-  delete(options?: DeleteOptions): Promise<void>;
+  del(options?: DeleteOptions): Promise<Error[]>;
+  delete(options?: DeleteOptions): Promise<Error[]>;
   getParent(): Promise<Directory>;
   head(options?: HeadOptions): Promise<Stats>;
   move(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
@@ -221,10 +222,10 @@ export interface FileSystemObject {
   patch(props: Props, options?: PatchOptions): Promise<void>;
   ren(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
   rename(fso: FileSystemObject, options?: MoveOptions): Promise<XmitError[]>;
-  rm(options?: DeleteOptions): Promise<void>;
+  rm(options?: DeleteOptions): Promise<Error[]>;
   stat(options?: HeadOptions): Promise<Stats>;
   toURL(urlType?: URLType): Promise<string>;
-  unlink(options?: DeleteOptions): Promise<void>;
+  unlink(options?: DeleteOptions): Promise<Error[]>;
 }
 
 export interface Directory extends FileSystemObject {

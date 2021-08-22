@@ -230,19 +230,7 @@ export const domExceptions: DOMExceptionType[] = [
 ];
 
 function isDOMException(e: any) {
-  if (typeof e !== "object") {
-    return false;
-  }
-  const name = e.name;
-  if (!name) {
-    return false;
-  }
-  for (const de of domExceptions) {
-    if (name === de.name) {
-      return true;
-    }
-  }
-  return false;
+  return e.code && e.name && e.message;
 }
 
 export function createError(options: {
@@ -270,7 +258,6 @@ export function createError(options: {
     return e;
   }
 
-  let name = options.name;
   if (typeof e === "object") {
     if (Object.isFrozen(e) || Object.isSealed(e)) {
       e = { ...e };
@@ -280,10 +267,10 @@ export function createError(options: {
   }
   e.repository = repository;
   e.path = path;
-  if (name) {
+  const name = options.name;
+  if (name && !e.code) {
     for (const de of domExceptions) {
       if (de.name == name) {
-        e.name = name;
         e.code = de.code;
         if (!e.message) {
           e.message = de.message;

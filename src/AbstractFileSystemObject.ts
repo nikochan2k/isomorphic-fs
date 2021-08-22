@@ -57,16 +57,17 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public async delete(
     options: DeleteOptions = { force: false, recursive: false }
-  ): Promise<void> {
+  ): Promise<Error[]> {
     if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(this.path, options)) {
-        return;
+        return [];
       }
     }
-    await this._delete(options);
+    const errors = await this._delete(options);
     if (!options.ignoreHook && this.afterDelete) {
       await this.afterDelete(this.path);
     }
+    return errors;
   }
 
   public async getParent(): Promise<Directory> {
@@ -83,14 +84,14 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
     options: MoveOptions = { force: false }
   ): Promise<XmitError[]> {
     await this.head(); // check existance
-    const copyErrors: XmitError[] = [];
-    await this._xmit(to, copyErrors, {
+    const moveErrors: XmitError[] = [];
+    await this._xmit(to, moveErrors, {
       bufferSize: options.bufferSize,
       force: options.force,
       move: true,
       recursive: true,
     });
-    return copyErrors;
+    return moveErrors;
   }
 
   public patch = (props: Props, options: PatchOptions = {}) =>
@@ -100,7 +101,7 @@ export abstract class AbstractFileSystemObject implements FileSystemObject {
 
   public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
 
-  public abstract _delete(options: DeleteOptions): Promise<void>;
+  public abstract _delete(options: DeleteOptions): Promise<Error[]>;
   public abstract _xmit(
     fso: FileSystemObject,
     copyErrors: XmitError[],
