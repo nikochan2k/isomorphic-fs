@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter, getSize, isBlob, validateBufferSize } from "univ-conv";
+import { Converter, isBlob, validateBufferSize } from "univ-conv";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -235,9 +235,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ): Promise<Ret<ReadStream>> {
     if (!options.ignoreHook && this.beforeGet) {
       const result = await this.beforeGet(this.path, options);
-      if (result) {
-        return result;
-      }
+      if (result) return result;
     }
     return this._createReadStream(options);
   }
@@ -248,12 +246,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     let [stats, e] = await this.head({ ignoreHook: options.ignoreHook });
     if (e) {
       if (e.name === NotFoundError.name) {
-        if (options.create == null) {
-          options.create = true;
-        }
-        if (options.create === false) {
-          return [undefined as never, e];
-        }
+        if (options.create == null) options.create = true;
+        if (options.create === false) return [undefined as never, e];
         if (!options.ignoreHook && this.beforePost) {
           const result = await this.beforePost(this.path, options);
           if (result) {
@@ -284,9 +278,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         }),
       ];
     }
-    if (options.create == null) {
-      options.create = false;
-    }
+    if (options.create == null) options.create = false;
     if (options.create === true) {
       return [
         undefined as never,
@@ -300,30 +292,27 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
     if (!options.ignoreHook && this.beforePut) {
       const result = await this.beforePut(this.path, options);
-      if (result) {
-        return result;
-      }
+      if (result) return result;
     }
     return this._createWriteStream(options);
   }
 
   public async hash(options: OpenOptions = {}): Promise<Ret<string>> {
     let [rs, e] = await this.createReadStream(options);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     try {
       const c = new Converter({ bufferSize: options.bufferSize });
       const hash = createHash();
-      let result: Source | null;
-      while ((result = await rs.read()) != null) {
-        const buffer = await c.toUint8Array(result);
+      while (true) {
+        const ret = await rs.read();
+        const [chunk, e] = ret;
+        if (e) return [undefined as never, e];
+        if (!chunk) break;
+        const buffer = await c.toUint8Array(chunk);
         hash.update(buffer);
       }
 
       return [toHex(hash.digest()), undefined as never];
-    } catch (e) {
-      return [undefined as never, e];
     } finally {
       await rs.close();
     }
@@ -334,24 +323,21 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ): Promise<Ret<Source>> {
     validateBufferSize(options);
     let [rs, e] = await this.createReadStream(options);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     const type = options.sourceType as SourceType;
     const converter = (rs as AbstractReadStream).converter;
     try {
       let pos = 0;
       const chunks: Source[] = [];
-      let chunk: Source | null;
-      while ((chunk = await rs.read()) != null) {
-        pos += getSize(chunk);
+      while (true) {
+        const [chunk, e] = await rs.read();
+        if (e) return [undefined as never, e];
+        if (!chunk) break;
         const converted = await this._convert(chunk, type, converter);
         chunks.push(converted);
       }
       const joined = await this._joinChunks(chunks, pos, type);
       return [joined, undefined as never];
-    } catch (e) {
-      return [undefined as never, e];
     } finally {
       await rs.close();
     }
@@ -363,9 +349,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ): Promise<Ret<number>> {
     const bufferSize = validateBufferSize(options);
     let [ws, e] = await this.createWriteStream(options);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     ws = ws as WriteStream;
     if (isBlob(src)) {
       try {

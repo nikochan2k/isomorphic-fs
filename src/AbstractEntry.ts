@@ -4,7 +4,6 @@ import {
   DeleteOptions,
   Directory,
   Entry,
-  ErrorLike,
   HeadOptions,
   MoveOptions,
   PatchOptions,
@@ -23,7 +22,7 @@ export abstract class AbstractEntry implements Entry {
   private beforeDelete?: (
     path: string,
     options: DeleteOptions
-  ) => Promise<[number, ErrorLike[]] | null>;
+  ) => Promise<Ret2<number> | null>;
 
   public cp = this.copy;
   public del = this.delete;
@@ -66,9 +65,7 @@ export abstract class AbstractEntry implements Entry {
   ): Promise<Ret2<number>> {
     if (!options.ignoreHook && this.beforeDelete) {
       const result = await this.beforeDelete(this.path, options);
-      if (result) {
-        return result;
-      }
+      if (result) return result;
     }
     const unlinkOptions: UnlinkOptions = {
       ...options,

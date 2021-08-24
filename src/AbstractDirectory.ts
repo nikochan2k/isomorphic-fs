@@ -14,7 +14,6 @@ import {
 import {
   createError,
   NotFoundError,
-  NotReadableError,
   SecurityError,
   TypeMismatchError,
 } from "./errors";
@@ -193,41 +192,40 @@ export abstract class AbstractDirectory
   public async mkcol(
     options: MkcolOptions = { force: false, recursive: false }
   ): Promise<Ret<boolean>> {
-    try {
-      const [stats, e] = await this.head({ ignoreHook: options.ignoreHook });
-      if (e) return [undefined as never, e];
+    const [stats, eHead] = await this.head({ ignoreHook: options.ignoreHook });
+    if (eHead) {
+      if (eHead.name !== NotFoundError.name) {
+        return [undefined as never, eHead];
+      }
+      if (options.recursive) {
+        const [parent, e] = await this.getParent();
+        if (e) return [undefined as never, e];
+        await parent.mkcol({ force: true, recursive: true });
+      }
+    } else {
       if (stats.size != null) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: `"${this.path}" is not a directory`,
-        });
+        return [
+          false as never,
+          createError({
+            name: TypeMismatchError.name,
+            repository: this.fs.repository,
+            path: this.path,
+            e: `"${this.path}" is not a directory`,
+          }),
+        ];
       }
       if (!options.force) {
-        throw createError({
-          name: SecurityError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: `"${this.path}" has already existed`,
-        });
+        return [
+          false as never,
+          createError({
+            name: SecurityError.name,
+            repository: this.fs.repository,
+            path: this.path,
+            e: `"${this.path}" has already existed`,
+          }),
+        ];
       }
       return [false, undefined as never];
-    } catch (e) {
-      if (e.name === NotFoundError.name) {
-        if (options.recursive) {
-          const [parent, e] = await this.getParent();
-          if (e) return [undefined as never, e];
-          await parent.mkcol({ force: true, recursive: true });
-        }
-      } else {
-        throw createError({
-          name: NotReadableError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e,
-        });
-      }
     }
     if (!options.ignoreHook && this.beforeMkcol) {
       const result = await this.beforeMkcol(this.path, options);

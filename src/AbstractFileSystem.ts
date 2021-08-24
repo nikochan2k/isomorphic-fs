@@ -71,9 +71,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       toPath,
       options.ignoreHook
     );
-    if (e) {
-      return [-1, [e]];
-    }
+    if (e) return [0, [e]];
     entries = entries as { from: Entry; to: Entry };
     return entries.from.copy(entries.to, options);
   }
@@ -83,9 +81,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: OpenReadOptions = {}
   ): Promise<Ret<ReadStream>> {
     const [file, e] = await this.getFile(path);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     return file.createReadStream(options);
   }
 
@@ -105,9 +101,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: DeleteOptions = { force: false, recursive: false }
   ): Promise<Ret2<number>> {
     const [entry, e] = await this.getEntry(path, options.ignoreHook);
-    if (e) {
-      return [0, [e]];
-    }
+    if (e) return [0, [e]];
     return entry.delete(options);
   }
 
@@ -116,9 +110,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: OpenOptions = {}
   ): Promise<Ret<string>> {
     const [file, e] = await this.getFile(path);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     return file.hash(options);
   }
 
@@ -128,15 +120,11 @@ export abstract class AbstractFileSystem implements FileSystem {
   ): Promise<Ret<Stats>> {
     path = normalizePath(path);
     let stats: Stats | null | undefined;
-    if (!options.ignoreHook && this.beforeHead) {
+    if (!options.ignoreHook && this.beforeHead)
       stats = await this.beforeHead(path, options);
-    }
-    if (!stats) {
-      stats = await this._head(path, options);
-    }
-    if (!options.ignoreHook && this.afterHead) {
+    if (!stats) stats = await this._head(path, options);
+    if (!options.ignoreHook && this.afterHead)
       await this.afterHead(path, stats);
-    }
     return [stats, undefined as never];
   }
 
@@ -145,9 +133,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: ListOptions
   ): Promise<Ret<string[]>> {
     const [dir, e] = await this.getDirectory(path);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     return dir.list(options);
   }
 
@@ -156,9 +142,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: MkcolOptions
   ): Promise<Ret<boolean>> {
     const [dir, e] = await this.getDirectory(path);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     return dir.mkcol(options);
   }
 
@@ -172,9 +156,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       toPath,
       options.ignoreHook
     );
-    if (e) {
-      return [-1, [e]];
-    }
+    if (e) return [0, [e]];
     entries = entries as { from: Entry; to: Entry };
     return entries.from.move(entries.to, options);
   }
@@ -203,9 +185,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: OpenReadOptions = {}
   ): Promise<Ret<Source>> {
     const [file, e] = await this.getFile(path);
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     return file.readAll(options);
   }
 
@@ -247,9 +227,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     ignoreHook?: boolean
   ): Promise<Ret<Entry>> {
     let [stats, e] = await this.head(path, { ignoreHook });
-    if (e) {
-      return [undefined as never, e];
-    }
+    if (e) return [undefined as never, e];
     stats = stats as Stats;
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
@@ -260,15 +238,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     ignoreHook?: boolean
   ): Promise<Ret<{ from: Entry; to: Entry }>> {
     let [from, eFrom] = await this.getEntry(fromPath, ignoreHook);
-    if (eFrom) {
-      return [undefined as never, eFrom];
-    }
+    if (eFrom) return [undefined as never, eFrom];
     const [to, eTo] = await (from instanceof AbstractFile
       ? this.getFile(toPath)
       : this.getDirectory(toPath));
-    if (eTo) {
-      return [undefined as never, eTo];
-    }
+    if (eTo) return [undefined as never, eTo];
     return [{ from, to }, undefined as never];
   }
 }

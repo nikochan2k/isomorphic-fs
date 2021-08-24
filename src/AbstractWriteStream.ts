@@ -1,6 +1,6 @@
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
-import { OpenWriteOptions, Source, WriteStream } from "./core";
+import { OpenWriteOptions, Ret, Source, WriteStream } from "./core";
 
 export abstract class AbstractWriteStream
   extends AbstractStream
@@ -13,7 +13,7 @@ export abstract class AbstractWriteStream
 
   constructor(
     file: AbstractFile,
-    protected readonly options: OpenWriteOptions
+    protected override readonly options: OpenWriteOptions
   ) {
     super(file, options);
     const hook = file.fs.options.hook;
@@ -24,9 +24,7 @@ export abstract class AbstractWriteStream
   public async close(): Promise<void> {
     await this._close();
     this.position = 0;
-    if (!this.changed) {
-      return;
-    }
+    if (!this.changed) return;
     if (!this.options.ignoreHook && this.afterPost && this.options.create) {
       await this.afterPost(this.file.path);
     } else if (
@@ -38,26 +36,29 @@ export abstract class AbstractWriteStream
     }
   }
 
-  public async truncate(size: number): Promise<void> {
-    await this._truncate(size);
-    if (size < this.position) {
-      this.position = size;
-    }
+  public async truncate(size: number): Promise<Ret<number>> {
+    const ret = await this._truncate(size);
+    const [truncated, e] = ret;
+    if (e) return ret;
+    if (truncated < this.position) this.position = truncated;
     this.changed = true;
+    return ret;
   }
 
   /**
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async write(src: Source): Promise<number> {
-    const written = await this._write(src);
+  public async write(src: Source): Promise<Ret<number>> {
+    const ret = await this._write(src);
+    const [written, e] = ret;
+    if (e) return ret;
     this.position += written;
     this.changed = true;
-    return written;
+    return ret;
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _truncate(size: number): Promise<void>;
-  public abstract _write(value: Source): Promise<number>;
+  public abstract _truncate(size: number): Promise<Ret<number>>;
+  public abstract _write(value: Source): Promise<Ret<number>>;
 }

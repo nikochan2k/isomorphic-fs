@@ -4,6 +4,7 @@ import { AbstractStream } from "./AbstractStream";
 import {
   OpenReadOptions,
   ReadStream,
+  Ret,
   Source,
   SourceType,
   WriteStream,
@@ -18,7 +19,10 @@ export abstract class AbstractReadStream
   protected fileSize?: number;
   protected handled = false;
 
-  constructor(file: AbstractFile, protected readonly options: OpenReadOptions) {
+  constructor(
+    file: AbstractFile,
+    protected override readonly options: OpenReadOptions
+  ) {
     super(file, options);
     if (!options.sourceType) {
       options.sourceType = this.getDefaultSourceType();
@@ -34,67 +38,71 @@ export abstract class AbstractReadStream
     }
   }
 
-  public async pipe(ws: WriteStream): Promise<void> {
-    let buffer: any;
-    while ((buffer = await this.read()) != null) {
-      await ws.write(buffer);
+  public async pipe(ws: WriteStream): Promise<Ret<number>> {
+    let written: number = 0;
+    while (true) {
+      const [chunk, eR] = await this.read();
+      if (eR) return [written as never, eR];
+      if (!chunk) break;
+      const [size, eW] = await ws.write(chunk);
+      if (eW) return [written as never, eW];
+      written += size;
     }
+    return [written, undefined as never];
   }
 
   /**
    * Asynchronously reads data from the file.
    * The `File` must have been opened for reading.
    */
-  public async read(size?: number): Promise<Source | null> {
+  public async read(size?: number): Promise<Ret<Source | null>> {
     const af = this.file;
     const converter = this.converter;
     const souceType = this.options.sourceType as SourceType;
-    let result: Source | null = null;
+    let ret: Ret<Source | null>;
     let pos = 0;
     if (size == null || size <= this.bufferSize) {
-      const chunk = await this._read(size);
+      const [chunk, e] = (ret = await this._read(size));
+      if (e) return ret;
       if (chunk) {
         pos = getSize(chunk);
-        result = await af._convert(chunk, souceType, converter);
+        ret[0] = await af._convert(chunk, souceType, converter);
       }
     } else {
       const chunks: Source[] = [];
-      const fileSize = await this._getFileSize();
+      const [fileSize, e] = await this._getFileSize();
+      if (e) return [undefined as never, e];
       const max = Math.min(size, fileSize);
       do {
         let next = pos + this.bufferSize;
-        if (max < next) {
-          next = max;
-        }
+        if (max < next) next = max;
         let chunkSize = next - pos;
-        const chunk = await this._read(chunkSize);
-        if (!chunk) {
-          break;
-        }
+        const [chunk, e] = (ret = await this._read(chunkSize));
+        if (e) return ret;
+        if (!chunk) break;
         pos += getSize(chunk);
         const converted = await af._convert(chunk, souceType, converter);
         chunks.push(converted);
       } while (pos < max);
       if (0 < chunks.length) {
-        result = await af._joinChunks(chunks, pos, souceType);
+        ret[0] = await af._joinChunks(chunks, pos, souceType);
       }
     }
     this.position += pos;
     this.handled = true;
-    return result;
+    return ret;
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _read(size?: number): Promise<Source | null>;
+  public abstract _read(size?: number): Promise<Ret<Source | null>>;
 
-  protected async _getFileSize() {
-    if (this.fileSize) {
-      return this.fileSize;
-    }
-    const stats = await this.file.head({ ignoreHook: true });
+  protected async _getFileSize(): Promise<Ret<number>> {
+    if (this.fileSize) return [this.fileSize, undefined as never];
+    const [stats, e] = await this.file.head({ ignoreHook: true });
+    if (e) return [undefined as never, e];
     const fileSize = stats.size as number;
     this.fileSize = fileSize;
-    return fileSize;
+    return [fileSize, undefined as never];
   }
 
   protected abstract getDefaultSourceType(): SourceType;

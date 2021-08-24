@@ -268,16 +268,16 @@ export interface Stream {
   position: number;
 
   close(): Promise<void>;
-  seek(offset: number, origin: SeekOrigin): Promise<void>;
+  seek(offset: number, origin: SeekOrigin): Promise<Ret<number>>;
 }
 
 export interface ReadStream extends Stream {
-  pipe(ws: WriteStream): Promise<ErrorLike | void>;
-  read(size?: number): Promise<Source | null>;
+  pipe(ws: WriteStream): Promise<Ret<number>>;
+  read(size?: number): Promise<Ret<Source | null>>;
 }
 export interface WriteStream extends Stream {
-  truncate(size: number): Promise<void>;
-  write(src: Source): Promise<number>;
+  truncate(size: number): Promise<Ret<number>>;
+  write(src: Source): Promise<Ret<number>>;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;
