@@ -2,6 +2,7 @@ import { Converter, validateBufferSize } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
   DEFAULT_BUFFER_SIZE,
+  ErrorLike,
   OpenOptions,
   Ret,
   SeekOrigin,
@@ -45,12 +46,12 @@ export abstract class AbstractStream implements Stream {
     }
     this.position = start;
 
-    const [, eSeek] = await this._seek(start);
+    const eSeek = await this._seek(start);
     if (eSeek) return [undefined as never, eSeek];
     return [this.position, undefined as never];
   }
 
   public abstract close(): Promise<void>;
 
-  protected abstract _seek(start: number): Promise<Ret<never>>;
+  protected abstract _seek(start: number): Promise<void | ErrorLike>;
 }
