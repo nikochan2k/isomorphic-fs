@@ -4,7 +4,6 @@ import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   Directory,
   Entry,
-  ErrorLike,
   ListOptions,
   MkcolOptions,
   Ret,
@@ -82,19 +81,26 @@ export abstract class AbstractDirectory
         options.errors.push(eHead);
         continue;
       }
-      const entry = (await (stats.size != null
+      const [entry, eEntry] = await (stats.size != null
         ? this.fs.getFile(child)
-        : this.fs.getDirectory(child))) as unknown as AbstractEntry;
-      await entry.delete(options);
+        : this.fs.getDirectory(child));
+      if (eEntry) {
+        options.errors.push(eEntry);
+        continue;
+      }
+      const [deleted, errors] = await entry.delete({
+        force: options.force,
+        recursive: options.recursive,
+        ignoreHook: options.ignoreHook,
+      });
+      options.deleted += deleted;
+      Array.prototype.push.apply(options.errors, errors);
     }
 
-    const eRmdir = await this._rmdir();
-    if (eRmdir) {
-      options.errors.push(eRmdir);
-    }
+    const [removed, eRmdir] = await this._rmdir();
+    if (eRmdir) options.errors.push(eRmdir);
+    options.deleted += removed ? 1 : 0;
   }
-
-  public abstract _rmdir(): Promise<void | ErrorLike>;
 
   public async _xmit(toEntry: Entry, options: XmitOptions): Promise<void> {
     if (toEntry instanceof AbstractFile) {
@@ -242,4 +248,5 @@ export abstract class AbstractDirectory
 
   public abstract _list(): Promise<Ret<string[]>>;
   public abstract _mkcol(): Promise<Ret<boolean>>;
+  public abstract _rmdir(): Promise<Ret<boolean>>;
 }

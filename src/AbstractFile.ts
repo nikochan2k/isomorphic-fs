@@ -13,7 +13,6 @@ import {
   OpenWriteOptions,
   ReadStream,
   Ret,
-  Ret2,
   Source,
   SourceType,
   Stats,
@@ -104,9 +103,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       );
     }
 
-    const [deleted, errors] = await this._unlink();
-    options.deleted += deleted;
-    Array.prototype.push.apply(options.errors, errors);
+    const [deleted, eUnlink] = await this._unlink();
+    if (eUnlink) {
+      options.errors.push(eUnlink);
+      return;
+    }
+    options.deleted += deleted ? 1 : 0;
   }
 
   public async _joinChunks(
@@ -392,7 +394,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract _createWriteStream(
     options: OpenWriteOptions
   ): Promise<Ret<WriteStream>>;
-  public abstract _unlink(): Promise<Ret2<number>>;
+  public abstract _unlink(): Promise<Ret<boolean>>;
 
   protected _createBuffer(byteLength: number): Uint8Array {
     const ab = new ArrayBuffer(byteLength);
