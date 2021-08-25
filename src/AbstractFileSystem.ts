@@ -119,13 +119,19 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: HeadOptions = {}
   ): Promise<Ret<Stats>> {
     path = normalizePath(path);
-    let stats: Stats | null | undefined;
-    if (!options.ignoreHook && this.beforeHead)
-      stats = await this.beforeHead(path, options);
-    if (!stats) stats = await this._head(path, options);
+    if (!options.ignoreHook && this.beforeHead) {
+      const ret = await this.beforeHead(path, options);
+      if (ret) {
+        const [, e] = ret;
+        if (e) return [undefined as never, e];
+        return ret;
+      }
+    }
+    const [stats, e] = await this._head(path, options);
+    if (e) return [undefined as never, e];
     if (!options.ignoreHook && this.afterHead)
       await this.afterHead(path, stats);
-    return [stats, undefined as never];
+    return [stats, e];
   }
 
   public async list(

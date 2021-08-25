@@ -46,7 +46,8 @@ export abstract class AbstractEntry implements Entry {
     to: Entry,
     options: CopyOptions = { force: false, recursive: false }
   ): Promise<Ret2<number>> {
-    await this.head(); // check existance
+    const [, e] = await this.head(); // check existance
+    if (e) return [0, [e]];
     const xmitOptions: XmitOptions = {
       bufferSize: options.bufferSize,
       force: options.force,
