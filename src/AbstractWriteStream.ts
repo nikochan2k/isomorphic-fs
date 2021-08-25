@@ -1,6 +1,6 @@
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
-import { OpenWriteOptions, Ret, Source, WriteStream } from "./core";
+import { ErrorLike, OpenWriteOptions, Ret, Source, WriteStream } from "./core";
 
 export abstract class AbstractWriteStream
   extends AbstractStream
@@ -37,12 +37,19 @@ export abstract class AbstractWriteStream
   }
 
   public async truncate(size: number): Promise<Ret<number>> {
-    const ret = await this._truncate(size);
-    const [truncated, e] = ret;
-    if (e) return ret;
-    if (truncated < this.position) this.position = truncated;
+    const [stats, eStat] = await this.file.stat({
+      ignoreHook: this.options.ignoreHook,
+    });
+    if (eStat) return [undefined as never, eStat];
+    const fileSize = stats.size as number;
+    if (fileSize < size) {
+      size = fileSize;
+    }
+    const e = await this._truncate(size);
+    if (e) return [undefined as never, e];
+    if (size < this.position) this.position = size;
     this.changed = true;
-    return ret;
+    return [size, undefined as never];
   }
 
   /**
@@ -59,6 +66,6 @@ export abstract class AbstractWriteStream
   }
 
   public abstract _close(): Promise<void>;
-  public abstract _truncate(size: number): Promise<Ret<number>>;
+  public abstract _truncate(size: number): Promise<void | ErrorLike>;
   public abstract _write(value: Source): Promise<Ret<number>>;
 }
