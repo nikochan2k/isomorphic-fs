@@ -230,7 +230,7 @@ export const domExceptions: DOMExceptionType[] = [
 ];
 
 function isDOMException(e: any) {
-  return e.code && e.name && e.message;
+  return typeof e.code === "number" && e.name && e.message;
 }
 
 export function createError(options: {
