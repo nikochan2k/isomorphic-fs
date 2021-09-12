@@ -107,25 +107,24 @@ export abstract class AbstractDirectory
       recursive: false,
       ignoreHook: options.ignoreHook,
     });
-    if (!options.recursive) {
-      return;
-    }
 
-    const children = await this.list();
-    for (const child of children) {
-      const stats = await this.fs.head(child);
-      const fromEntry = (await (stats.size != null
-        ? this.fs.getFile(child)
-        : this.fs.getDirectory(child))) as unknown as AbstractEntry;
-      const name = getName(child);
-      const toPath = joinPaths(toDir.path, name);
-      const toEntry = (await (stats.size != null
-        ? this.fs.getFile(toPath)
-        : this.fs.getDirectory(toPath))) as unknown as AbstractEntry;
-      try {
-        await fromEntry._xmit(toEntry, copyErrors, options);
-      } catch (error) {
-        copyErrors.push({ from: fromEntry, to: toEntry, error });
+    if (options.recursive) {
+      const children = await this.list();
+      for (const child of children) {
+        const stats = await this.fs.head(child);
+        const fromEntry = (await (stats.size != null
+          ? this.fs.getFile(child)
+          : this.fs.getDirectory(child))) as unknown as AbstractEntry;
+        const name = getName(child);
+        const toPath = joinPaths(toDir.path, name);
+        const toEntry = (await (stats.size != null
+          ? this.fs.getFile(toPath)
+          : this.fs.getDirectory(toPath))) as unknown as AbstractEntry;
+        try {
+          await fromEntry._xmit(toEntry, copyErrors, options);
+        } catch (error) {
+          copyErrors.push({ from: fromEntry, to: toEntry, error });
+        }
       }
     }
 

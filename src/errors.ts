@@ -229,28 +229,21 @@ export const domExceptions: DOMExceptionType[] = [
   NotAllowedError,
 ];
 
-function isDOMException(e: any) {
-  if (typeof e !== "object") {
-    return false;
-  }
-  const name = e.name;
-  if (!name) {
-    return false;
-  }
-  for (const de of domExceptions) {
-    if (name === de.name) {
-      return true;
-    }
-  }
-  return false;
-}
-
 export function createError(options: {
   repository: string;
   path: string;
   e?: any;
   name?: string;
 }) {
+  let e = options.e;
+  if (typeof e === "object") {
+    if (Object.isFrozen(e) || Object.isSealed(e)) {
+      e = { ...e };
+    }
+  } else {
+    e = { message: e };
+  }
+
   let repository = options.repository;
   if (repository.endsWith("/")) {
     repository = repository.substr(0, repository.length - 1);
@@ -259,26 +252,9 @@ export function createError(options: {
     repository = "/" + repository;
   }
   const path = options.path;
-
-  let e = options.e;
-  if (isDOMException(e)) {
-    if (Object.isFrozen(e) || Object.isSealed(e)) {
-      e = { name: e.name, code: e.code, message: e.message, stack: e.stack };
-    }
-    e.repository = repository;
-    e.path = path;
-    return e;
-  }
-
-  if (typeof e === "object") {
-    if (Object.isFrozen(e) || Object.isSealed(e)) {
-      e = { ...e };
-    }
-  } else {
-    e = { message: e };
-  }
   e.repository = repository;
   e.path = path;
+
   const name = options.name;
   if (name) {
     for (const de of domExceptions) {
@@ -288,9 +264,10 @@ export function createError(options: {
         if (!e.message) {
           e.message = de.message;
         }
-        break;
+        return e;
       }
     }
   }
+
   return e;
 }
