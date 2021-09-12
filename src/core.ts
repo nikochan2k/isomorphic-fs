@@ -147,8 +147,8 @@ export interface Hook {
 
 export interface XmitError {
   error: ErrorLike;
-  from: Entry;
-  to: Entry;
+  from?: Entry;
+  to?: Entry;
 }
 
 export interface ErrorLike {

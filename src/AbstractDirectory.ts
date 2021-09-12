@@ -111,16 +111,13 @@ export abstract class AbstractDirectory
     if (options.recursive) {
       const children = await this.list();
       for (const child of children) {
-        const stats = await this.fs.head(child);
-        const fromEntry = (await (stats.size != null
-          ? this.fs.getFile(child)
-          : this.fs.getDirectory(child))) as unknown as AbstractEntry;
-        const name = getName(child);
-        const toPath = joinPaths(toDir.path, name);
-        const toEntry = (await (stats.size != null
-          ? this.fs.getFile(toPath)
-          : this.fs.getDirectory(toPath))) as unknown as AbstractEntry;
+        let fromEntry: AbstractEntry | undefined;
+        let toEntry: AbstractEntry | undefined;
         try {
+          fromEntry = (await this.fs.getEntry(child)) as AbstractEntry;
+          const name = getName(child);
+          const toPath = joinPaths(toDir.path, name);
+          toEntry = (await this.fs.getEntry(toPath)) as AbstractEntry;
           await fromEntry._xmit(toEntry, copyErrors, options);
         } catch (error) {
           copyErrors.push({ from: fromEntry, to: toEntry, error });
