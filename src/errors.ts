@@ -280,13 +280,15 @@ export function createError(options: {
   e.repository = repository;
   e.path = path;
   const name = options.name;
-  for (const de of domExceptions) {
-    if (de.name == name) {
-      e.code = de.code;
-      if (!e.message) {
-        e.message = de.message;
+  if (name) {
+    for (const de of domExceptions) {
+      if (de.name == name) {
+        e.code = de.code;
+        if (!e.message) {
+          e.message = de.message;
+        }
+        break;
       }
-      break;
     }
   }
   return e;
