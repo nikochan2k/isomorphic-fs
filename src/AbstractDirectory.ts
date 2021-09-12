@@ -82,7 +82,7 @@ export abstract class AbstractDirectory
     for (const child of children) {
       try {
         const childEntry = await this.fs.getEntry(child);
-        childEntry.delete(options);
+        await childEntry.delete(options);
       } catch (e) {
         if (options.force) {
           errors.push(e);
