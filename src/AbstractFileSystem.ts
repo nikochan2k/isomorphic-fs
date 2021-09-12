@@ -88,8 +88,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     path: string,
     options: DeleteOptions = { force: false, recursive: false }
   ): Promise<void> {
-    const fso = await this.getFileSystemObject(path);
-    return fso.delete(options);
+    const entry = await this.getEntry(path);
+    return entry.delete(options);
   }
 
   public async hash(path: string, options: OpenOptions = {}): Promise<string> {
@@ -185,13 +185,13 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract getFile(path: string): Promise<File>;
   public abstract toURL(path: string, urlType?: URLType): Promise<string>;
 
-  protected async getFileSystemObject(path: string): Promise<Entry> {
+  protected async getEntry(path: string): Promise<Entry> {
     const stats = await this.head(path);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 
   private async _prepareXmit(fromPath: string, toPath: string) {
-    const from = await this.getFileSystemObject(fromPath);
+    const from = await this.getEntry(fromPath);
     const to = await (from instanceof AbstractFile
       ? this.getFile(toPath)
       : this.getDirectory(toPath));

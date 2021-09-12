@@ -100,7 +100,7 @@ export abstract class AbstractEntry implements Entry {
 
   public abstract _delete(options: DeleteOptions): Promise<void>;
   public abstract _xmit(
-    fso: Entry,
+    entry: Entry,
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void>;

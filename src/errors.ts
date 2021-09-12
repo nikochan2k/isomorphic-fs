@@ -283,6 +283,7 @@ export function createError(options: {
   if (name) {
     for (const de of domExceptions) {
       if (de.name == name) {
+        e.name = name;
         e.code = de.code;
         if (!e.message) {
           e.message = de.message;

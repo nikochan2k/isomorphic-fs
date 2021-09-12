@@ -114,18 +114,18 @@ export abstract class AbstractDirectory
     const children = await this.list();
     for (const child of children) {
       const stats = await this.fs.head(child);
-      const fromFso = (await (stats.size != null
+      const fromEntry = (await (stats.size != null
         ? this.fs.getFile(child)
         : this.fs.getDirectory(child))) as unknown as AbstractEntry;
       const name = getName(child);
       const toPath = joinPaths(toDir.path, name);
-      const toFso = (await (stats.size != null
+      const toEntry = (await (stats.size != null
         ? this.fs.getFile(toPath)
         : this.fs.getDirectory(toPath))) as unknown as AbstractEntry;
       try {
-        await fromFso._xmit(toFso, copyErrors, options);
+        await fromEntry._xmit(toEntry, copyErrors, options);
       } catch (error) {
-        copyErrors.push({ from: fromFso, to: toFso, error });
+        copyErrors.push({ from: fromEntry, to: toEntry, error });
       }
     }
 

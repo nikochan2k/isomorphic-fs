@@ -147,19 +147,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async _xmit(
-    toFso: AbstractEntry,
+    toEntry: AbstractEntry,
     copyErrors: XmitError[],
     options: XmitOptions
   ): Promise<void> {
-    if (toFso instanceof AbstractDirectory) {
+    if (toEntry instanceof AbstractDirectory) {
       throw createError({
         name: TypeMismatchError.name,
-        repository: toFso.fs.repository,
-        path: toFso.path,
-        e: `"${toFso}" is not a file`,
+        repository: toEntry.fs.repository,
+        path: toEntry.path,
+        e: `"${toEntry}" is not a file`,
       });
     }
-    const to = toFso as AbstractFile;
+    const to = toEntry as AbstractFile;
     try {
       await to.head();
       if (!options.force) {
@@ -192,8 +192,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         } else {
           throw createError({
             name: NotReadableError.name,
-            repository: toFso.fs.repository,
-            path: toFso.path,
+            repository: toEntry.fs.repository,
+            path: toEntry.path,
             e,
           });
         }

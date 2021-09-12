@@ -220,14 +220,14 @@ export interface Entry {
   fs: FileSystem;
   path: string;
 
-  copy(fso: Entry, options?: CopyOptions): Promise<XmitError[]>;
-  cp(fso: Entry, options?: CopyOptions): Promise<XmitError[]>;
+  copy(entry: Entry, options?: CopyOptions): Promise<XmitError[]>;
+  cp(entry: Entry, options?: CopyOptions): Promise<XmitError[]>;
   del(options?: DeleteOptions): Promise<void>;
   delete(options?: DeleteOptions): Promise<void>;
   getParent(): Promise<Directory>;
   head(options?: HeadOptions): Promise<Stats>;
-  move(fso: Entry, options?: MoveOptions): Promise<XmitError[]>;
-  mv(fso: Entry, options?: MoveOptions): Promise<XmitError[]>;
+  move(entry: Entry, options?: MoveOptions): Promise<XmitError[]>;
+  mv(entry: Entry, options?: MoveOptions): Promise<XmitError[]>;
   patch(props: Props, options?: PatchOptions): Promise<void>;
   rm(options?: DeleteOptions): Promise<void>;
   stat(options?: HeadOptions): Promise<Stats>;
