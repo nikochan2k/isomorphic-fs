@@ -233,9 +233,6 @@ function isDOMException(e: any) {
   if (typeof e !== "object") {
     return false;
   }
-  if (typeof e.code === "number") {
-    return false;
-  }
   const name = e.name;
   if (!name) {
     return false;
