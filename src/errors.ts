@@ -268,15 +268,13 @@ export function createError(options: {
   e.repository = repository;
   e.path = path;
   const name = options.name;
-  if (name && !e.code) {
-    for (const de of domExceptions) {
-      if (de.name == name) {
-        e.code = de.code;
-        if (!e.message) {
-          e.message = de.message;
-        }
-        break;
+  for (const de of domExceptions) {
+    if (de.name == name) {
+      e.code = de.code;
+      if (!e.message) {
+        e.message = de.message;
       }
+      break;
     }
   }
   return e;
