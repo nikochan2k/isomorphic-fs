@@ -1,12 +1,13 @@
 import { createHash } from "sha256-uint8array";
 import { Converter, getSize, isBlob, validateBufferSize } from "univ-conv";
 import { AbstractDirectory } from "./AbstractDirectory";
-import { AbstractFileSystem } from "./AbstractFileSystem";
 import { AbstractEntry } from "./AbstractEntry";
+import { AbstractFileSystem } from "./AbstractFileSystem";
 import { AbstractReadStream } from "./AbstractReadStream";
 import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
   DeleteOptions,
+  ErrorLike,
   File,
   OpenOptions,
   OpenReadOptions,
@@ -15,7 +16,6 @@ import {
   Source,
   SourceType,
   WriteStream,
-  XmitError,
   XmitOptions,
 } from "./core";
 import {
@@ -78,7 +78,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async _delete(
-    options: DeleteOptions = { force: false, recursive: false }
+    options: DeleteOptions,
+    _errors: ErrorLike[]
   ): Promise<void> {
     try {
       const stats = await this.head();
@@ -104,6 +105,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         });
       }
     }
+
     return this._rm();
   }
 
@@ -148,7 +150,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _xmit(
     toEntry: AbstractEntry,
-    copyErrors: XmitError[],
+    _copyErrors: ErrorLike[],
     options: XmitOptions
   ): Promise<void> {
     if (toEntry instanceof AbstractDirectory) {
@@ -210,14 +212,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     } finally {
       await rs.close();
-    }
-
-    if (options.move) {
-      try {
-        await this.delete();
-      } catch (error) {
-        copyErrors.push({ from: this, to, error });
-      }
     }
   }
 

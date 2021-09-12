@@ -3,13 +3,13 @@ import {
   DeleteOptions,
   Directory,
   Entry,
+  ErrorLike,
   HeadOptions,
   MoveOptions,
   PatchOptions,
   Props,
   Stats,
   URLType,
-  XmitError,
   XmitOptions,
 } from "./core";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -20,14 +20,13 @@ export abstract class AbstractEntry implements Entry {
   private beforeDelete?: (
     path: string,
     options: DeleteOptions
-  ) => Promise<boolean>;
+  ) => Promise<ErrorLike[]>;
 
   public cp = this.copy;
   public del = this.delete;
   public mv = this.move;
   public rm = this.delete;
   public stat = this.head;
-  public unlink = this.delete;
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
     this.path = normalizePath(path);
@@ -41,13 +40,12 @@ export abstract class AbstractEntry implements Entry {
   public async copy(
     to: Entry,
     options: CopyOptions = { force: false, recursive: false }
-  ): Promise<XmitError[]> {
+  ): Promise<ErrorLike[]> {
     await this.head(); // check existance
-    const copyErrors: XmitError[] = [];
+    const copyErrors: ErrorLike[] = [];
     await this._xmit(to, copyErrors, {
       bufferSize: options.bufferSize,
       force: options.force,
-      move: false,
       recursive: options.recursive,
     });
     return copyErrors;
@@ -55,16 +53,18 @@ export abstract class AbstractEntry implements Entry {
 
   public async delete(
     options: DeleteOptions = { force: false, recursive: false }
-  ): Promise<void> {
+  ): Promise<ErrorLike[]> {
     if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(this.path, options)) {
-        return;
+        return [];
       }
     }
-    await this._delete(options);
+    const errors: ErrorLike[] = [];
+    await this._delete(options, errors);
     if (!options.ignoreHook && this.afterDelete) {
       await this.afterDelete(this.path);
     }
+    return errors;
   }
 
   public async getParent(): Promise<Directory> {
@@ -79,15 +79,23 @@ export abstract class AbstractEntry implements Entry {
   public async move(
     to: Entry,
     options: MoveOptions = { force: false }
-  ): Promise<XmitError[]> {
+  ): Promise<ErrorLike[]> {
     await this.head(); // check existance
-    const copyErrors: XmitError[] = [];
+    const copyErrors: ErrorLike[] = [];
     await this._xmit(to, copyErrors, {
       bufferSize: options.bufferSize,
       force: options.force,
-      move: true,
       recursive: true,
     });
+
+    if (copyErrors.length === 0) {
+      const deleteErrors = await this.delete({
+        force: options.force,
+        recursive: false,
+      });
+      Array.prototype.push.apply(copyErrors, deleteErrors);
+    }
+
     return copyErrors;
   }
 
@@ -98,10 +106,14 @@ export abstract class AbstractEntry implements Entry {
 
   public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
 
-  public abstract _delete(options: DeleteOptions): Promise<void>;
+  public abstract _delete(
+    option: DeleteOptions,
+    errors: ErrorLike[]
+  ): Promise<void>;
+
   public abstract _xmit(
     entry: Entry,
-    copyErrors: XmitError[],
+    copyErrors: ErrorLike[],
     options: XmitOptions
   ): Promise<void>;
 }

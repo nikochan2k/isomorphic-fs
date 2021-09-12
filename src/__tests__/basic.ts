@@ -169,7 +169,6 @@ export const testAll = (fs: FileSystem) => {
 
   test("move directory", async () => {
     const errors = await fs.move("/folder2", "/folder3");
-    console.log(errors);
     expect(errors.length).toBe(0);
     const root = await fs.getDirectory("/");
     const list = await root.ls();

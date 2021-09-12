@@ -1,14 +1,13 @@
-import { getName, joinPaths } from "./util";
+import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractFileSystem } from "./AbstractFileSystem";
-import { AbstractEntry } from "./AbstractEntry";
 import {
   DeleteOptions,
   Directory,
   Entry,
+  ErrorLike,
   ListOptions,
   MkcolOptions,
-  XmitError,
   XmitOptions,
 } from "./core";
 import {
@@ -18,6 +17,7 @@ import {
   SecurityError,
   TypeMismatchError,
 } from "./errors";
+import { getName, joinPaths } from "./util";
 
 export abstract class AbstractDirectory
   extends AbstractEntry
@@ -50,7 +50,8 @@ export abstract class AbstractDirectory
   }
 
   public async _delete(
-    options: DeleteOptions = { force: false, recursive: false }
+    options: DeleteOptions,
+    errors: ErrorLike[]
   ): Promise<void> {
     try {
       const stats = await this.head();
@@ -76,20 +77,29 @@ export abstract class AbstractDirectory
         });
       }
     }
-    if (options.recursive) {
-      return this._rmdirRecursively();
-    } else {
-      return this._rmdir();
+
+    const children = await this.list();
+    for (const child of children) {
+      try {
+        const childEntry = await this.fs.getEntry(child);
+        childEntry.delete(options);
+      } catch (e) {
+        if (options.force) {
+          errors.push(e);
+        } else {
+          throw e;
+        }
+      }
     }
+
+    return this._rmdir();
   }
 
   public abstract _rmdir(): Promise<void>;
 
-  public abstract _rmdirRecursively(): Promise<void>;
-
   public async _xmit(
     to: Entry,
-    copyErrors: XmitError[],
+    copyErrors: ErrorLike[],
     options: XmitOptions
   ): Promise<void> {
     if (to instanceof AbstractFile) {
@@ -108,28 +118,21 @@ export abstract class AbstractDirectory
       ignoreHook: options.ignoreHook,
     });
 
-    if (options.recursive) {
-      const children = await this.list();
-      for (const child of children) {
-        let fromEntry: AbstractEntry | undefined;
-        let toEntry: AbstractEntry | undefined;
-        try {
-          fromEntry = (await this.fs.getEntry(child)) as AbstractEntry;
-          const name = getName(child);
-          const toPath = joinPaths(toDir.path, name);
-          toEntry = (await this.fs.getEntry(toPath)) as AbstractEntry;
-          await fromEntry._xmit(toEntry, copyErrors, options);
-        } catch (error) {
-          copyErrors.push({ from: fromEntry, to: toEntry, error });
-        }
-      }
+    if (!options.recursive) {
+      return;
     }
 
-    if (options.move) {
+    const fromPaths = await this.list();
+    for (const fromPath of fromPaths) {
+      let toPath: string | undefined;
       try {
-        await this.delete();
-      } catch (error) {
-        copyErrors.push({ from: this, to, error });
+        const fromEntry = (await this.fs.getEntry(fromPath)) as AbstractEntry;
+        const name = getName(fromPath);
+        toPath = joinPaths(toDir.path, name);
+        const toEntry = (await this.fs.getEntry(toPath)) as AbstractEntry;
+        await fromEntry._xmit(toEntry, copyErrors, options);
+      } catch (e) {
+        copyErrors.push({ ...e, from: fromPath, to: toPath });
       }
     }
   }

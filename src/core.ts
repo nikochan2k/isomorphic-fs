@@ -109,7 +109,6 @@ export interface CopyOptions extends Options {
 export interface XmitOptions extends Options {
   bufferSize?: number;
   force: boolean;
-  move: boolean;
   recursive: boolean;
 }
 
@@ -122,7 +121,7 @@ export interface Hook {
   afterPatch?: (path: string) => Promise<void>;
   afterPost?: (path: string) => Promise<void>;
   afterPut?: (path: string) => Promise<void>;
-  beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
+  beforeDelete?: (path: string, options: DeleteOptions) => Promise<ErrorLike[]>;
   beforeGet?: (
     path: string,
     options: OpenOptions
@@ -144,13 +143,6 @@ export interface Hook {
     options: OpenWriteOptions
   ) => Promise<WriteStream | null>;
 }
-
-export interface XmitError {
-  error: ErrorLike;
-  from?: Entry;
-  to?: Entry;
-}
-
 export interface ErrorLike {
   code?: number;
   message?: string;
@@ -168,12 +160,12 @@ export interface FileSystem {
     fromPath: string,
     toPath: string,
     options?: CopyOptions
-  ): Promise<XmitError[]>;
+  ): Promise<ErrorLike[]>;
   cp(
     fromPath: string,
     toPath: string,
     options?: CopyOptions
-  ): Promise<XmitError[]>;
+  ): Promise<ErrorLike[]>;
   createReadStream(
     path: string,
     options?: OpenReadOptions
@@ -182,8 +174,8 @@ export interface FileSystem {
     path: string,
     options?: OpenWriteOptions
   ): Promise<WriteStream>;
-  del(path: string, options?: DeleteOptions): Promise<void>;
-  delete(path: string, options?: DeleteOptions): Promise<void>;
+  del(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
+  delete(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   getDirectory(path: string): Promise<Directory>;
   getFile(path: string): Promise<File>;
   hash(path: string, options?: OpenOptions): Promise<string>;
@@ -196,19 +188,18 @@ export interface FileSystem {
     fromPath: string,
     toPath: string,
     options?: MoveOptions
-  ): Promise<XmitError[]>;
+  ): Promise<ErrorLike[]>;
   mv(
     fromPath: string,
     toPath: string,
     options?: MoveOptions
-  ): Promise<XmitError[]>;
+  ): Promise<ErrorLike[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
   readAll(path: string, options?: OpenReadOptions): Promise<Source>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
-  rm(path: string, options?: DeleteOptions): Promise<void>;
+  rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
-  unlink(path: string, options?: DeleteOptions): Promise<void>;
   writeAll(
     path: string,
     src: Source,
@@ -220,19 +211,18 @@ export interface Entry {
   fs: FileSystem;
   path: string;
 
-  copy(entry: Entry, options?: CopyOptions): Promise<XmitError[]>;
-  cp(entry: Entry, options?: CopyOptions): Promise<XmitError[]>;
-  del(options?: DeleteOptions): Promise<void>;
-  delete(options?: DeleteOptions): Promise<void>;
+  copy(entry: Entry, options?: CopyOptions): Promise<ErrorLike[]>;
+  cp(entry: Entry, options?: CopyOptions): Promise<ErrorLike[]>;
+  del(options?: DeleteOptions): Promise<ErrorLike[]>;
+  delete(options?: DeleteOptions): Promise<ErrorLike[]>;
   getParent(): Promise<Directory>;
   head(options?: HeadOptions): Promise<Stats>;
-  move(entry: Entry, options?: MoveOptions): Promise<XmitError[]>;
-  mv(entry: Entry, options?: MoveOptions): Promise<XmitError[]>;
+  move(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
+  mv(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
   patch(props: Props, options?: PatchOptions): Promise<void>;
-  rm(options?: DeleteOptions): Promise<void>;
+  rm(options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(options?: HeadOptions): Promise<Stats>;
   toURL(urlType?: URLType): Promise<string>;
-  unlink(options?: DeleteOptions): Promise<void>;
 }
 
 export interface Directory extends Entry {

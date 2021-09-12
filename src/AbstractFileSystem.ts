@@ -22,7 +22,7 @@ import {
   Stats,
   URLType,
   WriteStream,
-  XmitError,
+  ErrorLike,
 } from "./core";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -63,7 +63,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     fromPath: string,
     toPath: string,
     options: CopyOptions = { force: false, recursive: false }
-  ): Promise<XmitError[]> {
+  ): Promise<ErrorLike[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
   }
@@ -87,7 +87,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async delete(
     path: string,
     options: DeleteOptions = { force: false, recursive: false }
-  ): Promise<void> {
+  ): Promise<ErrorLike[]> {
     const entry = await this.getEntry(path);
     return entry.delete(options);
   }
@@ -131,7 +131,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     fromPath: string,
     toPath: string,
     options: MoveOptions = { force: false }
-  ): Promise<XmitError[]> {
+  ): Promise<ErrorLike[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.move(to, options);
   }
