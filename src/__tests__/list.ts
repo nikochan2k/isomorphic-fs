@@ -8,15 +8,21 @@ export const testAll = (fs: FileSystem) => {
   });
 
   test("nothing", async () => {
-    const [stats, e] = await fs.list("/nothing");
-    if (stats) fail("/nothing exists");
-    expect(e.name).toBe(NotFoundError.name);
+    try {
+      await fs.list("/nothing");
+      fail("/nothing exists");
+    } catch (e) {
+      expect(e.name).toBe(NotFoundError.name);
+    }
   });
 
   test("file_list", async () => {
     await fs.writeAll("/file_list", new ArrayBuffer(1));
-    const [list, e] = await fs.list("/file_list");
-    if (list) fail("/nothing exists");
-    expect(e.name === TypeMismatchError.name).toBe(true);
+    try {
+      await fs.list("/file_list");
+      fail("/nothing exists");
+    } catch (e) {
+      expect(e.name === TypeMismatchError.name).toBe(true);
+    }
   });
 };

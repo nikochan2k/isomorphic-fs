@@ -1,22 +1,23 @@
-import { AbstractEntry } from "./AbstractEntry";
+import { getName, joinPaths } from "./util";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractFileSystem } from "./AbstractFileSystem";
+import { AbstractEntry } from "./AbstractEntry";
 import {
+  DeleteOptions,
   Directory,
   Entry,
   ListOptions,
   MkcolOptions,
-  Ret,
-  UnlinkOptions,
+  XmitError,
   XmitOptions,
 } from "./core";
 import {
   createError,
   NotFoundError,
+  NotReadableError,
   SecurityError,
   TypeMismatchError,
 } from "./errors";
-import { getName, joinPaths } from "./util";
 
 export abstract class AbstractDirectory
   extends AbstractEntry
@@ -27,11 +28,11 @@ export abstract class AbstractDirectory
   private beforeList?: (
     path: string,
     options: ListOptions
-  ) => Promise<Ret<string[]>>;
+  ) => Promise<string[] | null>;
   private beforeMkcol?: (
     psth: string,
     options: MkcolOptions
-  ) => Promise<Ret<boolean>>;
+  ) => Promise<boolean>;
 
   public ls = this.list;
   public mkdir = this.mkcol;
@@ -48,147 +49,107 @@ export abstract class AbstractDirectory
     }
   }
 
-  public async _delete(options: UnlinkOptions): Promise<void> {
-    const [stats, eHead] = await this.head({ ignoreHook: options.ignoreHook });
-    if (eHead) {
-      options.errors.push(eHead);
-      return;
-    }
-    if (stats.size != null) {
-      options.errors.push(
-        createError({
+  public async _delete(
+    options: DeleteOptions = { force: false, recursive: false }
+  ): Promise<void> {
+    try {
+      const stats = await this.head();
+      if (stats.size != null) {
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a directory`,
-        })
-      );
-    }
-
-    const [children, eList] = await this.list();
-    if (eList) {
-      options.errors.push(eList);
-      return;
-    }
-    for (const child of children) {
-      if (!options.force && 0 < options.errors.length) {
-        return;
+        });
       }
-      const [stats, eHead] = await this.fs.head(child, {
-        ignoreHook: options.ignoreHook,
-      });
-      if (eHead) {
-        options.errors.push(eHead);
-        continue;
+    } catch (e) {
+      if (e.name === NotFoundError.name) {
+        if (!options.force) {
+          throw e;
+        }
+      } else {
+        throw createError({
+          name: NotReadableError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
       }
-      const [entry, eEntry] = await (stats.size != null
-        ? this.fs.getFile(child)
-        : this.fs.getDirectory(child));
-      if (eEntry) {
-        options.errors.push(eEntry);
-        continue;
-      }
-      const [deleted, errors] = await entry.delete({
-        force: options.force,
-        recursive: options.recursive,
-        ignoreHook: options.ignoreHook,
-      });
-      options.deleted += deleted;
-      Array.prototype.push.apply(options.errors, errors);
     }
-
-    const [removed, eRmdir] = await this._rmdir();
-    if (eRmdir) options.errors.push(eRmdir);
-    options.deleted += removed ? 1 : 0;
+    if (options.recursive) {
+      return this._rmdirRecursively();
+    } else {
+      return this._rmdir();
+    }
   }
 
-  public async _xmit(toEntry: Entry, options: XmitOptions): Promise<void> {
-    if (toEntry instanceof AbstractFile) {
-      options.errors.push(
-        createError({
-          name: TypeMismatchError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: `"${this.path}" is not a directory`,
-        })
-      );
-      return;
+  public abstract _rmdir(): Promise<void>;
+
+  public abstract _rmdirRecursively(): Promise<void>;
+
+  public async _xmit(
+    to: Entry,
+    copyErrors: XmitError[],
+    options: XmitOptions
+  ): Promise<void> {
+    if (to instanceof AbstractFile) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.fs.repository,
+        path: this.path,
+        e: `"${this.path}" is not a directory`,
+      });
     }
 
-    const toDir = toEntry as Directory;
-    const [, eMkcol] = await toDir.mkcol({
+    const toDir = to as Directory;
+    await toDir.mkcol({
       force: options.force,
       recursive: false,
       ignoreHook: options.ignoreHook,
     });
-    if (eMkcol) {
-      options.errors.push(eMkcol);
-      return;
-    }
-    options.copied++;
-
-    const [children, eList] = await this.list();
-    if (eList) {
-      options.errors.push(eList);
+    if (!options.recursive) {
       return;
     }
 
-    if (options.recursive) {
-      for (const child of children) {
-        if (!options.force && 0 < options.errors.length) {
-          return;
-        }
-        const [stats, eHead] = await this.fs.head(child, {
-          ignoreHook: options.ignoreHook,
-        });
-        if (eHead) {
-          options.errors.push(eHead);
-          continue;
-        }
-        const [fromEntry, eFrom] = await (stats.size != null
-          ? this.fs.getFile(child)
-          : this.fs.getDirectory(child));
-        if (eFrom) {
-          options.errors.push(eFrom);
-          continue;
-        }
-        const name = getName(child);
-        const toPath = joinPaths(toDir.path, name);
-        const [toEntry, eTo] = await (stats.size != null
-          ? this.fs.getFile(toPath)
-          : this.fs.getDirectory(toPath));
-        if (eTo) {
-          options.errors.push(eTo);
-          continue;
-        }
-        await (fromEntry as never as AbstractEntry)._xmit(toEntry, options);
+    const children = await this.list();
+    for (const child of children) {
+      const stats = await this.fs.head(child);
+      const fromFso = (await (stats.size != null
+        ? this.fs.getFile(child)
+        : this.fs.getDirectory(child))) as unknown as AbstractEntry;
+      const name = getName(child);
+      const toPath = joinPaths(toDir.path, name);
+      const toFso = (await (stats.size != null
+        ? this.fs.getFile(toPath)
+        : this.fs.getDirectory(toPath))) as unknown as AbstractEntry;
+      try {
+        await fromFso._xmit(toFso, copyErrors, options);
+      } catch (error) {
+        copyErrors.push({ from: fromFso, to: toFso, error });
       }
     }
 
     if (options.move) {
-      const [, errors] = await this.delete({
-        force: options.force,
-        recursive: false,
-      });
-      if (errors) {
-        Array.prototype.push.apply(options.errors, errors);
-        return;
+      try {
+        await this.delete();
+      } catch (error) {
+        copyErrors.push({ from: this, to, error });
       }
-      options.moved++;
     }
   }
 
-  public async list(options: ListOptions = {}): Promise<Ret<string[]>> {
+  public async list(options: ListOptions = {}): Promise<string[]> {
+    let list: string[] | null | undefined;
     if (!options.ignoreHook && this.beforeList) {
-      const result = await this.beforeList(this.path, options);
-      if (result) return result;
+      list = await this.beforeList(this.path, options);
     }
-    const [list, e] = await this._list();
-    if (e) return [undefined as never, e];
+    if (!list) {
+      list = await this._list();
+    }
     if (!options.ignoreHook && this.afterList) {
       await this.afterList(this.path, list);
     }
-    return [list, undefined as never];
+    return list;
   }
 
   /**
@@ -197,56 +158,52 @@ export abstract class AbstractDirectory
    */
   public async mkcol(
     options: MkcolOptions = { force: false, recursive: false }
-  ): Promise<Ret<boolean>> {
-    const [stats, eHead] = await this.head({ ignoreHook: options.ignoreHook });
-    if (eHead) {
-      if (eHead.name !== NotFoundError.name) {
-        return [undefined as never, eHead];
-      }
-      if (options.recursive) {
-        const [parent, e] = await this.getParent();
-        if (e) return [undefined as never, e];
-        await parent.mkcol({ force: true, recursive: true });
-      }
-    } else {
+  ): Promise<void> {
+    try {
+      const stats = await this.head();
       if (stats.size != null) {
-        return [
-          false as never,
-          createError({
-            name: TypeMismatchError.name,
-            repository: this.fs.repository,
-            path: this.path,
-            e: `"${this.path}" is not a directory`,
-          }),
-        ];
+        throw createError({
+          name: TypeMismatchError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" is not a directory`,
+        });
       }
       if (!options.force) {
-        return [
-          false as never,
-          createError({
-            name: SecurityError.name,
-            repository: this.fs.repository,
-            path: this.path,
-            e: `"${this.path}" has already existed`,
-          }),
-        ];
+        throw createError({
+          name: SecurityError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e: `"${this.path}" has already existed`,
+        });
       }
-      return [false, undefined as never];
+      return;
+    } catch (e) {
+      if (e.name === NotFoundError.name) {
+        if (options.recursive) {
+          const parent = await this.getParent();
+          await parent.mkcol({ force: true, recursive: true });
+        }
+      } else {
+        throw createError({
+          name: NotReadableError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
+      }
     }
     if (!options.ignoreHook && this.beforeMkcol) {
-      const result = await this.beforeMkcol(this.path, options);
-      if (result) return result;
+      if (await this.beforeMkcol(this.path, options)) {
+        return;
+      }
     }
-    const [result, e] = await this._mkcol();
-    if (e) return [undefined as never, e];
-
+    await this._mkcol();
     if (!options.ignoreHook && this.afterMkcol) {
       await this.afterMkcol(this.path);
     }
-    return [result, undefined as never];
   }
 
-  public abstract _list(): Promise<Ret<string[]>>;
-  public abstract _mkcol(): Promise<Ret<boolean>>;
-  public abstract _rmdir(): Promise<Ret<boolean>>;
+  public abstract _list(): Promise<string[]>;
+  public abstract _mkcol(): Promise<void>;
 }

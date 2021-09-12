@@ -1,23 +1,21 @@
 import { createHash } from "sha256-uint8array";
-import { Converter, isBlob, validateBufferSize } from "univ-conv";
+import { Converter, getSize, isBlob, validateBufferSize } from "univ-conv";
 import { AbstractDirectory } from "./AbstractDirectory";
-import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
+import { AbstractEntry } from "./AbstractEntry";
 import { AbstractReadStream } from "./AbstractReadStream";
 import { AbstractWriteStream } from "./AbstractWriteStream";
 import {
-  Entry,
+  DeleteOptions,
   File,
   OpenOptions,
   OpenReadOptions,
   OpenWriteOptions,
   ReadStream,
-  Ret,
   Source,
   SourceType,
-  Stats,
-  UnlinkOptions,
   WriteStream,
+  XmitError,
   XmitOptions,
 } from "./core";
 import {
@@ -33,15 +31,15 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   private beforeGet?: (
     path: string,
     options: OpenOptions
-  ) => Promise<Ret<ReadStream> | null>;
+  ) => Promise<ReadStream | null>;
   private beforePost?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<Ret<WriteStream> | null>;
+  ) => Promise<WriteStream | null>;
   private beforePut?: (
     path: string,
     options: OpenWriteOptions
-  ) => Promise<Ret<WriteStream> | null>;
+  ) => Promise<WriteStream | null>;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -79,36 +77,34 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  public async _delete(options: UnlinkOptions): Promise<void> {
-    let [stats, e] = await this.head({ ignoreHook: options.ignoreHook });
-    if (e) {
-      if (e.name === NotFoundError.name) {
-        if (!options.force) {
-          options.errors.push(e);
-          return;
-        }
-      } else {
-        options.errors.push(e);
-        return;
-      }
-    }
-    if (stats.size == null) {
-      options.errors.push(
-        createError({
+  public async _delete(
+    options: DeleteOptions = { force: false, recursive: false }
+  ): Promise<void> {
+    try {
+      const stats = await this.head();
+      if (stats.size == null) {
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is not a file`,
-        })
-      );
+        });
+      }
+    } catch (e) {
+      if (e.name === NotFoundError.name) {
+        if (!options.force) {
+          throw e;
+        }
+      } else {
+        throw createError({
+          name: NotReadableError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
+      }
     }
-
-    const [deleted, eUnlink] = await this._unlink();
-    if (eUnlink) {
-      options.errors.push(eUnlink);
-      return;
-    }
-    options.deleted += deleted ? 1 : 0;
+    return this._rm();
   }
 
   public async _joinChunks(
@@ -150,68 +146,65 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  public async _xmit(toEntry: Entry, options: XmitOptions): Promise<void> {
-    if (toEntry instanceof AbstractDirectory) {
-      options.errors.push(
-        createError({
-          name: TypeMismatchError.name,
-          repository: toEntry.fs.repository,
-          path: toEntry.path,
-          e: `"${toEntry}" is not a file`,
-        })
-      );
-      return;
+  public async _xmit(
+    toFso: AbstractEntry,
+    copyErrors: XmitError[],
+    options: XmitOptions
+  ): Promise<void> {
+    if (toFso instanceof AbstractDirectory) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: toFso.fs.repository,
+        path: toFso.path,
+        e: `"${toFso}" is not a file`,
+      });
     }
-    const to = toEntry as unknown as AbstractFile;
-    const [, eHead] = await to.head();
-    if (eHead) {
-      if (eHead.name !== NotFoundError.name) {
-        options.errors.push(
-          createError({
-            name: NotReadableError.name,
-            repository: to.fs.repository,
-            path: to.path,
-            e: eHead,
-          })
-        );
-        return;
-      }
-    }
-    if (!options.force) {
-      options.errors.push(
-        createError({
+    const to = toFso as AbstractFile;
+    try {
+      await to.head();
+      if (!options.force) {
+        throw createError({
           name: SecurityError.name,
           repository: to.fs.repository,
           path: to.path,
-        })
-      );
-      return;
+        });
+      }
+    } catch (e) {
+      if (e.name !== NotFoundError.name) {
+        throw createError({
+          name: NotReadableError.name,
+          repository: to.fs.repository,
+          path: to.path,
+          e,
+        });
+      }
     }
 
-    let [rs, eRS] = await this.createReadStream({
-      bufferSize: options.bufferSize,
-    });
-    if (eRS) {
-      options.errors.push(eRS);
-      return;
-    }
-
+    const rs = await this.createReadStream({ bufferSize: options.bufferSize });
     try {
-      const [ws, eWS] = await to.createWriteStream({
+      let create: boolean;
+      try {
+        await to.head();
+        create = false;
+      } catch (e) {
+        if (e.name === NotFoundError.name) {
+          create = true;
+        } else {
+          throw createError({
+            name: NotReadableError.name,
+            repository: toFso.fs.repository,
+            path: toFso.path,
+            e,
+          });
+        }
+      }
+      const ws = await to.createWriteStream({
         append: false,
+        create,
         bufferSize: options.bufferSize,
       });
-      if (!ws) {
-        if (eWS) options.errors.push(eWS);
-        return;
-      }
       try {
-        const ePipe = await rs.pipe(ws);
-        if (ePipe) {
-          options.errors.push(ePipe);
-          return;
-        }
-        options.copied++;
+        await rs.pipe(ws);
       } finally {
         await ws.close();
       }
@@ -220,101 +213,84 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     if (options.move) {
-      const [, errors] = await this.delete({
-        force: options.force,
-        recursive: options.recursive,
-      });
-      if (errors) {
-        Array.prototype.push.apply(options.errors, errors);
-        return;
+      try {
+        await this.delete();
+      } catch (error) {
+        copyErrors.push({ from: this, to, error });
       }
-      options.moved++;
     }
   }
 
   public async createReadStream(
     options: OpenOptions = {}
-  ): Promise<Ret<ReadStream>> {
+  ): Promise<ReadStream> {
+    let rs: ReadStream | null | undefined;
     if (!options.ignoreHook && this.beforeGet) {
-      const result = await this.beforeGet(this.path, options);
-      if (result) return result;
+      rs = await this.beforeGet(this.path, options);
     }
-    return this._createReadStream(options);
+    if (!rs) {
+      rs = await this._createReadStream(options);
+    }
+    return rs as ReadStream;
   }
 
   public async createWriteStream(
-    options: OpenWriteOptions = { append: false }
-  ): Promise<Ret<WriteStream>> {
-    let [stats, e] = await this.head({ ignoreHook: options.ignoreHook });
-    if (e) {
-      if (e.name === NotFoundError.name) {
-        if (options.create == null) options.create = true;
-        if (options.create === false) return [undefined as never, e];
-        if (!options.ignoreHook && this.beforePost) {
-          const result = await this.beforePost(this.path, options);
-          if (result) {
-            return result;
-          }
-        }
-      } else {
-        return [
-          undefined as never,
-          createError({
-            name: NotReadableError.name,
-            repository: this.fs.repository,
-            path: this.path,
-            e,
-          }),
-        ];
-      }
-    }
-    stats = stats as Stats;
-    if (stats.size == null) {
-      return [
-        undefined as never,
-        createError({
+    options: OpenWriteOptions = { append: false, create: true }
+  ): Promise<WriteStream> {
+    let ws: WriteStream | null | undefined;
+    try {
+      const stats = await this.head();
+      if (stats.size == null) {
+        throw createError({
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" is directory`,
-        }),
-      ];
-    }
-    if (options.create == null) options.create = false;
-    if (options.create === true) {
-      return [
-        undefined as never,
-        createError({
+        });
+      }
+      if (options.create) {
+        throw createError({
           name: SecurityError.name,
           repository: this.fs.repository,
           path: this.path,
           e: `"${this.path}" has already exists`,
-        }),
-      ];
+        });
+      }
+      if (!options.ignoreHook && this.beforePut) {
+        ws = await this.beforePut(this.path, options);
+      }
+    } catch (e) {
+      if (e.name === NotFoundError.name) {
+        if (!options.ignoreHook && this.beforePost) {
+          ws = await this.beforePost(this.path, options);
+        }
+      } else {
+        throw createError({
+          name: NotReadableError.name,
+          repository: this.fs.repository,
+          path: this.path,
+          e,
+        });
+      }
     }
-    if (!options.ignoreHook && this.beforePut) {
-      const result = await this.beforePut(this.path, options);
-      if (result) return result;
+    if (!ws) {
+      ws = await this._createWriteStream(options);
     }
-    return this._createWriteStream(options);
+    return ws as WriteStream;
   }
 
-  public async hash(options: OpenOptions = {}): Promise<Ret<string>> {
-    let [rs, e] = await this.createReadStream(options);
-    if (e) return [undefined as never, e];
+  public async hash(options: OpenOptions = {}): Promise<string> {
+    const rs = await this.createReadStream(options);
     try {
       const c = new Converter({ bufferSize: options.bufferSize });
       const hash = createHash();
-      while (true) {
-        const ret = await rs.read();
-        const [chunk, e] = ret;
-        if (e) return [undefined as never, e];
-        if (!chunk) break;
-        const buffer = await c.toUint8Array(chunk);
+      let result: Source | null;
+      while ((result = await rs.read()) != null) {
+        const buffer = await c.toUint8Array(result);
         hash.update(buffer);
       }
 
-      return [toHex(hash.digest()), undefined as never];
+      return toHex(hash.digest());
     } finally {
       await rs.close();
     }
@@ -322,24 +298,21 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async readAll(
     options: OpenReadOptions = { sourceType: "Uint8Array" }
-  ): Promise<Ret<Source>> {
+  ): Promise<Source> {
     validateBufferSize(options);
-    let [rs, e] = await this.createReadStream(options);
-    if (e) return [undefined as never, e];
+    const rs = (await this.createReadStream(options)) as AbstractReadStream;
     const type = options.sourceType as SourceType;
-    const converter = (rs as AbstractReadStream).converter;
+    const converter = rs.converter;
     try {
       let pos = 0;
       const chunks: Source[] = [];
-      while (true) {
-        const [chunk, e] = await rs.read();
-        if (e) return [undefined as never, e];
-        if (!chunk) break;
+      let chunk: Source | null;
+      while ((chunk = await rs.read()) != null) {
+        pos += getSize(chunk);
         const converted = await this._convert(chunk, type, converter);
         chunks.push(converted);
       }
-      const joined = await this._joinChunks(chunks, pos, type);
-      return [joined, undefined as never];
+      return this._joinChunks(chunks, pos, type);
     } finally {
       await rs.close();
     }
@@ -347,12 +320,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async writeAll(
     src: Source,
-    options: OpenWriteOptions = { append: false }
-  ): Promise<Ret<number>> {
+    options: OpenWriteOptions = { append: false, create: true }
+  ): Promise<number> {
     const bufferSize = validateBufferSize(options);
-    let [ws, e] = await this.createWriteStream(options);
-    if (e) return [undefined as never, e];
-    ws = ws as WriteStream;
+    const ws = (await this.createWriteStream(options)) as AbstractWriteStream;
+
     if (isBlob(src)) {
       try {
         let pos = 0;
@@ -367,11 +339,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       } finally {
         await ws.close();
       }
-      return [src.size, undefined as never];
+      return src.size;
     }
 
-    const converter = (ws as AbstractWriteStream).converter;
-    const u8 = await converter.toUint8Array(src);
+    const u8 = await ws.converter.toUint8Array(src);
     try {
       let pos = 0;
       let chunk: Uint8Array;
@@ -385,16 +356,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     } finally {
       await ws.close();
     }
-    return [u8.byteLength, undefined as never];
+    return u8.byteLength;
   }
 
   public abstract _createReadStream(
     options: OpenOptions
-  ): Promise<Ret<ReadStream>>;
+  ): Promise<AbstractReadStream>;
   public abstract _createWriteStream(
     options: OpenWriteOptions
-  ): Promise<Ret<WriteStream>>;
-  public abstract _unlink(): Promise<Ret<boolean>>;
+  ): Promise<AbstractWriteStream>;
+  public abstract _rm(): Promise<void>;
 
   protected _createBuffer(byteLength: number): Uint8Array {
     const ab = new ArrayBuffer(byteLength);
