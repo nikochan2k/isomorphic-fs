@@ -232,6 +232,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options: OpenWriteOptions = { append: false, create: true }
   ): Promise<WriteStream> {
     let ws: WriteStream | null | undefined;
+    let post = false;
     try {
       const stats = await this.head();
       if (stats.size == null) {
@@ -254,6 +255,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         ws = await this.beforePut(this.path, options);
       }
     } catch (e) {
+      post = true;
       if (e.name === NotFoundError.name) {
         if (!options.ignoreHook && this.beforePost) {
           ws = await this.beforePost(this.path, options);
@@ -268,7 +270,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
     if (!ws) {
-      ws = await this._createWriteStream(options);
+      ws = await this._createWriteStream(post, options);
     }
     return ws as WriteStream;
   }
@@ -357,6 +359,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options: OpenOptions
   ): Promise<AbstractReadStream>;
   public abstract _createWriteStream(
+    post: boolean,
     options: OpenWriteOptions
   ): Promise<AbstractWriteStream>;
   public abstract _rm(): Promise<void>;
