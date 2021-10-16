@@ -46,7 +46,7 @@ export abstract class AbstractReadStream
    * The `File` must have been opened for reading.
    */
   public async read(size?: number): Promise<Source | null> {
-    const af = this.file;
+    const file = this.file;
     const converter = this.converter;
     const souceType = this.options.sourceType as SourceType;
     let result: Source | null = null;
@@ -55,7 +55,7 @@ export abstract class AbstractReadStream
       const chunk = await this._read(size);
       if (chunk) {
         pos = getSize(chunk);
-        result = await af._convert(chunk, souceType, converter);
+        result = await file._convert(converter, chunk, souceType);
       }
     } else {
       const chunks: Source[] = [];
@@ -72,11 +72,11 @@ export abstract class AbstractReadStream
           break;
         }
         pos += getSize(chunk);
-        const converted = await af._convert(chunk, souceType, converter);
+        const converted = await file._convert(converter, chunk, souceType);
         chunks.push(converted);
       } while (pos < max);
       if (0 < chunks.length) {
-        result = await af._joinChunks(chunks, pos, souceType);
+        result = await file._joinChunks(chunks, pos, souceType);
       }
     }
     this.position += pos;

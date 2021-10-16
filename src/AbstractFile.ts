@@ -52,9 +52,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async _convert(
+    converter: Converter,
     chunk: Source,
-    type: SourceType,
-    converter: Converter
+    type: SourceType
   ): Promise<Source> {
     switch (type) {
       case "ArrayBuffer":
@@ -305,7 +305,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       let chunk: Source | null;
       while ((chunk = await rs.read()) != null) {
         pos += getSize(chunk);
-        const converted = await this._convert(chunk, type, converter);
+        const converted = await this._convert(converter, chunk, type);
         chunks.push(converted);
       }
       return this._joinChunks(chunks, pos, type);
