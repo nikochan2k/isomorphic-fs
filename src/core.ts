@@ -15,6 +15,7 @@ export interface Stats extends Props {
 
 export interface FileSystemOptions {
   hook?: Hook;
+  logicalDelete?: boolean;
 }
 
 export type BinarySource = ArrayBuffer | Uint8Array | Buffer | Blob;

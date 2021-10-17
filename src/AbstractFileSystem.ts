@@ -1,12 +1,13 @@
-import { normalizePath } from "./util";
+import { createError, NotFoundError } from ".";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
   DeleteOptions,
   Directory,
+  Entry,
+  ErrorLike,
   File,
   FileSystem,
-  Entry,
   FileSystemOptions,
   HeadOptions,
   ListOptions,
@@ -22,8 +23,8 @@ import {
   Stats,
   URLType,
   WriteStream,
-  ErrorLike,
 } from "./core";
+import { normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -111,6 +112,14 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (!stats) {
       stats = await this._head(path, options);
     }
+    if (this.options.logicalDelete && stats.deleted != null) {
+      throw createError({
+        repository: this.repository,
+        path,
+        e: undefined,
+        name: NotFoundError.name,
+      });
+    }
     if (!options.ignoreHook && this.afterHead) {
       await this.afterHead(path, stats);
     }
@@ -147,6 +156,8 @@ export abstract class AbstractFileSystem implements FileSystem {
         return;
       }
     }
+    const stats = await this.head(path, { ignoreHook: options.ignoreHook });
+    props = { ...stats, ...props };
     await this._patch(path, props, options);
     if (this.afterPatch) {
       await this.afterPatch(path);
