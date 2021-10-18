@@ -68,6 +68,7 @@ export abstract class AbstractDirectory
         if (!options.force) {
           throw e;
         }
+        return;
       } else {
         throw createError({
           name: NotReadableError.name,
@@ -78,16 +79,18 @@ export abstract class AbstractDirectory
       }
     }
 
-    const children = await this.list();
-    for (const child of children) {
-      try {
-        const childEntry = await this.fs.getEntry(child);
-        await childEntry.delete(options);
-      } catch (e) {
-        if (options.force) {
-          errors.push(e);
-        } else {
-          throw e;
+    if (options.recursive) {
+      const children = await this.list();
+      for (const child of children) {
+        try {
+          const childEntry = await this.fs.getEntry(child);
+          await childEntry.delete(options);
+        } catch (e) {
+          if (options.force) {
+            errors.push(e);
+          } else {
+            throw e;
+          }
         }
       }
     }

@@ -96,6 +96,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         if (!options.force) {
           throw e;
         }
+        return;
       } else {
         throw createError({
           name: NotReadableError.name,
