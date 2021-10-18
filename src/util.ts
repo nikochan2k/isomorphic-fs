@@ -1,6 +1,6 @@
 import { createError, SyntaxError } from "./errors";
 
-function getPathParts(path: string) {
+export function getPathParts(path: string) {
   const parts = path.split("/");
   const pathParts = [];
   for (const part of parts) {
