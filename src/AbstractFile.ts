@@ -250,13 +250,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
+  protected _getConverter(bufferSize?: number) {
+    return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
+  }
+
   protected abstract _getSource(options: OpenOptions): Promise<Source>;
   protected abstract _rm(): Promise<void>;
   protected abstract _write(src: Source, options: WriteOptions): Promise<void>;
-
-  private _getConverter(bufferSize?: number) {
-    return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
-  }
 
   private async getSource(options: OpenOptions): Promise<Source> {
     const ignoreHook = options.ignoreHook;
