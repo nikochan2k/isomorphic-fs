@@ -125,21 +125,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return this._rm();
   }
 
-  public async hash(options?: OpenOptions): Promise<string> {
-    options = options || {};
-    const converter = this._getConverter(options.bufferSize);
-    const source = await this.getSource(options);
-    const streamSource = await converter.toStreamSource(source);
-
-    const hash = createHash();
-    await handleStreamSource(streamSource, async (chunk) => {
-      const buffer = await converter.toUint8Array(chunk);
-      hash.update(buffer);
-    });
-
-    return toHex(hash.digest());
-  }
-
   public async _xmit(
     toEntry: AbstractEntry,
     _copyErrors: ErrorLike[],
@@ -176,6 +161,21 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     const source = await this.getSource(options);
     await to.write(source, { bufferSize: options.bufferSize });
+  }
+
+  public async hash(options?: OpenOptions): Promise<string> {
+    options = options || {};
+    const converter = this._getConverter(options.bufferSize);
+    const source = await this.getSource(options);
+    const streamSource = await converter.toStreamSource(source);
+
+    const hash = createHash();
+    await handleStreamSource(streamSource, async (chunk) => {
+      const buffer = await converter.toUint8Array(chunk);
+      hash.update(buffer);
+    });
+
+    return toHex(hash.digest());
   }
 
   public async read(options?: ReadOptions): Promise<Source> {
@@ -237,7 +237,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    await this._writeAll(src, options);
+    await this._write(src, options);
 
     if (create) {
       if (this.afterPost) {
@@ -252,10 +252,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   protected abstract _getSource(): Promise<Source>;
   protected abstract _rm(): Promise<void>;
-  protected abstract _writeAll(
-    src: Source,
-    options: WriteOptions
-  ): Promise<void>;
+  protected abstract _write(src: Source, options: WriteOptions): Promise<void>;
 
   private _getConverter(bufferSize?: number) {
     return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
