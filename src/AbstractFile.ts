@@ -250,7 +250,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  protected abstract _getSource(): Promise<Source>;
+  protected abstract _getSource(options: OpenOptions): Promise<Source>;
   protected abstract _rm(): Promise<void>;
   protected abstract _write(src: Source, options: WriteOptions): Promise<void>;
 
@@ -266,7 +266,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       source = await this.beforeGet(path, options);
     }
     if (!source) {
-      source = await this._getSource();
+      source = await this._getSource(options);
     }
     if (!ignoreHook && this.afterGet) {
       this.afterGet(path, source).catch((e) => console.warn(e));
