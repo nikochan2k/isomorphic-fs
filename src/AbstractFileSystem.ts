@@ -1,6 +1,7 @@
-import { createError, NotFoundError } from "./errors";
+import { Source } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
+  BlockReadOptions,
   CopyOptions,
   DeleteOptions,
   Directory,
@@ -14,17 +15,14 @@ import {
   MkcolOptions,
   MoveOptions,
   OpenOptions,
-  OpenReadOptions,
-  OpenWriteOptions,
   PatchOptions,
   Props,
-  ReadStream,
   Stats,
   URLType,
-  WriteStream,
+  WriteOptions,
 } from "./core";
+import { createError, NotFoundError } from "./errors";
 import { normalizePath } from "./util";
-import { Source } from "univ-conv";
 
 export abstract class AbstractFileSystem implements FileSystem {
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -67,22 +65,6 @@ export abstract class AbstractFileSystem implements FileSystem {
   ): Promise<ErrorLike[]> {
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
-  }
-
-  public async createReadStream(
-    path: string,
-    options: OpenReadOptions = {}
-  ): Promise<ReadStream> {
-    const file = await this.getFile(path);
-    return file.createReadStream(options);
-  }
-
-  public async createWriteStream(
-    path: string,
-    options: OpenWriteOptions = { create: true, append: false }
-  ): Promise<WriteStream> {
-    const file = await this.getFile(path);
-    return file.createWriteStream(options);
   }
 
   public async delete(
@@ -166,7 +148,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async readAll(
     path: string,
-    options: OpenReadOptions = {}
+    options: BlockReadOptions = {}
   ): Promise<Source> {
     const file = await this.getFile(path);
     return file.readAll(options);
@@ -174,11 +156,11 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async writeAll(
     path: string,
-    value: Source,
-    options: OpenWriteOptions = { create: true, append: false }
-  ): Promise<number> {
+    source: Source,
+    options?: WriteOptions
+  ): Promise<void> {
     const file = await this.getFile(path);
-    return file.writeAll(value, options);
+    await file.writeAll(source, options);
   }
 
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;

@@ -194,6 +194,12 @@ export const NotAllowedError: DOMExceptionType = {
     "The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.",
 };
 
+export const PathExistError: DOMExceptionType = {
+  code: 12,
+  name: "PathExistError",
+  message: "The request file or directry has already existed.",
+};
+
 export const domExceptions: DOMExceptionType[] = [
   IndexSizeError,
   HierarchyRequestError,

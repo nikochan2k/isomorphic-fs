@@ -2,7 +2,7 @@ import { Converter, hasBlob, hasBuffer } from "univ-conv";
 
 const c = new Converter();
 
-test("util/binary ArrayBuffer", async () => {
+it("util/binary ArrayBuffer", async () => {
   const expected = "大谷翔平ホームラン";
   const ab = await c.toArrayBuffer(expected);
 
@@ -45,7 +45,7 @@ test("util/binary ArrayBuffer", async () => {
   }
 });
 
-test("util/binary Uint8Array", async () => {
+it("util/binary Uint8Array", async () => {
   const expected = "大谷翔平ホームラン";
   const u8 = await c.toUint8Array(expected);
 
@@ -88,7 +88,7 @@ test("util/binary Uint8Array", async () => {
   }
 });
 
-test("util/binary Buffer", async () => {
+it("util/binary Buffer", async () => {
   if (!hasBuffer) {
     return;
   }
@@ -135,7 +135,7 @@ test("util/binary Buffer", async () => {
   }
 });
 
-test("util/binary Blob", async () => {
+it("util/binary Blob", async () => {
   if (!hasBlob) {
     return;
   }
@@ -182,7 +182,7 @@ test("util/binary Blob", async () => {
   }
 });
 
-test("util/binary Base64", async () => {
+it("util/binary Base64", async () => {
   const expected = "大谷翔平ホームラン";
   const base64 = await c.toBase64(expected);
 
@@ -228,7 +228,7 @@ test("util/binary Base64", async () => {
   }
 });
 
-test("util/binary BinaryString", async () => {
+it("util/binary BinaryString", async () => {
   const expected = "大谷翔平ホームラン";
   const binaryString = await c.toBinaryString(expected);
 

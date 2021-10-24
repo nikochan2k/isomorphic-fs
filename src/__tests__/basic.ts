@@ -1,17 +1,17 @@
-import { FileSystem, SeekOrigin } from "../core";
-import { NotFoundError } from "../errors";
 import { Converter } from "univ-conv";
+import { FileSystem } from "../core";
+import { NotFoundError } from "../errors";
 
 const c = new Converter();
 
 export const testAll = (fs: FileSystem) => {
-  test("rootdir", async () => {
+  it("rootdir", async () => {
     const dir = await fs.getDirectory("/");
     const paths = await dir.readdir();
     expect(paths.length).toBe(0);
   });
 
-  test("add empty file", async () => {
+  it("add empty file", async () => {
     const file = await fs.getFile("/empty.txt");
     try {
       await file.stat();
@@ -20,14 +20,12 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const buffer = await c.toArrayBuffer("");
-    const ws = await file.createWriteStream();
-    await ws.write(buffer);
-    await ws.close();
+    await file.writeAll(buffer);
     const stats = await file.stat();
     expect(stats.size).toBe(0);
   });
 
-  test("add text file", async () => {
+  it("add text file", async () => {
     const file = await fs.getFile("/test.txt");
     try {
       await file.stat();
@@ -36,59 +34,31 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const buffer = await c.toArrayBuffer("test");
-    const ws = await file.createWriteStream();
-    await ws.write(buffer);
-    await ws.close();
+    await file.writeAll(buffer);
     const stats = await file.stat();
     expect(stats.size).toBe(4);
   });
 
-  test("read text file", async () => {
+  it("read text file", async () => {
     const file = await fs.getFile("/test.txt");
-    const rs = await file.createReadStream();
-    const buffer = (await rs.read()) as ArrayBuffer;
+    const buffer = (await file.readAll()) as Uint8Array;
     expect(buffer.byteLength).toBe(4);
     const text = await c.toText(buffer);
     expect(text).toBe("test");
   });
 
-  test("continuous read and write", async () => {
+  it("continuous read and write", async () => {
     const file = await fs.getFile("/otani.txt");
+    await file.writeAll("大谷翔平");
+    let text = await file.readAll({ sourceType: "Text" });
+    expect(text).toBe("大谷翔平");
 
-    const ws = await file.createWriteStream();
-    await ws.write(await c.toArrayBuffer("大谷"));
-    await ws.write(await c.toArrayBuffer("翔平"));
-
-    const rs = await file.createReadStream();
-    let buffer = (await rs.read(6)) as ArrayBuffer;
-    let text = await c.toText(buffer);
-    expect(text).toBe("大谷");
-
-    await rs.seek(6, SeekOrigin.Begin);
-    buffer = (await rs.read()) as ArrayBuffer;
-    text = await c.toText(buffer);
-    expect(text).toBe("翔平");
-
-    await ws.seek(0, SeekOrigin.End);
-    await ws.write(await c.toArrayBuffer("ホームラン"));
-
-    await rs.seek(0, SeekOrigin.Begin);
-    buffer = (await rs.read()) as ArrayBuffer;
-    text = await c.toText(buffer);
+    await file.writeAll("ホームラン", { append: true, create: false });
+    text = await file.readAll({ sourceType: "Text" });
     expect(text).toBe("大谷翔平ホームラン");
-
-    await rs.seek(0, SeekOrigin.Begin);
-    await rs.read(6);
-    await rs.seek(6, SeekOrigin.Current);
-    buffer = (await rs.read()) as ArrayBuffer;
-    text = await c.toText(buffer);
-    expect(text).toBe("ホームラン");
-
-    await ws.close();
-    await rs.close();
   });
 
-  test("mkdir test", async () => {
+  it("mkdir test", async () => {
     const dir = await fs.getDirectory("/");
     let dirs = await dir.readdir();
     expect(dirs.length).toBe(3);
@@ -114,7 +84,7 @@ export const testAll = (fs: FileSystem) => {
     expect(0 <= dirs.indexOf("/folder")).toBe(true);
   });
 
-  test("create file in dir", async () => {
+  it("create file in dir", async () => {
     const file = await fs.getFile("/folder/sample.txt");
     try {
       await file.stat();
@@ -122,29 +92,21 @@ export const testAll = (fs: FileSystem) => {
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-    const ws = await file.createWriteStream();
-    const outBuf = await c.toArrayBuffer("Sample");
     const before = Date.now();
-    await ws.write(outBuf);
-    await ws.close();
-
+    await file.writeAll("Sample");
     const after = Date.now() + 1;
     const stats = await file.stat();
     const modified = stats.modified ?? 0;
     expect(before <= modified && modified <= after).toBe(true);
-
-    const rs = await file.createReadStream();
-    const inBuf = (await rs.read()) as ArrayBuffer;
-    const text = await c.toText(inBuf);
+    const text = await file.readAll({ sourceType: "Text" });
     expect(text).toBe("Sample");
-    rs.close();
 
     const dir = await fs.getDirectory("/folder/");
     const list = await dir.list();
     expect(0 <= list.indexOf("/folder/sample.txt")).toBe(true);
   });
 
-  test("copy directory", async () => {
+  it("copy directory", async () => {
     const from = await fs.getDirectory("/folder");
     const to = await fs.getDirectory("/folder2");
     const errors = await from.copy(to, { force: false, recursive: true });
@@ -158,14 +120,14 @@ export const testAll = (fs: FileSystem) => {
     expect(0 <= toList.indexOf("/folder2/sample.txt")).toBe(true);
   });
 
-  test("move file", async () => {
+  it("move file", async () => {
     await fs.move("/folder2/sample.txt", "/folder2/sample2.txt");
     const list = await fs.list("/folder2");
     expect(list.indexOf("/folder2/sample.txt") < 0).toBe(true);
     expect(0 <= list.indexOf("/folder2/sample2.txt")).toBe(true);
   });
 
-  test("move directory", async () => {
+  it("move directory", async () => {
     const errors = await fs.move("/folder2", "/folder3");
     expect(errors.length).toBe(0);
     const root = await fs.getDirectory("/");

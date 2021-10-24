@@ -1,4 +1,4 @@
-import { Source, SourceType } from "univ-conv";
+import { BlockSourceType, Source } from "univ-conv";
 
 export interface Times {
   accessed?: number;
@@ -65,11 +65,11 @@ export interface OpenOptions extends Options {
   bufferSize?: number;
 }
 
-export interface OpenReadOptions extends OpenOptions {
-  sourceType?: SourceType;
+export interface BlockReadOptions extends OpenOptions {
+  sourceType?: BlockSourceType;
 }
 
-export interface OpenWriteOptions extends OpenOptions {
+export interface WriteOptions extends OpenOptions {
   /**
    * Open file for appending.
    * @default false
@@ -101,18 +101,15 @@ export interface XmitOptions extends Options {
 
 export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
-  afterGet?: (path: string) => Promise<void>;
+  afterGet?: (path: string, source: Source) => Promise<void>;
   afterHead?: (path: string, stats: Stats) => Promise<void>;
   afterList?: (path: string, list: string[]) => Promise<void>;
   afterMkcol?: (path: string) => Promise<void>;
   afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (path: string) => Promise<void>;
-  afterPut?: (path: string) => Promise<void>;
+  afterPost?: (path: string, source: Source) => Promise<void>;
+  afterPut?: (path: string, source: Source) => Promise<void>;
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<ErrorLike[]>;
-  beforeGet?: (
-    path: string,
-    options: OpenOptions
-  ) => Promise<ReadStream | null>;
+  beforeGet?: (path: string, options: OpenOptions) => Promise<Source | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
@@ -123,12 +120,14 @@ export interface Hook {
   ) => Promise<boolean>;
   beforePost?: (
     path: string,
-    options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+    source: Source,
+    options: WriteOptions
+  ) => Promise<boolean>;
   beforePut?: (
     path: string,
-    options: OpenWriteOptions
-  ) => Promise<WriteStream | null>;
+    source: Source,
+    options: WriteOptions
+  ) => Promise<boolean>;
 }
 export interface ErrorLike {
   code?: number;
@@ -153,14 +152,6 @@ export interface FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<ErrorLike[]>;
-  createReadStream(
-    path: string,
-    options?: OpenReadOptions
-  ): Promise<ReadStream>;
-  createWriteStream(
-    path: string,
-    options?: OpenWriteOptions
-  ): Promise<WriteStream>;
   del(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   delete(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   getDirectory(path: string): Promise<Directory>;
@@ -182,16 +173,12 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<ErrorLike[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  readAll(path: string, options?: OpenReadOptions): Promise<Source>;
+  readAll(path: string, options?: BlockReadOptions): Promise<Source>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
-  writeAll(
-    path: string,
-    src: Source,
-    options?: OpenWriteOptions
-  ): Promise<number>;
+  writeAll(path: string, src: Source, options?: WriteOptions): Promise<void>;
 }
 
 export interface Entry {
@@ -221,11 +208,9 @@ export interface Directory extends Entry {
 }
 
 export interface File extends Entry {
-  createReadStream(options?: OpenReadOptions): Promise<ReadStream>;
-  createWriteStream(options?: OpenWriteOptions): Promise<WriteStream>;
   hash(options?: OpenOptions): Promise<string>;
-  readAll(options?: OpenReadOptions): Promise<Source>;
-  writeAll(src: Source, options: OpenWriteOptions): Promise<number>;
+  readAll(options?: BlockReadOptions): Promise<Source>;
+  writeAll(src: Source, options?: WriteOptions): Promise<void>;
 }
 
 export enum SeekOrigin {

@@ -1,6 +1,6 @@
 import { getName, getParentPath, normalizePath } from "../util";
 
-test("util/path.ts#getParentPath", () => {
+it("util/path.ts#getParentPath", () => {
   let parentPath = getParentPath("/hoge/fuga");
   expect(parentPath).toBe("/hoge");
   parentPath = getParentPath("/hoge/fuga/");
@@ -13,7 +13,7 @@ test("util/path.ts#getParentPath", () => {
   expect(parentPath).toBe("/");
 });
 
-test("util/path.ts#getName", () => {
+it("util/path.ts#getName", () => {
   let name = getName("/hoge/fuga");
   expect(name).toBe("fuga");
   name = getName("hoge/fuga");
@@ -26,7 +26,7 @@ test("util/path.ts#getName", () => {
   expect(name).toBe("test");
 });
 
-test("util/path.ts#normalizePath", () => {
+it("util/path.ts#normalizePath", () => {
   let path = normalizePath("/hoge/fuga");
   expect(path).toBe("/hoge/fuga");
   path = normalizePath("/hoge//fuga/");
