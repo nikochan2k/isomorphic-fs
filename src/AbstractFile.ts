@@ -1,5 +1,5 @@
 import { createHash } from "sha256-uint8array";
-import { Converter, getSize, isBlob, validateBufferSize } from "univ-conv";
+import { Converter, isBlob, Source, SourceType } from "univ-conv";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -13,8 +13,6 @@ import {
   OpenReadOptions,
   OpenWriteOptions,
   ReadStream,
-  Source,
-  SourceType,
   WriteStream,
   XmitOptions,
 } from "./core";
@@ -72,8 +70,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         const binaryString = await converter.toBinaryString(chunk);
         return { value: binaryString, encoding: "BinaryString" };
       case "Text":
-        const text = await converter.toBinaryString(chunk);
-        return { value: text, encoding: "Text" };
+        return converter.toText(chunk);
     }
   }
 
@@ -144,8 +141,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         return new Blob(blobs);
       case "Base64":
       case "BinaryString":
-      case "Text":
         return { value: chunks.join(""), encoding: type };
+      case "Text":
+        return chunks.join("");
     }
   }
 
@@ -295,7 +293,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public async readAll(
     options: OpenReadOptions = { sourceType: "Uint8Array" }
   ): Promise<Source> {
-    validateBufferSize(options);
     const rs = (await this.createReadStream(options)) as AbstractReadStream;
     const type = options.sourceType as SourceType;
     const converter = rs.converter;
@@ -304,7 +301,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       const chunks: Source[] = [];
       let chunk: Source | null;
       while ((chunk = await rs.read()) != null) {
-        pos += getSize(chunk);
+        pos += await converter.getSize(chunk);
         const converted = await this._convert(converter, chunk, type);
         chunks.push(converted);
       }
@@ -318,8 +315,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     src: Source,
     options: OpenWriteOptions = { append: false, create: true }
   ): Promise<number> {
-    const bufferSize = validateBufferSize(options);
     const ws = (await this.createWriteStream(options)) as AbstractWriteStream;
+    const bufferSize = ws.converter.bufferSize;
 
     if (isBlob(src)) {
       try {

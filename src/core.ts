@@ -1,3 +1,5 @@
+import { Source, SourceType } from "univ-conv";
+
 export interface Times {
   accessed?: number;
   created?: number;
@@ -17,22 +19,6 @@ export interface FileSystemOptions {
   hook?: Hook;
   logicalDelete?: boolean;
 }
-
-export type BinarySource = ArrayBuffer | Uint8Array | Buffer | Blob;
-export type EncodingType = "Base64" | "Text" | "BinaryString";
-export interface StringSource {
-  encoding: EncodingType;
-  value: string;
-}
-export type Source = BinarySource | StringSource;
-export type SourceType =
-  | "ArrayBuffer"
-  | "Uint8Array"
-  | "Buffer"
-  | "Blob"
-  | "Base64"
-  | "BinaryString"
-  | "Text";
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 

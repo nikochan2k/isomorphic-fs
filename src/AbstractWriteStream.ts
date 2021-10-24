@@ -1,6 +1,7 @@
+import { Source } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
-import { OpenWriteOptions, Source, WriteStream } from "./core";
+import { OpenWriteOptions, WriteStream } from "./core";
 
 export abstract class AbstractWriteStream
   extends AbstractStream
@@ -46,10 +47,6 @@ export abstract class AbstractWriteStream
     this.changed = true;
   }
 
-  /**
-   * Asynchronously reads data from the file.
-   * The `File` must have been opened for reading.
-   */
   public async write(src: Source): Promise<number> {
     const written = await this._write(src);
     this.position += written;

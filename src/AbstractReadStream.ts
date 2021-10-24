@@ -1,13 +1,7 @@
-import { getSize } from "univ-conv";
+import { Source, SourceType } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractStream } from "./AbstractStream";
-import {
-  OpenReadOptions,
-  ReadStream,
-  Source,
-  SourceType,
-  WriteStream,
-} from "./core";
+import { OpenReadOptions, ReadStream, WriteStream } from "./core";
 
 export abstract class AbstractReadStream
   extends AbstractStream
@@ -54,7 +48,7 @@ export abstract class AbstractReadStream
     if (size == null || size <= this.bufferSize) {
       const chunk = await this._read(size);
       if (chunk) {
-        pos = getSize(chunk);
+        pos = await this.converter.getSize(chunk);
         result = await file._convert(converter, chunk, souceType);
       }
     } else {
@@ -71,7 +65,7 @@ export abstract class AbstractReadStream
         if (!chunk) {
           break;
         }
-        pos += getSize(chunk);
+        pos += await converter.getSize(chunk);
         const converted = await file._convert(converter, chunk, souceType);
         chunks.push(converted);
       } while (pos < max);

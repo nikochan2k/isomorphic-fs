@@ -45,8 +45,8 @@
   },
   "devDependencies": {
     "@types/jest": "^27.0.2",
-    "@types/node": "^16.11.1",
-    "jest": "^27.2.5",
+    "@types/node": "^16.11.4",
+    "jest": "^27.3.1",
     "npm-run-all": "^4.1.5",
     "rimraf": "^3.0.2",
     "ts-jest": "^27.0.7",
@@ -55,7 +55,7 @@
   "dependencies": {
     "sha256-uint8array": "^0.10.3",
     "tslib": "^2.3.1",
-    "univ-conv": "^0.1.6"
+    "univ-conv": "^0.1.8"
   },
   "author": "Yoshihiro Seki",
   "license": "MIT"

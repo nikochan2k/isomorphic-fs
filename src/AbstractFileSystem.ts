@@ -1,4 +1,4 @@
-import { createError, NotFoundError } from ".";
+import { createError, NotFoundError } from "./errors";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -19,12 +19,12 @@ import {
   PatchOptions,
   Props,
   ReadStream,
-  Source,
   Stats,
   URLType,
   WriteStream,
 } from "./core";
 import { normalizePath } from "./util";
+import { Source } from "univ-conv";
 
 export abstract class AbstractFileSystem implements FileSystem {
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
