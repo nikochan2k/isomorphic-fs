@@ -20,7 +20,7 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const buffer = await c.toArrayBuffer("");
-    await file.writeAll(buffer);
+    await file.write(buffer);
     const stats = await file.stat();
     expect(stats.size).toBe(0);
   });
@@ -34,14 +34,14 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const buffer = await c.toArrayBuffer("test");
-    await file.writeAll(buffer);
+    await file.write(buffer);
     const stats = await file.stat();
     expect(stats.size).toBe(4);
   });
 
   it("read text file", async () => {
     const file = await fs.getFile("/test.txt");
-    const buffer = (await file.readAll()) as Uint8Array;
+    const buffer = (await file.read()) as Uint8Array;
     expect(buffer.byteLength).toBe(4);
     const text = await c.toText(buffer);
     expect(text).toBe("test");
@@ -49,12 +49,12 @@ export const testAll = (fs: FileSystem) => {
 
   it("continuous read and write", async () => {
     const file = await fs.getFile("/otani.txt");
-    await file.writeAll("大谷翔平");
-    let text = await file.readAll({ sourceType: "Text" });
+    await file.write("大谷翔平");
+    let text = await file.read({ sourceType: "Text" });
     expect(text).toBe("大谷翔平");
 
-    await file.writeAll("ホームラン", { append: true, create: false });
-    text = await file.readAll({ sourceType: "Text" });
+    await file.write("ホームラン", { append: true, create: false });
+    text = await file.read({ sourceType: "Text" });
     expect(text).toBe("大谷翔平ホームラン");
   });
 
@@ -93,12 +93,12 @@ export const testAll = (fs: FileSystem) => {
       expect(e.name).toBe(NotFoundError.name);
     }
     const before = Date.now();
-    await file.writeAll("Sample");
+    await file.write("Sample");
     const after = Date.now() + 1;
     const stats = await file.stat();
     const modified = stats.modified ?? 0;
     expect(before <= modified && modified <= after).toBe(true);
-    const text = await file.readAll({ sourceType: "Text" });
+    const text = await file.read({ sourceType: "Text" });
     expect(text).toBe("Sample");
 
     const dir = await fs.getDirectory("/folder/");

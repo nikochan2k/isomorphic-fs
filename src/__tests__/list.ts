@@ -17,7 +17,7 @@ export const testAll = (fs: FileSystem) => {
   });
 
   it("file_list", async () => {
-    await fs.writeAll("/file_list", new ArrayBuffer(1));
+    await fs.write("/file_list", new ArrayBuffer(1));
     try {
       await fs.list("/file_list");
       fail("/nothing exists");

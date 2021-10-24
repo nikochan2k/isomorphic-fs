@@ -1,7 +1,7 @@
 import { Source } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
-  BlockReadOptions,
+  ReadOptions,
   CopyOptions,
   DeleteOptions,
   Directory,
@@ -146,21 +146,18 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public async readAll(
-    path: string,
-    options: BlockReadOptions = {}
-  ): Promise<Source> {
+  public async read(path: string, options: ReadOptions = {}): Promise<Source> {
     const file = await this.getFile(path);
-    return file.readAll(options);
+    return file.read(options);
   }
 
-  public async writeAll(
+  public async write(
     path: string,
     source: Source,
     options?: WriteOptions
   ): Promise<void> {
     const file = await this.getFile(path);
-    await file.writeAll(source, options);
+    await file.write(source, options);
   }
 
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;

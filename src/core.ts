@@ -1,4 +1,4 @@
-import { BlockSourceType, Source } from "univ-conv";
+import { Source, SourceType } from "univ-conv";
 
 export interface Times {
   accessed?: number;
@@ -65,22 +65,13 @@ export interface OpenOptions extends Options {
   bufferSize?: number;
 }
 
-export interface BlockReadOptions extends OpenOptions {
-  sourceType?: BlockSourceType;
+export interface ReadOptions extends OpenOptions {
+  sourceType?: SourceType;
 }
 
 export interface WriteOptions extends OpenOptions {
-  /**
-   * Open file for appending.
-   * @default false
-   */
-  append: boolean;
-  /**
-   * If it is true, the file is created if it does not exist, fail if it exists.
-   * If it is false, fail if it exists, truncated if it does not exist.
-   * If it is undefined, the file is created if it does not exist, or truncated if it exists.
-   */
-  create: boolean;
+  append?: boolean;
+  create?: boolean;
 }
 
 export interface MoveOptions extends Options {
@@ -173,12 +164,12 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<ErrorLike[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  readAll(path: string, options?: BlockReadOptions): Promise<Source>;
+  read(path: string, options?: ReadOptions): Promise<Source>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
-  writeAll(path: string, src: Source, options?: WriteOptions): Promise<void>;
+  write(path: string, src: Source, options?: WriteOptions): Promise<void>;
 }
 
 export interface Entry {
@@ -209,8 +200,8 @@ export interface Directory extends Entry {
 
 export interface File extends Entry {
   hash(options?: OpenOptions): Promise<string>;
-  readAll(options?: BlockReadOptions): Promise<Source>;
-  writeAll(src: Source, options?: WriteOptions): Promise<void>;
+  read(options?: ReadOptions): Promise<Source>;
+  write(src: Source, options?: WriteOptions): Promise<void>;
 }
 
 export enum SeekOrigin {

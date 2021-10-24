@@ -1,22 +1,26 @@
 import { createHash } from "sha256-uint8array";
 import {
-  BlockSource,
-  BlockSourceType,
   Converter,
   converter as defaultConverter,
   handleStreamSource,
   isBrowser,
   Source,
+  SourceType,
 } from "univ-conv";
-import { PathExistError } from ".";
+import {
+  AbstractDirectory,
+  PathExistError,
+  SecurityError,
+  XmitOptions,
+} from ".";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
-  BlockReadOptions,
   DeleteOptions,
   ErrorLike,
   File,
   OpenOptions,
+  ReadOptions,
   WriteOptions,
 } from "./core";
 import {
@@ -62,8 +66,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public async _convert(
     converter: Converter,
     chunk: Source,
-    type: BlockSourceType
-  ): Promise<BlockSource> {
+    type: SourceType
+  ): Promise<Source> {
     switch (type) {
       case "ArrayBuffer":
         return converter.toArrayBuffer(chunk);
@@ -73,6 +77,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         return converter.toBuffer(chunk);
       case "Blob":
         return converter.toBlob(chunk);
+      case "Readable":
+        return converter.toReadable(chunk);
+      case "ReadableStream":
+        return converter.toReadableStream(chunk);
       case "Base64":
         const base64 = await converter.toBase64(chunk);
         return { value: base64, encoding: "Base64" };
@@ -132,7 +140,45 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return toHex(hash.digest());
   }
 
-  public async readAll(options?: BlockReadOptions): Promise<BlockSource> {
+  public async _xmit(
+    toEntry: AbstractEntry,
+    _copyErrors: ErrorLike[],
+    options: XmitOptions
+  ): Promise<void> {
+    if (toEntry instanceof AbstractDirectory) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: toEntry.fs.repository,
+        path: toEntry.path,
+        e: `"${toEntry}" is not a file`,
+      });
+    }
+    const to = toEntry as AbstractFile;
+    try {
+      await to.head();
+      if (!options.force) {
+        throw createError({
+          name: SecurityError.name,
+          repository: to.fs.repository,
+          path: to.path,
+        });
+      }
+    } catch (e) {
+      if (e.name !== NotFoundError.name) {
+        throw createError({
+          name: NotReadableError.name,
+          repository: to.fs.repository,
+          path: to.path,
+          e,
+        });
+      }
+    }
+
+    const source = await this.getSource(options);
+    await to.write(source, { bufferSize: options.bufferSize });
+  }
+
+  public async read(options?: ReadOptions): Promise<Source> {
     const type = options?.sourceType ?? (isBrowser ? "Blob" : "Uint8Array");
     options = { sourceType: type };
     const source = await this.getSource(options);
@@ -140,7 +186,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return this._convert(converter, source, type);
   }
 
-  public async writeAll(src: Source, options?: WriteOptions): Promise<void> {
+  public async write(src: Source, options?: WriteOptions): Promise<void> {
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;

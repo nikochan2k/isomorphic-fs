@@ -17,7 +17,7 @@ export const testAll = (fs: FileSystem) => {
   });
 
   it("file_head", async () => {
-    await fs.writeAll("/file_head", new ArrayBuffer(1));
+    await fs.write("/file_head", new ArrayBuffer(1));
     const stat = await fs.stat("/file_head");
     expect(stat.size).toBe(1);
   });
