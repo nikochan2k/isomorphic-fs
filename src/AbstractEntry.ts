@@ -81,22 +81,22 @@ export abstract class AbstractEntry implements Entry {
     options: MoveOptions = { force: false }
   ): Promise<ErrorLike[]> {
     await this.head(); // check existance
-    const copyErrors: ErrorLike[] = [];
-    await this._xmit(to, copyErrors, {
+    const errors: ErrorLike[] = [];
+    await this._xmit(to, errors, {
       bufferSize: options.bufferSize,
       force: options.force,
       recursive: true,
     });
 
-    if (copyErrors.length === 0) {
+    if (errors.length === 0) {
       const deleteErrors = await this.delete({
         force: options.force,
         recursive: false,
       });
-      Array.prototype.push.apply(copyErrors, deleteErrors);
+      Array.prototype.push.apply(errors, deleteErrors);
     }
 
-    return copyErrors;
+    return errors;
   }
 
   public patch = (props: Props, options: PatchOptions = {}) =>
