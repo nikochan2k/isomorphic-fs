@@ -97,7 +97,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     _errors: ErrorLike[]
   ): Promise<void> {
     try {
-      const stats = await this.head();
+      const stats = await this.head(options);
       if (stats.size == null) {
         throw createError({
           name: TypeMismatchError.name,
@@ -140,7 +140,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
     const to = toEntry as AbstractFile;
     try {
-      await to.head();
+      await to.head(options);
       if (!options.force) {
         throw createError({
           name: SecurityError.name,
@@ -160,7 +160,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     const source = await this.getSource(options);
-    await to.write(source, { bufferSize: options.bufferSize });
+    await to.write(source, options);
   }
 
   public async hash(options?: OpenOptions): Promise<string> {
@@ -179,11 +179,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async read(options?: ReadOptions): Promise<Source> {
-    const type = options?.sourceType ?? (isBrowser ? "Blob" : "Uint8Array");
-    options = { sourceType: type };
+    options = { ...options };
+    options.sourceType =
+      options.sourceType ?? (isBrowser ? "Blob" : "Uint8Array");
     const source = await this.getSource(options);
     const converter = this._getConverter(options?.bufferSize);
-    return this._convert(converter, source, type);
+    return this._convert(converter, source, options.sourceType);
   }
 
   public async write(src: Source, options?: WriteOptions): Promise<void> {
@@ -222,7 +223,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    options = { append: options?.append ?? false, create };
+    options = { append: !!options?.append, create };
     if (create) {
       if (this.beforePost) {
         if (await this.beforePost(path, src, options)) {

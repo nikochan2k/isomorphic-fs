@@ -37,23 +37,16 @@ export abstract class AbstractEntry implements Entry {
     }
   }
 
-  public async copy(
-    to: Entry,
-    options: CopyOptions = { force: false, recursive: false }
-  ): Promise<ErrorLike[]> {
+  public async copy(to: Entry, options?: CopyOptions): Promise<ErrorLike[]> {
+    options = { force: false, recursive: false, ...options };
     await this.head(); // check existance
     const copyErrors: ErrorLike[] = [];
-    await this._xmit(to, copyErrors, {
-      bufferSize: options.bufferSize,
-      force: options.force,
-      recursive: options.recursive,
-    });
+    await this._xmit(to, copyErrors, options);
     return copyErrors;
   }
 
-  public async delete(
-    options: DeleteOptions = { force: false, recursive: false }
-  ): Promise<ErrorLike[]> {
+  public async delete(options?: DeleteOptions): Promise<ErrorLike[]> {
+    options = { force: false, recursive: false, ...options };
     if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(this.path, options)) {
         return [];
@@ -72,15 +65,13 @@ export abstract class AbstractEntry implements Entry {
     return this.fs.getDirectory(parentPath);
   }
 
-  public head(options: HeadOptions = {}): Promise<Stats> {
+  public head(options?: HeadOptions): Promise<Stats> {
     return this.fs.head(this.path, options);
   }
 
-  public async move(
-    to: Entry,
-    options: MoveOptions = { force: false }
-  ): Promise<ErrorLike[]> {
-    await this.head(); // check existance
+  public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
+    options = { force: false, ...options };
+    await this.head(options); // check existance
     const errors: ErrorLike[] = [];
     await this._xmit(to, errors, {
       bufferSize: options.bufferSize,
@@ -91,7 +82,7 @@ export abstract class AbstractEntry implements Entry {
     if (errors.length === 0) {
       const deleteErrors = await this.delete({
         force: options.force,
-        recursive: false,
+        recursive: true,
       });
       Array.prototype.push.apply(errors, deleteErrors);
     }
@@ -99,7 +90,7 @@ export abstract class AbstractEntry implements Entry {
     return errors;
   }
 
-  public patch = (props: Props, options: PatchOptions = {}) =>
+  public patch = (props: Props, options?: PatchOptions) =>
     this.fs.patch(this.path, props, options);
 
   public toString = () => `${this.fs.repository}:${this.path}`;

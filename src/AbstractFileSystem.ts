@@ -61,38 +61,42 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async copy(
     fromPath: string,
     toPath: string,
-    options: CopyOptions = { force: false, recursive: false }
+    options?: CopyOptions
   ): Promise<ErrorLike[]> {
+    options = { force: false, recursive: false, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
   }
 
   public async delete(
     path: string,
-    options: DeleteOptions = { force: false, recursive: false }
+    options?: DeleteOptions
   ): Promise<ErrorLike[]> {
-    const entry = await this.getEntry(path);
+    options = { force: false, recursive: false, ...options };
+    const entry = await this.getEntry(path, options);
     return entry.delete(options);
   }
 
-  public async getEntry(path: string): Promise<Entry> {
-    const stats = await this.head(path);
+  public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
+    options = { ...options };
+    const stats = await this.head(path, options);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 
-  public async hash(path: string, options: OpenOptions = {}): Promise<string> {
+  public async hash(path: string, options?: OpenOptions): Promise<string> {
     const file = await this.getFile(path);
     return file.hash(options);
   }
 
-  public async head(path: string, options: HeadOptions = {}): Promise<Stats> {
+  public async head(path: string, options?: HeadOptions): Promise<Stats> {
+    options = { ...options };
     path = normalizePath(path);
     let stats: Stats | null | undefined;
     if (!options.ignoreHook && this.beforeHead) {
       stats = await this.beforeHead(path, options);
     }
     if (!stats) {
-      stats = await this._head(path, options);
+      stats = await this._head(path);
     }
     if (this.options.logicalDelete && stats.deleted != null) {
       throw createError({
@@ -121,8 +125,9 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async move(
     fromPath: string,
     toPath: string,
-    options: MoveOptions = { force: false }
+    options?: MoveOptions
   ): Promise<ErrorLike[]> {
+    options = { force: false, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.move(to, options);
   }
@@ -130,15 +135,16 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async patch(
     path: string,
     props: Props,
-    options: PatchOptions = {}
+    options?: PatchOptions
   ): Promise<void> {
+    options = { ...options };
     path = normalizePath(path);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
         return;
       }
     }
-    const stats = await this.head(path, { ignoreHook: options.ignoreHook });
+    const stats = await this.head(path, options);
     props = { ...stats, ...props };
     await this._patch(path, props, options);
     if (this.afterPatch) {
@@ -146,7 +152,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public async read(path: string, options: ReadOptions = {}): Promise<Source> {
+  public async read(path: string, options?: ReadOptions): Promise<Source> {
     const file = await this.getFile(path);
     return file.read(options);
   }
@@ -160,7 +166,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     return file.write(source, options);
   }
 
-  public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
+  public abstract _head(path: string): Promise<Stats>;
   public abstract _patch(
     path: string,
     props: Props,

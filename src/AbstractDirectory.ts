@@ -54,7 +54,7 @@ export abstract class AbstractDirectory
     errors: ErrorLike[]
   ): Promise<void> {
     try {
-      const stats = await this.head();
+      const stats = await this.head(options);
       if (stats.size != null) {
         throw createError({
           name: TypeMismatchError.name,
@@ -80,7 +80,7 @@ export abstract class AbstractDirectory
     }
 
     if (options.recursive) {
-      const children = await this.list();
+      const children = await this.list(options);
       for (const child of children) {
         try {
           const childEntry = await this.fs.getEntry(child);
@@ -97,8 +97,6 @@ export abstract class AbstractDirectory
 
     return this._rmdir();
   }
-
-  public abstract _rmdir(): Promise<void>;
 
   public async _xmit(
     to: Entry,
@@ -129,7 +127,7 @@ export abstract class AbstractDirectory
     for (const fromPath of fromPaths) {
       let toPath: string | undefined;
       try {
-        const stats = await this.fs.head(fromPath);
+        const stats = await this.fs.head(fromPath, options);
         const fromEntry = (await (stats.size != null
           ? this.fs.getFile(fromPath)
           : this.fs.getDirectory(fromPath))) as Entry as AbstractEntry;
@@ -145,7 +143,8 @@ export abstract class AbstractDirectory
     }
   }
 
-  public async list(options: ListOptions = {}): Promise<string[]> {
+  public async list(options?: ListOptions): Promise<string[]> {
+    options = { ...options };
     let list: string[] | null | undefined;
     if (!options.ignoreHook && this.beforeList) {
       list = await this.beforeList(this.path, options);
@@ -159,15 +158,10 @@ export abstract class AbstractDirectory
     return list;
   }
 
-  /**
-   * Create a directory.
-   * @param options Either the file mode, or an object optionally specifying the file mode and whether parent folders
-   */
-  public async mkcol(
-    options: MkcolOptions = { force: false, recursive: false }
-  ): Promise<void> {
+  public async mkcol(options?: MkcolOptions): Promise<void> {
+    options = { force: false, recursive: false, ...options };
     try {
-      const stats = await this.head();
+      const stats = await this.head(options);
       if (stats.size != null) {
         throw createError({
           name: TypeMismatchError.name,
@@ -189,7 +183,11 @@ export abstract class AbstractDirectory
       if (e.name === NotFoundError.name) {
         if (options.recursive) {
           const parent = await this.getParent();
-          await parent.mkcol({ force: true, recursive: true });
+          await parent.mkcol({
+            force: true,
+            recursive: true,
+            ignoreHook: options.ignoreHook,
+          });
         }
       } else {
         throw createError({
@@ -213,4 +211,5 @@ export abstract class AbstractDirectory
 
   public abstract _list(): Promise<string[]>;
   public abstract _mkcol(): Promise<void>;
+  public abstract _rmdir(): Promise<void>;
 }
