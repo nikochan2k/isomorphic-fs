@@ -157,7 +157,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: WriteOptions
   ): Promise<void> {
     const file = await this.getFile(path);
-    await file.write(source, options);
+    return file.write(source, options);
   }
 
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
