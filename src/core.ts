@@ -204,25 +204,4 @@ export interface File extends Entry {
   write(src: Source, options?: WriteOptions): Promise<void>;
 }
 
-export enum SeekOrigin {
-  Begin,
-  Current,
-  End,
-}
-export interface Stream {
-  position: number;
-
-  close(): Promise<void>;
-  seek(offset: number, origin: SeekOrigin): Promise<void>;
-}
-
-export interface ReadStream extends Stream {
-  pipe(ws: WriteStream): Promise<void>;
-  read(size?: number): Promise<Source | null>;
-}
-export interface WriteStream extends Stream {
-  truncate(size: number): Promise<void>;
-  write(src: Source): Promise<number>;
-}
-
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;
