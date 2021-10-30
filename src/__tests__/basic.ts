@@ -4,7 +4,11 @@ import { NotFoundError } from "../errors";
 
 const c = new Converter();
 
-export const testAll = (fs: FileSystem) => {
+export const testAll = (fs: FileSystem, init: () => Promise<void>) => {
+  beforeAll(async () => {
+    await init();
+  });
+
   it("rootdir", async () => {
     const dir = await fs.getDirectory("/");
     const paths = await dir.readdir();

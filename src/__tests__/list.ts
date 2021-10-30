@@ -1,7 +1,11 @@
 import { FileSystem } from "../core";
 import { NotFoundError, TypeMismatchError } from "../errors";
 
-export const testAll = (fs: FileSystem) => {
+export const testAll = (fs: FileSystem, init: () => Promise<void>) => {
+  beforeAll(async () => {
+    await init();
+  });
+
   it("rootdir", async () => {
     const list = await fs.list("/");
     expect(list.length).toBe(0);

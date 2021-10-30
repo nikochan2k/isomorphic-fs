@@ -1,7 +1,11 @@
 import { FileSystem } from "../core";
 import { NotFoundError } from "../errors";
 
-export const testAll = (fs: FileSystem) => {
+export const testAll = (fs: FileSystem, init: () => Promise<void>) => {
+  beforeAll(async () => {
+    await init();
+  });
+
   it("rootdir", async () => {
     const stat = await fs.head("/");
     expect(stat.size).toBeUndefined();
