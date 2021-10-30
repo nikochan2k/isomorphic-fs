@@ -1,3 +1,3 @@
-# isomorphic-fs
+# univ-fs
 
-The isomorphic FileSystem API.
+The universal FileSystem API core.
