@@ -1,4 +1,4 @@
-import { Source, SourceType } from "univ-conv";
+import { Data, DataType } from "univ-conv";
 
 export interface Times {
   accessed?: number;
@@ -66,7 +66,7 @@ export interface OpenOptions extends Options {
 }
 
 export interface ReadOptions extends OpenOptions {
-  sourceType?: SourceType;
+  type?: DataType;
 }
 
 export interface WriteOptions extends OpenOptions {
@@ -92,15 +92,15 @@ export interface XmitOptions extends Options {
 
 export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
-  afterGet?: (path: string, source: Source) => Promise<void>;
+  afterGet?: (path: string, source: Data) => Promise<void>;
   afterHead?: (path: string, stats: Stats) => Promise<void>;
   afterList?: (path: string, list: string[]) => Promise<void>;
   afterMkcol?: (path: string) => Promise<void>;
   afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (path: string, source: Source) => Promise<void>;
-  afterPut?: (path: string, source: Source) => Promise<void>;
+  afterPost?: (path: string, source: Data) => Promise<void>;
+  afterPut?: (path: string, source: Data) => Promise<void>;
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<ErrorLike[]>;
-  beforeGet?: (path: string, options: OpenOptions) => Promise<Source | null>;
+  beforeGet?: (path: string, options: OpenOptions) => Promise<Data | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
@@ -111,12 +111,12 @@ export interface Hook {
   ) => Promise<boolean>;
   beforePost?: (
     path: string,
-    source: Source,
+    source: Data,
     options: WriteOptions
   ) => Promise<boolean>;
   beforePut?: (
     path: string,
-    source: Source,
+    source: Data,
     options: WriteOptions
   ) => Promise<boolean>;
 }
@@ -164,12 +164,12 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<ErrorLike[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  read(path: string, options?: ReadOptions): Promise<Source>;
+  read(path: string, options?: ReadOptions): Promise<Data>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
-  write(path: string, src: Source, options?: WriteOptions): Promise<void>;
+  write(path: string, src: Data, options?: WriteOptions): Promise<void>;
 }
 
 export interface Entry {
@@ -200,8 +200,8 @@ export interface Directory extends Entry {
 
 export interface File extends Entry {
   hash(options?: OpenOptions): Promise<string>;
-  read(options?: ReadOptions): Promise<Source>;
-  write(src: Source, options?: WriteOptions): Promise<void>;
+  read(options?: ReadOptions): Promise<Data>;
+  write(src: Data, options?: WriteOptions): Promise<void>;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;

@@ -47,7 +47,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
 
   it("read text file", async () => {
     const file = await fs.getFile("/test.txt");
-    const buffer = (await file.read()) as Uint8Array;
+    const buffer = (await file.read({ type: "Uint8Array" })) as Uint8Array;
     expect(buffer.byteLength).toBe(4);
     const text = await c.toText(buffer);
     expect(text).toBe("test");
@@ -56,11 +56,11 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
   it("continuous read and write", async () => {
     const file = await fs.getFile("/otani.txt");
     await file.write("大谷翔平");
-    let text = await file.read({ sourceType: "Text" });
+    let text = await file.read({ type: "UTF8" });
     expect(text).toBe("大谷翔平");
 
     await file.write("ホームラン", { append: true, create: false });
-    text = await file.read({ sourceType: "Text" });
+    text = await file.read({ type: "UTF8" });
     expect(text).toBe("大谷翔平ホームラン");
   });
 
@@ -104,7 +104,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     const stats = await file.stat();
     const modified = stats.modified ?? 0;
     expect(before <= modified && modified <= after).toBe(true);
-    const text = await file.read({ sourceType: "Text" });
+    const text = await file.read({ type: "UTF8" });
     expect(text).toBe("Sample");
 
     const dir = await fs.getDirectory("/folder/");

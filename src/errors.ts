@@ -4,7 +4,7 @@ interface DOMExceptionType {
   message: string;
 }
 
-/** @deprecated Use RangeError instead. */
+/* Use RangeError instead. */
 export const IndexSizeError: DOMExceptionType = {
   code: 1,
   name: "IndexSizeError",
@@ -77,14 +77,14 @@ export const NamespaceError: DOMExceptionType = {
   message: "The operation is not allowed by Namespaces in XML. [XML-NAMES]",
 };
 
-/** @deprecated Use TypeError for invalid arguments, "NotSupportedError" DOMException for unsupported operations, and "NotAllowedError" DOMException for denied requests instead. */
+/* Use TypeError for invalid arguments, "NotSupportedError" DOMException for unsupported operations, and "NotAllowedError" DOMException for denied requests instead. */
 export const InvalidAccessError: DOMExceptionType = {
   code: 15,
   name: "InvalidAccessError",
   message: "The object does not support the operation or argument.",
 };
 
-/** @deprecated Use TypeError instead. */
+/* Use TypeError instead. */
 export const TypeMismatchError: DOMExceptionType = {
   code: 17,
   name: "TypeMismatchError",

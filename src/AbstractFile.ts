@@ -2,17 +2,11 @@ import { createHash } from "sha256-uint8array";
 import {
   Converter,
   converter as defaultConverter,
-  handleStreamSource,
+  Data,
+  handleReadableStreamData,
   isBrowser,
-  Source,
-  SourceType,
 } from "univ-conv";
-import {
-  AbstractDirectory,
-  PathExistError,
-  SecurityError,
-  XmitOptions,
-} from ".";
+import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
@@ -22,31 +16,34 @@ import {
   OpenOptions,
   ReadOptions,
   WriteOptions,
+  XmitOptions,
 } from "./core";
 import {
   createError,
   NotFoundError,
   NotReadableError,
   TypeMismatchError,
+  PathExistError,
+  SecurityError,
 } from "./errors";
 import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {
-  private afterGet?: (path: string, source: Source) => Promise<void>;
-  private afterPost?: (path: string, source: Source) => Promise<void>;
-  private afterPut?: (path: string, source: Source) => Promise<void>;
+  private afterGet?: (path: string, source: Data) => Promise<void>;
+  private afterPost?: (path: string, source: Data) => Promise<void>;
+  private afterPut?: (path: string, source: Data) => Promise<void>;
   private beforeGet?: (
     path: string,
     options: OpenOptions
-  ) => Promise<Source | null>;
+  ) => Promise<Data | null>;
   private beforePost?: (
     path: string,
-    source: Source,
+    source: Data,
     options: WriteOptions
   ) => Promise<boolean>;
   private beforePut?: (
     path: string,
-    source: Source,
+    source: Data,
     options: WriteOptions
   ) => Promise<boolean>;
 
@@ -60,35 +57,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       this.afterGet = hook.afterGet;
       this.afterPost = hook.afterPost;
       this.afterPut = hook.afterPut;
-    }
-  }
-
-  public async _convert(
-    converter: Converter,
-    chunk: Source,
-    type: SourceType
-  ): Promise<Source> {
-    switch (type) {
-      case "ArrayBuffer":
-        return converter.toArrayBuffer(chunk);
-      case "Uint8Array":
-        return converter.toUint8Array(chunk);
-      case "Buffer":
-        return converter.toBuffer(chunk);
-      case "Blob":
-        return converter.toBlob(chunk);
-      case "Readable":
-        return converter.toReadable(chunk);
-      case "ReadableStream":
-        return converter.toReadableStream(chunk);
-      case "Base64":
-        const base64 = await converter.toBase64(chunk);
-        return { value: base64, encoding: "Base64" };
-      case "BinaryString":
-        const binaryString = await converter.toBinaryString(chunk);
-        return { value: binaryString, encoding: "BinaryString" };
-      case "Text":
-        return converter.toText(chunk);
     }
   }
 
@@ -159,18 +127,18 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    const source = await this.getSource(options);
+    const source = await this.getData(options);
     await to.write(source, options);
   }
 
   public async hash(options?: OpenOptions): Promise<string> {
     options = options || {};
     const converter = this._getConverter(options.bufferSize);
-    const source = await this.getSource(options);
-    const streamSource = await converter.toStreamSource(source);
+    const source = await this.getData(options);
+    const streamData = await converter.toReadableStreamData(source);
 
     const hash = createHash();
-    await handleStreamSource(streamSource, async (chunk) => {
+    await handleReadableStreamData(streamData, async (chunk) => {
       const buffer = await converter.toUint8Array(chunk);
       hash.update(buffer);
     });
@@ -178,16 +146,15 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return toHex(hash.digest());
   }
 
-  public async read(options?: ReadOptions): Promise<Source> {
+  public async read(options?: ReadOptions): Promise<Data> {
     options = { ...options };
-    options.sourceType =
-      options.sourceType ?? (isBrowser ? "Blob" : "Uint8Array");
-    const source = await this.getSource(options);
+    options.type = options.type ?? (isBrowser ? "Blob" : "Uint8Array");
+    const source = await this.getData(options);
     const converter = this._getConverter(options?.bufferSize);
-    return this._convert(converter, source, options.sourceType);
+    return converter.convert(source, options.type);
   }
 
-  public async write(src: Source, options?: WriteOptions): Promise<void> {
+  public async write(src: Data, options?: WriteOptions): Promise<void> {
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
@@ -255,19 +222,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
   }
 
-  protected abstract _getSource(options: OpenOptions): Promise<Source>;
+  protected abstract _getData(options: OpenOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
-  protected abstract _write(src: Source, options: WriteOptions): Promise<void>;
+  protected abstract _write(src: Data, options: WriteOptions): Promise<void>;
 
-  private async getSource(options: OpenOptions): Promise<Source> {
+  private async getData(options: OpenOptions): Promise<Data> {
     const ignoreHook = options.ignoreHook;
     const path = this.path;
-    let source: Source | null = null;
+    let source: Data | null = null;
     if (!ignoreHook && this.beforeGet) {
       source = await this.beforeGet(path, options);
     }
     if (!source) {
-      source = await this._getSource(options);
+      source = await this._getData(options);
     }
     if (!ignoreHook && this.afterGet) {
       this.afterGet(path, source).catch((e) => console.warn(e));

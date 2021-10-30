@@ -1,4 +1,4 @@
-import { Source } from "univ-conv";
+import { Data } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
   ReadOptions,
@@ -152,14 +152,14 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public async read(path: string, options?: ReadOptions): Promise<Source> {
+  public async read(path: string, options?: ReadOptions): Promise<Data> {
     const file = await this.getFile(path);
     return file.read(options);
   }
 
   public async write(
     path: string,
-    source: Source,
+    source: Data,
     options?: WriteOptions
   ): Promise<void> {
     const file = await this.getFile(path);
