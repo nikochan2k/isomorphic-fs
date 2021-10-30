@@ -1,13 +1,10 @@
 import { FileSystem } from "../core";
 import { NotFoundError } from "../errors";
 
-export const testAll = (
-  fs: FileSystem,
-  init?: (fs: FileSystem) => Promise<void>
-) => {
+export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
   beforeAll(async () => {
     if (init) {
-      await init(fs);
+      await init();
     }
   });
 
