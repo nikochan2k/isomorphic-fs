@@ -1,9 +1,11 @@
 import { FileSystem } from "../core";
 import { NotFoundError } from "../errors";
 
-export const testAll = (fs: FileSystem, init: () => Promise<void>) => {
+export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
   beforeAll(async () => {
-    await init();
+    if (init) {
+      await init();
+    }
   });
 
   it("rootdir", async () => {
