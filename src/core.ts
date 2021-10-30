@@ -1,4 +1,4 @@
-import { Data, DataType } from "univ-conv";
+import { Data, DataType, ReturnDataType } from "univ-conv";
 
 export interface Times {
   accessed?: number;
@@ -65,8 +65,8 @@ export interface OpenOptions extends Options {
   bufferSize?: number;
 }
 
-export interface ReadOptions extends OpenOptions {
-  type?: DataType;
+export interface ReadOptions<T extends DataType> extends OpenOptions {
+  type?: T;
 }
 
 export interface WriteOptions extends OpenOptions {
@@ -92,13 +92,13 @@ export interface XmitOptions extends Options {
 
 export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
-  afterGet?: (path: string, source: Data) => Promise<void>;
+  afterGet?: (path: string, data: Data) => Promise<void>;
   afterHead?: (path: string, stats: Stats) => Promise<void>;
   afterList?: (path: string, list: string[]) => Promise<void>;
   afterMkcol?: (path: string) => Promise<void>;
   afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (path: string, source: Data) => Promise<void>;
-  afterPut?: (path: string, source: Data) => Promise<void>;
+  afterPost?: (path: string, data: Data) => Promise<void>;
+  afterPut?: (path: string, data: Data) => Promise<void>;
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<ErrorLike[]>;
   beforeGet?: (path: string, options: OpenOptions) => Promise<Data | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
@@ -111,12 +111,12 @@ export interface Hook {
   ) => Promise<boolean>;
   beforePost?: (
     path: string,
-    source: Data,
+    data: Data,
     options: WriteOptions
   ) => Promise<boolean>;
   beforePut?: (
     path: string,
-    source: Data,
+    data: Data,
     options: WriteOptions
   ) => Promise<boolean>;
 }
@@ -164,12 +164,15 @@ export interface FileSystem {
     options?: MoveOptions
   ): Promise<ErrorLike[]>;
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
-  read(path: string, options?: ReadOptions): Promise<Data>;
+  read<T extends DataType>(
+    path: string,
+    options?: ReadOptions<T>
+  ): Promise<ReturnDataType<T>>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
   toURL(path: string, urlType?: URLType): Promise<string>;
-  write(path: string, src: Data, options?: WriteOptions): Promise<void>;
+  write(path: string, data: Data, options?: WriteOptions): Promise<void>;
 }
 
 export interface Entry {
@@ -200,8 +203,10 @@ export interface Directory extends Entry {
 
 export interface File extends Entry {
   hash(options?: OpenOptions): Promise<string>;
-  read(options?: ReadOptions): Promise<Data>;
-  write(src: Data, options?: WriteOptions): Promise<void>;
+  read<T extends DataType>(
+    options?: ReadOptions<T>
+  ): Promise<ReturnDataType<T>>;
+  write(data: Data, options?: WriteOptions): Promise<void>;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;

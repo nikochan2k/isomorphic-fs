@@ -3,8 +3,10 @@ import {
   Converter,
   converter as defaultConverter,
   Data,
+  DataType,
   handleReadableStreamData,
   isBrowser,
+  ReturnDataType,
 } from "univ-conv";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
@@ -29,21 +31,21 @@ import {
 import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {
-  private afterGet?: (path: string, source: Data) => Promise<void>;
-  private afterPost?: (path: string, source: Data) => Promise<void>;
-  private afterPut?: (path: string, source: Data) => Promise<void>;
+  private afterGet?: (path: string, data: Data) => Promise<void>;
+  private afterPost?: (path: string, data: Data) => Promise<void>;
+  private afterPut?: (path: string, data: Data) => Promise<void>;
   private beforeGet?: (
     path: string,
     options: OpenOptions
   ) => Promise<Data | null>;
   private beforePost?: (
     path: string,
-    source: Data,
+    data: Data,
     options: WriteOptions
   ) => Promise<boolean>;
   private beforePut?: (
     path: string,
-    source: Data,
+    data: Data,
     options: WriteOptions
   ) => Promise<boolean>;
 
@@ -127,15 +129,15 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    const source = await this.getData(options);
-    await to.write(source, options);
+    const data = await this.getData(options);
+    await to.write(data, options);
   }
 
   public async hash(options?: OpenOptions): Promise<string> {
     options = options || {};
     const converter = this._getConverter(options.bufferSize);
-    const source = await this.getData(options);
-    const streamData = await converter.toReadableStreamData(source);
+    const data = await this.getData(options);
+    const streamData = await converter.toReadableStreamData(data);
 
     const hash = createHash();
     await handleReadableStreamData(streamData, async (chunk) => {
@@ -146,15 +148,17 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return toHex(hash.digest());
   }
 
-  public async read(options?: ReadOptions): Promise<Data> {
+  public async read<T extends DataType>(
+    options?: ReadOptions<T>
+  ): Promise<ReturnDataType<T>> {
     options = { ...options };
-    options.type = options.type ?? (isBrowser ? "Blob" : "Uint8Array");
-    const source = await this.getData(options);
+    options.type = (options.type ?? (isBrowser ? "Blob" : "Uint8Array")) as T;
+    const data = await this.getData(options);
     const converter = this._getConverter(options?.bufferSize);
-    return converter.convert(source, options.type);
+    return converter.convert(data, options.type);
   }
 
-  public async write(src: Data, options?: WriteOptions): Promise<void> {
+  public async write(data: Data, options?: WriteOptions): Promise<void> {
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
@@ -193,27 +197,27 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options = { append: !!options?.append, create };
     if (create) {
       if (this.beforePost) {
-        if (await this.beforePost(path, src, options)) {
+        if (await this.beforePost(path, data, options)) {
           return;
         }
       }
     } else {
       if (this.beforePut) {
-        if (await this.beforePut(path, src, options)) {
+        if (await this.beforePut(path, data, options)) {
           return;
         }
       }
     }
 
-    await this._write(src, options);
+    await this._write(data, options);
 
     if (create) {
       if (this.afterPost) {
-        this.afterPost(path, src).catch((e) => console.warn(e));
+        this.afterPost(path, data).catch((e) => console.warn(e));
       }
     } else {
       if (this.afterPut) {
-        this.afterPut(path, src).catch((e) => console.warn(e));
+        this.afterPut(path, data).catch((e) => console.warn(e));
       }
     }
   }
@@ -224,21 +228,21 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   protected abstract _getData(options: OpenOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
-  protected abstract _write(src: Data, options: WriteOptions): Promise<void>;
+  protected abstract _write(data: Data, options: WriteOptions): Promise<void>;
 
   private async getData(options: OpenOptions): Promise<Data> {
     const ignoreHook = options.ignoreHook;
     const path = this.path;
-    let source: Data | null = null;
+    let data: Data | null = null;
     if (!ignoreHook && this.beforeGet) {
-      source = await this.beforeGet(path, options);
+      data = await this.beforeGet(path, options);
     }
-    if (!source) {
-      source = await this._getData(options);
+    if (!data) {
+      data = await this._getData(options);
     }
     if (!ignoreHook && this.afterGet) {
-      this.afterGet(path, source).catch((e) => console.warn(e));
+      this.afterGet(path, data).catch((e) => console.warn(e));
     }
-    return source;
+    return data;
   }
 }

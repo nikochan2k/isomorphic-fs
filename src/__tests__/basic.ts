@@ -47,7 +47,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
 
   it("read text file", async () => {
     const file = await fs.getFile("/test.txt");
-    const buffer = (await file.read({ type: "Uint8Array" })) as Uint8Array;
+    const buffer = await file.read({ type: "Uint8Array" });
     expect(buffer.byteLength).toBe(4);
     const text = await c.toText(buffer);
     expect(text).toBe("test");
