@@ -4,10 +4,13 @@ import { NotFoundError } from "../errors";
 
 const c = new Converter();
 
-export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
+export const testAll = (
+  fs: FileSystem,
+  init?: (fs: FileSystem) => Promise<void>
+) => {
   beforeAll(async () => {
     if (init) {
-      await init();
+      await init(fs);
     }
   });
 
