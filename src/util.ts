@@ -54,7 +54,7 @@ export function normalizePath(path: string) {
 }
 
 export function isIllegalFileName(name: string) {
-  return /[\x00-\x1f\x7f-\x9f\\/:*?"<>|]/.test(name);
+  return /[\x00-\x1f\x7f-\x9f\\/:*?"<>|]/.test(name); // eslint-disable-line
 }
 
 const LUT_HEX_4b = new Array(0x10);
@@ -64,9 +64,9 @@ for (let n = 0; n < 0x10; n++) {
 
 const LUT_HEX_8b = new Array(0x100);
 for (let n = 0; n < 0x100; n++) {
-  LUT_HEX_8b[n] = `${LUT_HEX_4b[(n >>> 4) & 0xf]}${LUT_HEX_4b[n & 0xf]}`;
+  LUT_HEX_8b[n] = `${LUT_HEX_4b[(n >>> 4) & 0xf]}${LUT_HEX_4b[n & 0xf]}`; // eslint-disable-line
 }
 
 export function toHex(u8: Uint8Array) {
-  return u8.reduce((result, i) => result + LUT_HEX_8b[i], "");
+  return u8.reduce((result, i) => result + LUT_HEX_8b[i], ""); // eslint-disable-line
 }

@@ -22,11 +22,13 @@ export abstract class AbstractEntry implements Entry {
     options: DeleteOptions
   ) => Promise<ErrorLike[]>;
 
-  public cp = this.copy;
-  public del = this.delete;
-  public mv = this.move;
-  public rm = this.delete;
-  public stat = this.head;
+  public cp = (to: Entry, options?: CopyOptions | undefined) =>
+    this.copy(to, options);
+  public del = (options?: DeleteOptions | undefined) => this.delete(options);
+  public mv = (to: Entry, options?: MoveOptions | undefined) =>
+    this.move(to, options);
+  public rm = (options?: DeleteOptions | undefined) => this.delete(options);
+  public stat = (options?: HeadOptions | undefined) => this.head(options);
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
     this.path = normalizePath(path);
@@ -99,12 +101,12 @@ export abstract class AbstractEntry implements Entry {
 
   public abstract _delete(
     option: DeleteOptions,
-    errors: ErrorLike[]
+    errors: (ErrorLike | string)[]
   ): Promise<void>;
 
   public abstract _xmit(
     entry: Entry,
-    copyErrors: ErrorLike[],
+    copyErrors: (ErrorLike | string)[],
     options: XmitOptions
   ): Promise<void>;
 }

@@ -34,9 +34,9 @@ export abstract class AbstractDirectory
     options: MkcolOptions
   ) => Promise<boolean>;
 
-  public ls = this.list;
-  public mkdir = this.mkcol;
-  public readdir = this.list;
+  public ls = (options?: ListOptions | undefined) => this.list(options);
+  public mkdir = (options?: MkcolOptions | undefined) => this.mkcol(options);
+  public readdir = (options?: ListOptions | undefined) => this.list(options);
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -60,11 +60,11 @@ export abstract class AbstractDirectory
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
-          e: `"${this.path}" is not a directory`,
+          e: { message: `"${this.path}" is not a directory` },
         });
       }
-    } catch (e) {
-      if (e.name === NotFoundError.name) {
+    } catch (e: unknown) {
+      if ((e as Error).name === NotFoundError.name) {
         if (!options.force) {
           throw e;
         }
@@ -74,7 +74,7 @@ export abstract class AbstractDirectory
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
-          e,
+          e: e as ErrorLike,
         });
       }
     }
@@ -85,9 +85,9 @@ export abstract class AbstractDirectory
         try {
           const childEntry = await this.fs.getEntry(child);
           await childEntry.delete(options);
-        } catch (e) {
+        } catch (e: unknown) {
           if (options.force) {
-            errors.push(e);
+            errors.push(e as ErrorLike);
           } else {
             throw e;
           }
@@ -108,7 +108,7 @@ export abstract class AbstractDirectory
         name: TypeMismatchError.name,
         repository: this.fs.repository,
         path: this.path,
-        e: `"${this.path}" is not a directory`,
+        e: { message: `"${this.path}" is not a directory` },
       });
     }
 
@@ -137,8 +137,8 @@ export abstract class AbstractDirectory
           ? this.fs.getFile(toPath)
           : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
         await fromEntry._xmit(toEntry, copyErrors, options);
-      } catch (e) {
-        copyErrors.push({ ...e, from: fromPath, to: toPath });
+      } catch (e: unknown) {
+        copyErrors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
       }
     }
   }
@@ -167,7 +167,7 @@ export abstract class AbstractDirectory
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
-          e: `"${this.path}" is not a directory`,
+          e: { message: `"${this.path}" is not a directory` },
         });
       }
       if (!options.force) {
@@ -175,12 +175,12 @@ export abstract class AbstractDirectory
           name: SecurityError.name,
           repository: this.fs.repository,
           path: this.path,
-          e: `"${this.path}" has already existed`,
+          e: { message: `"${this.path}" has already existed` },
         });
       }
       return;
-    } catch (e) {
-      if (e.name === NotFoundError.name) {
+    } catch (e: unknown) {
+      if ((e as ErrorLike).name === NotFoundError.name) {
         if (options.recursive) {
           const parent = await this.getParent();
           await parent.mkcol({
@@ -194,7 +194,7 @@ export abstract class AbstractDirectory
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
-          e,
+          e: e as ErrorLike,
         });
       }
     }

@@ -37,15 +37,30 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: PatchOptions
   ) => Promise<boolean>;
 
-  public cp = this.copy;
-  public del = this.delete;
-  public ls = this.list;
-  public mkdir = this.mkcol;
-  public mv = this.move;
-  public readdir = this.list;
-  public rm = this.delete;
-  public stat = this.head;
-  public unlink = this.delete;
+  public cp = (
+    fromPath: string,
+    toPath: string,
+    options?: CopyOptions | undefined
+  ) => this.copy(fromPath, toPath, options);
+  public del = (path: string, options?: DeleteOptions | undefined) =>
+    this.delete(path, options);
+  public ls = (path: string, options?: ListOptions | undefined) =>
+    this.list(path, options);
+  public mkdir = (path: string, options?: MkcolOptions | undefined) =>
+    this.mkcol(path, options);
+  public mv = (
+    fromPath: string,
+    toPath: string,
+    options?: MoveOptions | undefined
+  ) => this.move(fromPath, toPath, options);
+  public readdir = (path: string, options?: ListOptions | undefined) =>
+    this.list(path, options);
+  public rm = (path: string, options?: DeleteOptions | undefined) =>
+    this.delete(path, options);
+  public stat = (path: string, options?: HeadOptions | undefined) =>
+    this.head(path, options);
+  public unlink = (path: string, options?: DeleteOptions | undefined) =>
+    this.delete(path, options);
 
   constructor(
     public readonly repository: string,

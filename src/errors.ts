@@ -1,3 +1,5 @@
+import { ErrorLike } from ".";
+
 interface DOMExceptionType {
   code?: number;
   name: string;
@@ -238,7 +240,7 @@ export const domExceptions: DOMExceptionType[] = [
 export function createError(options: {
   repository: string;
   path: string;
-  e?: any;
+  e?: ErrorLike;
   name?: string;
 }) {
   let e = options.e;
@@ -258,8 +260,8 @@ export function createError(options: {
     repository = "/" + repository;
   }
   const path = options.path;
-  e.repository = repository;
-  e.path = path;
+  e["repository"] = repository;
+  e["path"] = path;
 
   const name = options.name;
   if (name) {

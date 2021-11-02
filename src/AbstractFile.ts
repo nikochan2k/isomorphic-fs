@@ -24,9 +24,9 @@ import {
   createError,
   NotFoundError,
   NotReadableError,
-  TypeMismatchError,
   PathExistError,
   SecurityError,
+  TypeMismatchError,
 } from "./errors";
 import { toHex } from "./util";
 
@@ -64,7 +64,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _delete(
     options: DeleteOptions,
-    _errors: ErrorLike[]
+    _errors: ErrorLike[] // eslint-disable-line
   ): Promise<void> {
     try {
       const stats = await this.head(options);
@@ -73,11 +73,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           name: TypeMismatchError.name,
           repository: this.fs.repository,
           path: this.path,
-          e: `"${this.path}" is not a file`,
+          e: { message: `"${this.path}" is not a file` },
         });
       }
-    } catch (e) {
-      if (e.name === NotFoundError.name) {
+    } catch (e: unknown) {
+      if ((e as ErrorLike).name === NotFoundError.name) {
         if (!options.force) {
           throw e;
         }
@@ -87,7 +87,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           name: NotReadableError.name,
           repository: this.fs.repository,
           path: this.path,
-          e,
+          e: e as ErrorLike,
         });
       }
     }
@@ -105,7 +105,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         name: TypeMismatchError.name,
         repository: toEntry.fs.repository,
         path: toEntry.path,
-        e: `"${toEntry}" is not a file`,
+        e: { message: `"${toEntry.path}" is not a file` },
       });
     }
     const to = toEntry as AbstractFile;
@@ -118,13 +118,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           path: to.path,
         });
       }
-    } catch (e) {
-      if (e.name !== NotFoundError.name) {
+    } catch (e: unknown) {
+      if ((e as ErrorLike).name !== NotFoundError.name) {
         throw createError({
           name: NotReadableError.name,
           repository: to.fs.repository,
           path: to.path,
-          e,
+          e: e as ErrorLike,
         });
       }
     }
@@ -141,7 +141,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     const hash = createHash();
     await handleReadableStreamData(streamData, async (chunk) => {
-      const buffer = await converter.toUint8Array(chunk);
+      const buffer = await converter.toUint8Array(chunk as Data);
       hash.update(buffer);
     });
 
@@ -173,14 +173,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         });
       }
       create = false;
-    } catch (e) {
-      if (e.name === NotFoundError.name) {
+    } catch (e: unknown) {
+      if ((e as ErrorLike).name === NotFoundError.name) {
         if (options?.create === false) {
           throw createError({
             name: NotFoundError.name,
             repository,
             path,
-            e,
+            e: e as ErrorLike,
           });
         }
         create = true;
@@ -189,7 +189,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           name: NotReadableError.name,
           repository,
           path,
-          e,
+          e: e as ErrorLike,
         });
       }
     }

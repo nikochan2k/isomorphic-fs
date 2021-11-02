@@ -1,5 +1,13 @@
 import { Data, DataType, ReturnDataType } from "univ-conv";
 
+type JsonPrimitive = boolean | number | string | null | undefined;
+
+type JsonArray = JsonPrimitive[] | JsonObject[];
+
+type JsonObject = {
+  [key: string]: JsonPrimitive | JsonObject | JsonArray;
+};
+
 export interface Times {
   accessed?: number;
   created?: number;
@@ -7,9 +15,7 @@ export interface Times {
   modified?: number;
 }
 
-export interface Props extends Times {
-  [name: string]: any;
-}
+export interface Props extends Times, JsonObject {}
 
 export interface Stats extends Props {
   size?: number;
@@ -41,11 +47,11 @@ export interface DeleteOptions extends Options {
   recursive: boolean;
 }
 
-export interface HeadOptions extends Options {}
+export type HeadOptions = Options;
 
-export interface PatchOptions extends Options {}
+export type PatchOptions = Options;
 
-export interface ListOptions extends Options {}
+export type ListOptions = Options;
 
 export interface MkcolOptions extends Options {
   /**
@@ -120,13 +126,12 @@ export interface Hook {
     options: WriteOptions
   ) => Promise<boolean>;
 }
-export interface ErrorLike {
+
+export interface ErrorLike extends JsonObject {
   code?: number;
   message?: string;
   name?: string;
   stack?: string;
-
-  [key: string]: any;
 }
 
 export interface FileSystem {
