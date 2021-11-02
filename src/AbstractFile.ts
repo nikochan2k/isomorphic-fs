@@ -209,7 +209,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    await this._write(data, options);
+    await this._save(data, options);
 
     if (create) {
       if (this.afterPost) {
@@ -226,9 +226,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
   }
 
-  protected abstract _getData(options: OpenOptions): Promise<Data>;
+  protected abstract _load(options: OpenOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
-  protected abstract _write(data: Data, options: WriteOptions): Promise<void>;
+  protected abstract _save(data: Data, options: WriteOptions): Promise<void>;
 
   private async getData(options: OpenOptions): Promise<Data> {
     const ignoreHook = options.ignoreHook;
@@ -238,7 +238,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       data = await this.beforeGet(path, options);
     }
     if (!data) {
-      data = await this._getData(options);
+      data = await this._load(options);
     }
     if (!ignoreHook && this.afterGet) {
       this.afterGet(path, data).catch((e) => console.warn(e));
