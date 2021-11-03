@@ -20,7 +20,7 @@ export abstract class AbstractEntry implements Entry {
   private beforeDelete?: (
     path: string,
     options: DeleteOptions
-  ) => Promise<ErrorLike[]>;
+  ) => Promise<boolean>;
 
   public cp = (to: Entry, options?: CopyOptions | undefined) =>
     this.copy(to, options);

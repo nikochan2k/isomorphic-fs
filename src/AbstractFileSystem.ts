@@ -1,7 +1,6 @@
 import { Data, DataType, ReturnDataType } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
-  ReadOptions,
   CopyOptions,
   DeleteOptions,
   Directory,
@@ -17,11 +16,11 @@ import {
   OpenOptions,
   PatchOptions,
   Props,
+  ReadOptions,
   Stats,
   URLType,
   WriteOptions,
 } from "./core";
-import { createError, NotFoundError } from "./errors";
 import { normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -112,14 +111,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
     if (!stats) {
       stats = await this._head(path, options);
-    }
-    if (this.options.logicalDelete && stats.deleted != null) {
-      throw createError({
-        repository: this.repository,
-        path,
-        e: undefined,
-        name: NotFoundError.name,
-      });
     }
     if (!options.ignoreHook && this.afterHead) {
       await this.afterHead(path, stats);

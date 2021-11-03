@@ -11,7 +11,6 @@ type JsonObject = {
 export interface Times {
   accessed?: number;
   created?: number;
-  deleted?: number;
   modified?: number;
 }
 
@@ -23,9 +22,6 @@ export interface Stats extends Props {
 
 export interface FileSystemOptions {
   hook?: Hook;
-  createTime?: boolean;
-  accessTime?: boolean;
-  logicalDelete?: boolean;
 }
 
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
@@ -49,9 +45,7 @@ export interface DeleteOptions extends Options {
   recursive: boolean;
 }
 
-export interface HeadOptions extends Options {
-  getDeleted?: boolean;
-}
+export type HeadOptions = Options;
 
 export type PatchOptions = Options;
 
@@ -109,7 +103,7 @@ export interface Hook {
   afterPatch?: (path: string) => Promise<void>;
   afterPost?: (path: string, data: Data) => Promise<void>;
   afterPut?: (path: string, data: Data) => Promise<void>;
-  beforeDelete?: (path: string, options: DeleteOptions) => Promise<ErrorLike[]>;
+  beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
   beforeGet?: (path: string, options: OpenOptions) => Promise<Data | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
