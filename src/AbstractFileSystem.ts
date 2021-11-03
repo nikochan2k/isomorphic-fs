@@ -111,7 +111,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       stats = await this.beforeHead(path, options);
     }
     if (!stats) {
-      stats = await this._head(path);
+      stats = await this._head(path, options);
     }
     if (this.options.logicalDelete && stats.deleted != null) {
       throw createError({
@@ -184,7 +184,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     return file.write(data, options);
   }
 
-  public abstract _head(path: string): Promise<Stats>;
+  public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _patch(
     path: string,
     props: Props,
