@@ -94,6 +94,11 @@ export interface XmitOptions extends Options {
   recursive: boolean;
 }
 
+export interface URLOptions {
+  urlType?: URLType;
+  expires?: number;
+}
+
 export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
   afterGet?: (path: string, data: Data) => Promise<void>;
@@ -174,7 +179,7 @@ export interface FileSystem {
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
-  toURL(path: string, urlType?: URLType): Promise<string>;
+  toURL(path: string, options?: URLOptions): Promise<string>;
   write(path: string, data: Data, options?: WriteOptions): Promise<void>;
 }
 
@@ -193,7 +198,7 @@ export interface Entry {
   patch(props: Props, options?: PatchOptions): Promise<void>;
   rm(options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(options?: HeadOptions): Promise<Stats>;
-  toURL(urlType?: URLType): Promise<string>;
+  toURL(options?: URLOptions): Promise<string>;
 }
 
 export interface Directory extends Entry {
