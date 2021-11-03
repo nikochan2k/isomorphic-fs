@@ -49,7 +49,9 @@ export interface DeleteOptions extends Options {
   recursive: boolean;
 }
 
-export type HeadOptions = Options;
+export interface HeadOptions extends Options {
+  getDeleted?: boolean;
+}
 
 export type PatchOptions = Options;
 
