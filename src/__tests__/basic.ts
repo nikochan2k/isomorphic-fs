@@ -96,11 +96,11 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-    const before = Date.now();
+    const before = Math.floor(Date.now() / 1000);
     await file.write("Sample");
-    const after = Date.now() + 1;
+    const after = before + 1;
     const stats = await file.stat();
-    const modified = stats.modified ?? 0;
+    const modified = Math.floor((stats.modified ?? 0) / 1000);
     expect(before <= modified && modified <= after).toBe(true);
     const text = await file.read({ type: "UTF8" });
     expect(text).toBe("Sample");
