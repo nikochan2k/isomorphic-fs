@@ -1,4 +1,5 @@
 import { Data, DataType, ReturnDataType } from "univ-conv";
+import { URLOptions } from ".";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -18,7 +19,6 @@ import {
   Props,
   ReadOptions,
   Stats,
-  URLType,
   WriteOptions,
 } from "./core";
 import { normalizePath } from "./util";
@@ -193,7 +193,7 @@ export abstract class AbstractFileSystem implements FileSystem {
    * @param options
    */
   public abstract getFile(path: string): Promise<File>;
-  public abstract toURL(path: string, urlType?: URLType): Promise<string>;
+  public abstract toURL(path: string, options?: URLOptions): Promise<string>;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
     const from = await this.getEntry(fromPath);

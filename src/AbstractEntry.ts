@@ -1,3 +1,5 @@
+import { URLOptions } from ".";
+import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   CopyOptions,
   DeleteOptions,
@@ -9,10 +11,8 @@ import {
   PatchOptions,
   Props,
   Stats,
-  URLType,
   XmitOptions,
 } from "./core";
-import { AbstractFileSystem } from "./AbstractFileSystem";
 import { getParentPath, normalizePath } from "./util";
 
 export abstract class AbstractEntry implements Entry {
@@ -97,7 +97,7 @@ export abstract class AbstractEntry implements Entry {
 
   public toString = () => `${this.fs.repository}:${this.path}`;
 
-  public toURL = (urlType?: URLType) => this.fs.toURL(this.path, urlType);
+  public toURL = (options?: URLOptions) => this.fs.toURL(this.path, options);
 
   public abstract _delete(
     option: DeleteOptions,
