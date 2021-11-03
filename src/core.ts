@@ -23,6 +23,8 @@ export interface Stats extends Props {
 
 export interface FileSystemOptions {
   hook?: Hook;
+  createTime?: boolean;
+  accessTime?: boolean;
   logicalDelete?: boolean;
 }
 
