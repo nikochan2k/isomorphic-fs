@@ -134,7 +134,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       ...options,
     };
     const converter = this._getConverter(options.bufferSize);
-    await this._checkFile(options);
     const data = await this.load(options);
     const streamData = await converter.toReadableStreamData(data);
 
@@ -156,7 +155,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       ...options,
     };
     options.type = (options.type ?? (isBrowser ? "Blob" : "Uint8Array")) as T;
-    await this._checkFile(options);
     const data = await this.load(options);
     const converter = this._getConverter(options?.bufferSize);
     return converter.convert(data, options.type);
