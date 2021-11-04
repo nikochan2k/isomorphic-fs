@@ -128,11 +128,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async hash(options?: OpenOptions): Promise<string> {
-    options = {
-      ignoreHook: false,
-      bufferSize: DEFAULT_BUFFER_SIZE,
-      ...options,
-    };
+    options = { ...options };
     const converter = this._getConverter(options.bufferSize);
     const data = await this.load(options);
     const streamData = await converter.toReadableStreamData(data);
@@ -149,11 +145,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public async read<T extends DataType>(
     options?: ReadOptions<T>
   ): Promise<ReturnDataType<T>> {
-    options = {
-      ignoreHook: false,
-      bufferSize: DEFAULT_BUFFER_SIZE,
-      ...options,
-    };
+    options = { ...options };
     options.type = (options.type ?? (isBrowser ? "Blob" : "Uint8Array")) as T;
     const data = await this.load(options);
     const converter = this._getConverter(options?.bufferSize);
@@ -161,13 +153,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async write(data: Data, options?: WriteOptions): Promise<void> {
-    options = {
-      create: false,
-      append: false,
-      ignoreHook: false,
-      bufferSize: DEFAULT_BUFFER_SIZE,
-      ...options,
-    };
+    options = { ...options };
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;

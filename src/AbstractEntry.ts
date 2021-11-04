@@ -33,12 +33,7 @@ export abstract class AbstractEntry implements Entry {
   }
 
   public async copy(to: Entry, options?: CopyOptions): Promise<ErrorLike[]> {
-    options = {
-      force: false,
-      recursive: false,
-      bufferSize: DEFAULT_BUFFER_SIZE,
-      ...options,
-    };
+    options = { force: false, recursive: false, ...options };
     await this.head(); // check existance
     const copyErrors: ErrorLike[] = [];
     await this._xmit(to, copyErrors, options);
@@ -51,7 +46,7 @@ export abstract class AbstractEntry implements Entry {
   public del = (options?: DeleteOptions | undefined) => this.delete(options);
 
   public async delete(options?: DeleteOptions): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ignoreHook: false, ...options };
+    options = { force: false, recursive: false, ...options };
     if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(this.path, options)) {
         return [];
@@ -75,12 +70,7 @@ export abstract class AbstractEntry implements Entry {
   }
 
   public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
-    options = {
-      force: false,
-      ignoreHook: false,
-      bufferSize: DEFAULT_BUFFER_SIZE,
-      ...options,
-    };
+    options = { force: false, ...options };
     await this.head(options); // check existance
     const errors: ErrorLike[] = [];
     await this._xmit(to, errors, {

@@ -8,8 +8,8 @@ import {
   ErrorLike,
   ListOptions,
   MkcolOptions,
-  XmitOptions,
   Options,
+  XmitOptions,
 } from "./core";
 import {
   createError,
@@ -133,13 +133,13 @@ export abstract class AbstractDirectory
   }
 
   public async list(options?: ListOptions): Promise<string[]> {
-    options = { ignoreHook: false, ...options };
+    options = { ...options };
     let list: string[] | null | undefined;
     if (!options.ignoreHook && this.beforeList) {
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
-      // await this._checkDirectory(options);
+      await this._checkDirectory(options);
       list = await this._list();
     }
     if (!options.ignoreHook && this.afterList) {
@@ -151,7 +151,7 @@ export abstract class AbstractDirectory
   public ls = (options?: ListOptions | undefined) => this.list(options);
 
   public async mkcol(options?: MkcolOptions): Promise<void> {
-    options = { force: false, recursive: false, ignoreHook: false, ...options };
+    options = { force: false, recursive: false, ...options };
     try {
       await this._checkDirectory(options);
       if (!options.force) {

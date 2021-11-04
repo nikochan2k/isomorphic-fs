@@ -1,4 +1,4 @@
-import { Data, DataType, DEFAULT_BUFFER_SIZE, ReturnDataType } from "univ-conv";
+import { Data, DataType, ReturnDataType } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -52,13 +52,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<ErrorLike[]> {
-    options = {
-      force: false,
-      recursive: false,
-      ignoreHook: false,
-      bufferSize: DEFAULT_BUFFER_SIZE,
-      ...options,
-    };
+    options = { force: false, recursive: false, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
   }
@@ -76,13 +70,13 @@ export abstract class AbstractFileSystem implements FileSystem {
     path: string,
     options?: DeleteOptions
   ): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ignoreHook: false, ...options };
+    options = { force: false, recursive: false, ...options };
     const entry = await this.getEntry(path, options);
     return entry.delete(options);
   }
 
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
-    options = { ignoreHook: false, ...options };
+    options = { ...options };
     const stats = await this.head(path, options);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
@@ -93,7 +87,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async head(path: string, options?: HeadOptions): Promise<Stats> {
-    options = { ignoreHook: false, ...options };
+    options = { ...options };
     path = normalizePath(path);
     let stats: Stats | null | undefined;
     if (!options.ignoreHook && this.beforeHead) {
@@ -129,7 +123,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: MoveOptions
   ): Promise<ErrorLike[]> {
-    options = { force: false, bufferSize: DEFAULT_BUFFER_SIZE, ...options };
+    options = { force: false, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.move(to, options);
   }
@@ -145,7 +139,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     props: Props,
     options?: PatchOptions
   ): Promise<void> {
-    options = { ignoreHook: false, ...options };
+    options = { ...options };
     path = normalizePath(path);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
