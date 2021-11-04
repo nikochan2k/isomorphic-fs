@@ -1,4 +1,4 @@
-import { URLOptions } from ".";
+import { DEFAULT_BUFFER_SIZE } from "univ-conv";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   CopyOptions,
@@ -12,6 +12,7 @@ import {
   Props,
   Stats,
   XmitOptions,
+  URLOptions,
 } from "./core";
 import { getParentPath, normalizePath } from "./util";
 
@@ -21,14 +22,6 @@ export abstract class AbstractEntry implements Entry {
     path: string,
     options: DeleteOptions
   ) => Promise<boolean>;
-
-  public cp = (to: Entry, options?: CopyOptions | undefined) =>
-    this.copy(to, options);
-  public del = (options?: DeleteOptions | undefined) => this.delete(options);
-  public mv = (to: Entry, options?: MoveOptions | undefined) =>
-    this.move(to, options);
-  public rm = (options?: DeleteOptions | undefined) => this.delete(options);
-  public stat = (options?: HeadOptions | undefined) => this.head(options);
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
     this.path = normalizePath(path);
@@ -40,15 +33,25 @@ export abstract class AbstractEntry implements Entry {
   }
 
   public async copy(to: Entry, options?: CopyOptions): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ...options };
+    options = {
+      force: false,
+      recursive: false,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ...options,
+    };
     await this.head(); // check existance
     const copyErrors: ErrorLike[] = [];
     await this._xmit(to, copyErrors, options);
     return copyErrors;
   }
 
+  public cp = (to: Entry, options?: CopyOptions | undefined) =>
+    this.copy(to, options);
+
+  public del = (options?: DeleteOptions | undefined) => this.delete(options);
+
   public async delete(options?: DeleteOptions): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ...options };
+    options = { force: false, recursive: false, ignoreHook: false, ...options };
     if (!options.ignoreHook && this.beforeDelete) {
       if (await this.beforeDelete(this.path, options)) {
         return [];
@@ -72,7 +75,12 @@ export abstract class AbstractEntry implements Entry {
   }
 
   public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
-    options = { force: false, ...options };
+    options = {
+      force: false,
+      ignoreHook: false,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ...options,
+    };
     await this.head(options); // check existance
     const errors: ErrorLike[] = [];
     await this._xmit(to, errors, {
@@ -92,8 +100,15 @@ export abstract class AbstractEntry implements Entry {
     return errors;
   }
 
+  public mv = (to: Entry, options?: MoveOptions | undefined) =>
+    this.move(to, options);
+
   public patch = (props: Props, options?: PatchOptions) =>
     this.fs.patch(this.path, props, options);
+
+  public rm = (options?: DeleteOptions | undefined) => this.delete(options);
+
+  public stat = (options?: HeadOptions | undefined) => this.head(options);
 
   public toString = () => `${this.fs.repository}:${this.path}`;
 
@@ -103,7 +118,6 @@ export abstract class AbstractEntry implements Entry {
     option: DeleteOptions,
     errors: (ErrorLike | string)[]
   ): Promise<void>;
-
   public abstract _xmit(
     entry: Entry,
     copyErrors: (ErrorLike | string)[],

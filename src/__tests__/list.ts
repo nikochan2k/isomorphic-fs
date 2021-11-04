@@ -14,7 +14,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
   it("nothing", async () => {
     try {
       await fs.list("/nothing");
-      fail("/nothing exists");
+      throw new Error("/nothing exists");
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
@@ -24,7 +24,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     await fs.write("/file_list", new ArrayBuffer(1));
     try {
       await fs.list("/file_list");
-      fail("/nothing exists");
+      throw new Error("/nothing exists");
     } catch (e) {
       expect(e.name === TypeMismatchError.name).toBe(true);
     }

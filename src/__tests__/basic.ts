@@ -19,7 +19,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     const file = await fs.getFile("/empty.txt");
     try {
       await file.stat();
-      fail("Found file: " + file.path);
+      throw new Error("Found file: " + file.path);
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
@@ -33,7 +33,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     const file = await fs.getFile("/test.txt");
     try {
       await file.stat();
-      fail("Found file: " + file.path);
+      throw new Error("Found file: " + file.path);
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
@@ -73,7 +73,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     const folder = await fs.getDirectory("/folder");
     try {
       await folder.stat();
-      fail("Found folder: " + folder.path);
+      throw new Error("Found folder: " + folder.path);
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
@@ -92,7 +92,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     const file = await fs.getFile("/folder/sample.txt");
     try {
       await file.stat();
-      fail("Found file: " + file.path);
+      throw new Error("Found file: " + file.path);
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }

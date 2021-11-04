@@ -14,7 +14,7 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
   it("nothing", async () => {
     try {
       await fs.stat("/nothing");
-      fail("/nothing exists");
+      throw new Error("/nothing exists");
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }

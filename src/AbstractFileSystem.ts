@@ -1,5 +1,4 @@
-import { Data, DataType, ReturnDataType } from "univ-conv";
-import { URLOptions } from ".";
+import { Data, DataType, DEFAULT_BUFFER_SIZE, ReturnDataType } from "univ-conv";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -19,6 +18,7 @@ import {
   Props,
   ReadOptions,
   Stats,
+  URLOptions,
   WriteOptions,
 } from "./core";
 import { normalizePath } from "./util";
@@ -36,31 +36,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: PatchOptions
   ) => Promise<boolean>;
 
-  public cp = (
-    fromPath: string,
-    toPath: string,
-    options?: CopyOptions | undefined
-  ) => this.copy(fromPath, toPath, options);
-  public del = (path: string, options?: DeleteOptions | undefined) =>
-    this.delete(path, options);
-  public ls = (path: string, options?: ListOptions | undefined) =>
-    this.list(path, options);
-  public mkdir = (path: string, options?: MkcolOptions | undefined) =>
-    this.mkcol(path, options);
-  public mv = (
-    fromPath: string,
-    toPath: string,
-    options?: MoveOptions | undefined
-  ) => this.move(fromPath, toPath, options);
-  public readdir = (path: string, options?: ListOptions | undefined) =>
-    this.list(path, options);
-  public rm = (path: string, options?: DeleteOptions | undefined) =>
-    this.delete(path, options);
-  public stat = (path: string, options?: HeadOptions | undefined) =>
-    this.head(path, options);
-  public unlink = (path: string, options?: DeleteOptions | undefined) =>
-    this.delete(path, options);
-
   constructor(
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
@@ -77,22 +52,37 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ...options };
+    options = {
+      force: false,
+      recursive: false,
+      ignoreHook: false,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ...options,
+    };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
   }
+
+  public cp = (
+    fromPath: string,
+    toPath: string,
+    options?: CopyOptions | undefined
+  ) => this.copy(fromPath, toPath, options);
+
+  public del = (path: string, options?: DeleteOptions | undefined) =>
+    this.delete(path, options);
 
   public async delete(
     path: string,
     options?: DeleteOptions
   ): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ...options };
+    options = { force: false, recursive: false, ignoreHook: false, ...options };
     const entry = await this.getEntry(path, options);
     return entry.delete(options);
   }
 
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
-    options = { ...options };
+    options = { ignoreHook: false, ...options };
     const stats = await this.head(path, options);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
@@ -103,7 +93,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async head(path: string, options?: HeadOptions): Promise<Stats> {
-    options = { ...options };
+    options = { ignoreHook: false, ...options };
     path = normalizePath(path);
     let stats: Stats | null | undefined;
     if (!options.ignoreHook && this.beforeHead) {
@@ -123,27 +113,39 @@ export abstract class AbstractFileSystem implements FileSystem {
     return dir.list(options);
   }
 
+  public ls = (path: string, options?: ListOptions | undefined) =>
+    this.list(path, options);
+
   public async mkcol(path: string, options?: MkcolOptions): Promise<void> {
     const dir = await this.getDirectory(path);
     return dir.mkcol(options);
   }
+
+  public mkdir = (path: string, options?: MkcolOptions | undefined) =>
+    this.mkcol(path, options);
 
   public async move(
     fromPath: string,
     toPath: string,
     options?: MoveOptions
   ): Promise<ErrorLike[]> {
-    options = { force: false, ...options };
+    options = { force: false, bufferSize: DEFAULT_BUFFER_SIZE, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.move(to, options);
   }
+
+  public mv = (
+    fromPath: string,
+    toPath: string,
+    options?: MoveOptions | undefined
+  ) => this.move(fromPath, toPath, options);
 
   public async patch(
     path: string,
     props: Props,
     options?: PatchOptions
   ): Promise<void> {
-    options = { ...options };
+    options = { ignoreHook: false, ...options };
     path = normalizePath(path);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
@@ -165,6 +167,18 @@ export abstract class AbstractFileSystem implements FileSystem {
     const file = await this.getFile(path);
     return file.read(options);
   }
+
+  public readdir = (path: string, options?: ListOptions | undefined) =>
+    this.list(path, options);
+
+  public rm = (path: string, options?: DeleteOptions | undefined) =>
+    this.delete(path, options);
+
+  public stat = (path: string, options?: HeadOptions | undefined) =>
+    this.head(path, options);
+
+  public unlink = (path: string, options?: DeleteOptions | undefined) =>
+    this.delete(path, options);
 
   public async write(
     path: string,

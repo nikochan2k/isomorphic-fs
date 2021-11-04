@@ -9,6 +9,7 @@ import {
   ListOptions,
   MkcolOptions,
   XmitOptions,
+  Options,
 } from "./core";
 import {
   createError,
@@ -34,10 +35,6 @@ export abstract class AbstractDirectory
     options: MkcolOptions
   ) => Promise<boolean>;
 
-  public ls = (options?: ListOptions | undefined) => this.list(options);
-  public mkdir = (options?: MkcolOptions | undefined) => this.mkcol(options);
-  public readdir = (options?: ListOptions | undefined) => this.list(options);
-
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
     const hook = fs.options?.hook;
@@ -54,15 +51,7 @@ export abstract class AbstractDirectory
     errors: ErrorLike[]
   ): Promise<void> {
     try {
-      const stats = await this.head(options);
-      if (stats.size != null) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: { message: `"${this.path}" is not a directory` },
-        });
-      }
+      await this._checkDirectory(options);
     } catch (e: unknown) {
       if ((e as Error).name === NotFoundError.name) {
         if (!options.force) {
@@ -144,12 +133,13 @@ export abstract class AbstractDirectory
   }
 
   public async list(options?: ListOptions): Promise<string[]> {
-    options = { ...options };
+    options = { ignoreHook: false, ...options };
     let list: string[] | null | undefined;
     if (!options.ignoreHook && this.beforeList) {
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
+      await this._checkDirectory(options);
       list = await this._list();
     }
     if (!options.ignoreHook && this.afterList) {
@@ -158,18 +148,12 @@ export abstract class AbstractDirectory
     return list;
   }
 
+  public ls = (options?: ListOptions | undefined) => this.list(options);
+
   public async mkcol(options?: MkcolOptions): Promise<void> {
-    options = { force: false, recursive: false, ...options };
+    options = { force: false, recursive: false, ignoreHook: false, ...options };
     try {
-      const stats = await this.head(options);
-      if (stats.size != null) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: { message: `"${this.path}" is not a directory` },
-        });
-      }
+      await this._checkDirectory(options);
       if (!options.force) {
         throw createError({
           name: SecurityError.name,
@@ -209,7 +193,23 @@ export abstract class AbstractDirectory
     }
   }
 
+  public mkdir = (options?: MkcolOptions | undefined) => this.mkcol(options);
+
+  public readdir = (options?: ListOptions | undefined) => this.list(options);
+
   public abstract _list(): Promise<string[]>;
   public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
+
+  private async _checkDirectory(options: Options) {
+    const stats = await this.head(options);
+    if (stats.size != null) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.fs.repository,
+        path: this.path,
+        e: { message: `"${this.path}" is not a directory` },
+      });
+    }
+  }
 }

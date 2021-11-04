@@ -4,6 +4,7 @@ import {
   converter as defaultConverter,
   Data,
   DataType,
+  DEFAULT_BUFFER_SIZE,
   handleReadableStreamData,
   isBrowser,
   ReturnDataType,
@@ -16,6 +17,7 @@ import {
   ErrorLike,
   File,
   OpenOptions,
+  Options,
   ReadOptions,
   WriteOptions,
   XmitOptions,
@@ -67,15 +69,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     _errors: ErrorLike[] // eslint-disable-line
   ): Promise<void> {
     try {
-      const stats = await this.head(options);
-      if (stats.size == null) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: { message: `"${this.path}" is not a file` },
-        });
-      }
+      await this._checkFile(options);
     } catch (e: unknown) {
       if ((e as ErrorLike).name === NotFoundError.name) {
         if (!options.force) {
@@ -134,8 +128,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async hash(options?: OpenOptions): Promise<string> {
-    options = options || {};
+    options = {
+      ignoreHook: false,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ...options,
+    };
     const converter = this._getConverter(options.bufferSize);
+    await this._checkFile(options);
     const data = await this.load(options);
     const streamData = await converter.toReadableStreamData(data);
 
@@ -151,20 +150,32 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public async read<T extends DataType>(
     options?: ReadOptions<T>
   ): Promise<ReturnDataType<T>> {
-    options = { ...options };
+    options = {
+      ignoreHook: false,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ...options,
+    };
     options.type = (options.type ?? (isBrowser ? "Blob" : "Uint8Array")) as T;
+    await this._checkFile(options);
     const data = await this.load(options);
     const converter = this._getConverter(options?.bufferSize);
     return converter.convert(data, options.type);
   }
 
   public async write(data: Data, options?: WriteOptions): Promise<void> {
+    options = {
+      create: false,
+      append: false,
+      ignoreHook: false,
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ...options,
+    };
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
     let create: boolean;
     try {
-      await this.head();
+      await this._checkFile(options);
       if (options?.create) {
         throw createError({
           name: PathExistError.name,
@@ -229,6 +240,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   protected abstract _load(options: OpenOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
   protected abstract _save(data: Data, options: WriteOptions): Promise<void>;
+
+  private async _checkFile(options: Options) {
+    const stats = await this.head(options);
+    if (stats.size == null) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.fs.repository,
+        path: this.path,
+        e: { message: `"${this.path}" is not a file` },
+      });
+    }
+    return stats;
+  }
 
   private async load(options: OpenOptions): Promise<Data> {
     const ignoreHook = options.ignoreHook;
