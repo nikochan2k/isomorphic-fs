@@ -139,7 +139,7 @@ export abstract class AbstractDirectory
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
-      await this._checkDirectory(options);
+      // await this._checkDirectory(options);
       list = await this._list();
     }
     if (!options.ignoreHook && this.afterList) {
