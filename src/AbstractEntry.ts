@@ -1,4 +1,3 @@
-import { DEFAULT_BUFFER_SIZE } from "univ-conv";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   CopyOptions,
@@ -11,8 +10,8 @@ import {
   PatchOptions,
   Props,
   Stats,
-  XmitOptions,
   URLOptions,
+  XmitOptions,
 } from "./core";
 import { getParentPath, normalizePath } from "./util";
 

@@ -4,7 +4,6 @@ import {
   converter as defaultConverter,
   Data,
   DataType,
-  DEFAULT_BUFFER_SIZE,
   handleReadableStreamData,
   isBrowser,
   ReturnDataType,
