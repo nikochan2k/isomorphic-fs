@@ -1,22 +1,15 @@
 import { Data, DataType, ReturnDataType } from "univ-conv";
 
-type JsonPrimitive = boolean | number | string | null | undefined;
+type Primitive = boolean | number | string | null | undefined;
 
-type JsonArray = JsonPrimitive[] | JsonObject[];
+export interface Props {
+  [key: string]: Primitive;
+}
 
-type JsonObject = {
-  [key: string]: JsonPrimitive | JsonObject | JsonArray;
-};
-
-export interface Times {
+export interface Stats extends Props {
   accessed?: number;
   created?: number;
   modified?: number;
-}
-
-export interface Props extends Times, JsonObject {}
-
-export interface Stats extends Props {
   size?: number;
 }
 
@@ -130,11 +123,12 @@ export interface Hook {
   ) => Promise<boolean>;
 }
 
-export interface ErrorLike extends JsonObject {
+export interface ErrorLike {
   code?: number;
   message?: string;
   name?: string;
   stack?: string;
+  [key: string]: any; // eslint-disable-line
 }
 
 export interface FileSystem {
