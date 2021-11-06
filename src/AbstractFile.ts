@@ -18,6 +18,7 @@ import {
   OpenOptions,
   Options,
   ReadOptions,
+  Stats,
   WriteOptions,
   XmitOptions,
 } from "./core";
@@ -33,8 +34,8 @@ import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {
   private afterGet?: (path: string, data: Data) => Promise<void>;
-  private afterPost?: (path: string, data: Data) => Promise<void>;
-  private afterPut?: (path: string, data: Data) => Promise<void>;
+  private afterPost?: (path: string) => Promise<void>;
+  private afterPut?: (path: string) => Promise<void>;
   private beforeGet?: (
     path: string,
     options: OpenOptions
@@ -42,11 +43,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   private beforePost?: (
     path: string,
     data: Data,
+    stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean>;
   private beforePut?: (
     path: string,
     data: Data,
+    stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean>;
 
@@ -156,9 +159,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
+    let stats: Stats | undefined;
     let create: boolean;
     try {
-      await this._checkFile(options);
+      stats = await this._checkFile(options);
       if (options?.create) {
         throw createError({
           name: PathExistError.name,
@@ -191,27 +195,27 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options = { append: !!options?.append, create };
     if (create) {
       if (this.beforePost) {
-        if (await this.beforePost(path, data, options)) {
+        if (await this.beforePost(path, data, stats, options)) {
           return;
         }
       }
     } else {
       if (this.beforePut) {
-        if (await this.beforePut(path, data, options)) {
+        if (await this.beforePut(path, data, stats, options)) {
           return;
         }
       }
     }
 
-    await this._save(data, options);
+    await this._save(data, stats, options);
 
     if (create) {
       if (this.afterPost) {
-        this.afterPost(path, data).catch((e) => console.warn(e));
+        this.afterPost(path).catch((e) => console.warn(e));
       }
     } else {
       if (this.afterPut) {
-        this.afterPut(path, data).catch((e) => console.warn(e));
+        this.afterPut(path).catch((e) => console.warn(e));
       }
     }
   }
@@ -222,7 +226,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   protected abstract _load(options: OpenOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
-  protected abstract _save(data: Data, options: WriteOptions): Promise<void>;
+  protected abstract _save(
+    data: Data,
+    stats: Stats | undefined,
+    options: WriteOptions
+  ): Promise<void>;
 
   private async _checkFile(options: Options) {
     const stats = await this.head(options);

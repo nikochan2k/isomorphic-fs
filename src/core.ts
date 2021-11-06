@@ -111,8 +111,8 @@ export interface Hook {
   afterList?: (path: string, list: string[]) => Promise<void>;
   afterMkcol?: (path: string) => Promise<void>;
   afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (path: string, data: Data) => Promise<void>;
-  afterPut?: (path: string, data: Data) => Promise<void>;
+  afterPost?: (path: string) => Promise<void>;
+  afterPut?: (path: string) => Promise<void>;
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
   beforeGet?: (path: string, options: OpenOptions) => Promise<Data | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
@@ -126,11 +126,13 @@ export interface Hook {
   beforePost?: (
     path: string,
     data: Data,
+    stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean>;
   beforePut?: (
     path: string,
     data: Data,
+    stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean>;
 }
