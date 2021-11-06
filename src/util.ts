@@ -27,13 +27,13 @@ export function getPathParts(path: string) {
   return pathParts;
 }
 
-export function getParentPath(path: string) {
+export function getParentPath(path: string, leadingSlash = true) {
   let parts = getPathParts(path);
   if (parts.length <= 1) {
-    return "/";
+    return leadingSlash ? "/" : "";
   }
   parts = parts.slice(0, -1);
-  return "/" + parts.join("/");
+  return (leadingSlash ? "/" : "") + parts.join("/");
 }
 
 export function getName(path: string): string {
@@ -44,16 +44,16 @@ export function getName(path: string): string {
   return parts[parts.length - 1] as string;
 }
 
-export function joinPaths(path1: string, path2: string) {
+export function joinPaths(path1: string, path2: string, leadingSlash = true) {
   const parts1 = getPathParts(path1);
   const parts2 = getPathParts(path2);
   const parts = [...parts1, ...parts2];
-  return "/" + parts.join("/");
+  return (leadingSlash ? "/" : "") + parts.join("/");
 }
 
-export function normalizePath(path: string) {
+export function normalizePath(path: string, leadingSlash = true) {
   const parts = getPathParts(path);
-  return "/" + parts.join("/");
+  return (leadingSlash ? "/" : "") + parts.join("/");
 }
 
 export function isIllegalFileName(name: string) {
