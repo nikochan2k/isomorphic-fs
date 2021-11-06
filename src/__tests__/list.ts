@@ -26,7 +26,9 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
       await fs.list("/file_list");
       throw new Error("/nothing exists");
     } catch (e) {
-      expect(e.name === TypeMismatchError.name).toBe(true);
+      expect(
+        e.name === TypeMismatchError.name || e.name === NotFoundError.name
+      ).toBe(true);
     }
   });
 };
