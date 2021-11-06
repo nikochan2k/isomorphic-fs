@@ -1,5 +1,8 @@
 import { createError, SyntaxError } from "./errors";
 
+// eslint-disable-next-line no-control-regex
+export const INVALID_CHARS = /[\x00-\x1F\x7F-\x9F\\:*"<>|]/;
+
 export function getPathParts(path: string) {
   const parts = path.split("/");
   const pathParts = [];
