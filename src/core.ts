@@ -14,9 +14,16 @@ export interface Times {
 
 export interface Stats extends Times, Props {
   size?: number;
+  hash?: string;
 }
 
-export const EXCLUDE_PROP_NAMES = ["accessed", "created", "modified", "size"];
+export const EXCLUDE_PROP_NAMES = [
+  "accessed",
+  "created",
+  "modified",
+  "size",
+  "hash",
+];
 
 export interface FileSystemOptions {
   hook?: Hook;
