@@ -22,7 +22,7 @@ export const EXCLUDE_PROP_NAMES = [
   "created",
   "modified",
   "size",
-  "hash",
+  "etag",
 ];
 
 export interface FileSystemOptions {
