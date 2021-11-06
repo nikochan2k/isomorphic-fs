@@ -1,4 +1,5 @@
 import { Data, DataType, ReturnDataType } from "univ-conv";
+import { createError, TypeMismatchError } from ".";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -189,6 +190,19 @@ export abstract class AbstractFileSystem implements FileSystem {
   public stat = (path: string, options?: HeadOptions | undefined) =>
     this.head(path, options);
 
+  public async toURL(path: string, options?: URLOptions): Promise<string> {
+    const stats = await this.stat(path);
+    if (stats.size == null) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.repository,
+        path,
+        e: { message: `"${path}" is not a file` },
+      });
+    }
+    return this._toURL(path, options);
+  }
+
   public unlink = (path: string, options?: DeleteOptions | undefined) =>
     this.delete(path, options);
 
@@ -207,6 +221,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     props: Props,
     options: PatchOptions
   ): Promise<void>;
+  public abstract _toURL(path: string, options?: URLOptions): Promise<string>;
   /**
    * Get a directory.
    * @param path A path to a directory.
@@ -219,7 +234,6 @@ export abstract class AbstractFileSystem implements FileSystem {
    * @param options
    */
   public abstract getFile(path: string): Promise<File>;
-  public abstract toURL(path: string, options?: URLOptions): Promise<string>;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
     const from = await this.getEntry(fromPath);
