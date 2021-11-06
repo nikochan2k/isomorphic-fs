@@ -6,12 +6,17 @@ export interface Props {
   [key: string]: Primitive;
 }
 
-export interface Stats extends Props {
+export interface Times {
   accessed?: number;
   created?: number;
   modified?: number;
+}
+
+export interface Stats extends Times, Props {
   size?: number;
 }
+
+export const EXCLUDE_PROP_NAMES = ["accessed", "created", "modified", "size"];
 
 export interface FileSystemOptions {
   hook?: Hook;

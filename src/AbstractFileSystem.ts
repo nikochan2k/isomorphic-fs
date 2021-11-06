@@ -147,7 +147,18 @@ export abstract class AbstractFileSystem implements FileSystem {
       }
     }
     const stats = await this.head(path, options);
-    props = { ...stats, ...props };
+    if (props["size"]) {
+      delete props["size"];
+    }
+    if (!props["accessed"] && stats.accessed) {
+      props["accessed"] = stats.accessed;
+    }
+    if (!props["created"] && stats.created) {
+      props["created"] = stats.created;
+    }
+    if (!props["modified"] && stats.modified) {
+      props["modified"] = stats.modified;
+    }
     await this._patch(path, props, options);
     if (this.afterPatch) {
       await this.afterPatch(path);
