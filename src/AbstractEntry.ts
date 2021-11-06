@@ -64,9 +64,7 @@ export abstract class AbstractEntry implements Entry {
     return this.fs.getDirectory(parentPath);
   }
 
-  public head(options?: HeadOptions): Promise<Stats> {
-    return this.fs.head(this.path, options);
-  }
+  public abstract head(options?: HeadOptions): Promise<Stats>;
 
   public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
     options = { force: false, ...options };

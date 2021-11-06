@@ -8,6 +8,7 @@ import {
   isBrowser,
   ReturnDataType,
 } from "univ-conv";
+import { HeadOptions } from ".";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -144,6 +145,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return toHex(hash.digest());
   }
 
+  public head(options?: HeadOptions): Promise<Stats> {
+    options = { ...options, type: "file" };
+    return this.fs.head(this.path, options);
+  }
+
   public async read<T extends DataType>(
     options?: ReadOptions<T>
   ): Promise<ReturnDataType<T>> {
@@ -233,13 +239,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ): Promise<void>;
 
   private async _checkFile(options: Options) {
+    const path = this.path;
     const stats = await this.head(options);
     if (stats.size == null) {
       throw createError({
         name: TypeMismatchError.name,
         repository: this.fs.repository,
-        path: this.path,
-        e: { message: `"${this.path}" is not a file` },
+        path,
+        e: { message: `"${path}" is not a file` },
       });
     }
     return stats;

@@ -50,7 +50,9 @@ export interface DeleteOptions extends Options {
   recursive: boolean;
 }
 
-export type HeadOptions = Options;
+export interface HeadOptions extends Options {
+  type?: "file" | "directory";
+}
 
 export type PatchOptions = Options;
 

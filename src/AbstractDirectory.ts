@@ -6,9 +6,11 @@ import {
   Directory,
   Entry,
   ErrorLike,
+  HeadOptions,
   ListOptions,
   MkcolOptions,
   Options,
+  Stats,
   XmitOptions,
 } from "./core";
 import {
@@ -130,6 +132,11 @@ export abstract class AbstractDirectory
         copyErrors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
       }
     }
+  }
+
+  public head(options?: HeadOptions): Promise<Stats> {
+    options = { ...options, type: "directory" };
+    return this.fs.head(this.path, options);
   }
 
   public async list(options?: ListOptions): Promise<string[]> {

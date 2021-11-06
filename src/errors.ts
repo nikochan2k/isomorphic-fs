@@ -1,4 +1,4 @@
-import { ErrorLike } from ".";
+import { ErrorLike } from "./core";
 
 interface DOMExceptionType {
   code?: number;

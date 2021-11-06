@@ -96,8 +96,32 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
     options = { ...options };
+    if (!options.type && path.endsWith("/")) {
+      options.type = "directory";
+    }
+
+    if (options.type === "file") {
+      return this.getFile(path);
+    }
+    if (options.type === "directory") {
+      return this.getDirectory(path);
+    }
+
     const stats = await this.head(path, options);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
+  }
+
+  public getFile(path: string): Promise<File> {
+    if (path.endsWith("/")) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.repository,
+        path,
+        e: { message: `"${path}" must not end with slash` },
+      });
+    }
+
+    return this._getFile(path);
   }
 
   public async hash(path: string, options?: OpenOptions): Promise<string> {
@@ -107,6 +131,19 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async head(path: string, options?: HeadOptions): Promise<Stats> {
     options = { ...options };
+    if (path.endsWith("/")) {
+      if (options.type === "file") {
+        throw createError({
+          name: TypeMismatchError.name,
+          repository: this.repository,
+          path,
+          e: {
+            message: `"options.type" is file, but "${path}" ends with slash`,
+          },
+        });
+      }
+      options.type = "directory";
+    }
     path = normalizePath(path);
     let stats: Stats | null | undefined;
     if (!options.ignoreHook && this.beforeHead) {
@@ -215,6 +252,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     return file.write(data, options);
   }
 
+  public abstract _getFile(path: string): Promise<File>;
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _patch(
     path: string,
@@ -222,18 +260,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: PatchOptions
   ): Promise<void>;
   public abstract _toURL(path: string, options?: URLOptions): Promise<string>;
-  /**
-   * Get a directory.
-   * @param path A path to a directory.
-   * @param options
-   */
   public abstract getDirectory(path: string): Promise<Directory>;
-  /**
-   * Get a file.
-   * @param path A path to a file.
-   * @param options
-   */
-  public abstract getFile(path: string): Promise<File>;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
     const from = await this.getEntry(fromPath);
