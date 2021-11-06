@@ -147,21 +147,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       }
     }
     const stats = await this.head(path, options);
-    if (props["size"]) {
-      delete props["size"];
-    }
-    if (props["etag"]) {
-      delete props["etag"];
-    }
-    if (!props["accessed"] && stats.accessed) {
-      props["accessed"] = stats.accessed;
-    }
-    if (!props["created"] && stats.created) {
-      props["created"] = stats.created;
-    }
-    if (!props["modified"] && stats.modified) {
-      props["modified"] = stats.modified;
-    }
+    this._fixProps(props, stats);
     await this._patch(path, props, options);
     if (this.afterPatch) {
       await this.afterPatch(path);
@@ -216,6 +202,24 @@ export abstract class AbstractFileSystem implements FileSystem {
    */
   public abstract getFile(path: string): Promise<File>;
   public abstract toURL(path: string, options?: URLOptions): Promise<string>;
+
+  protected _fixProps(props: Props, stats: Stats) {
+    if (props["size"]) {
+      delete props["size"];
+    }
+    if (props["etag"]) {
+      delete props["etag"];
+    }
+    if (!props["accessed"] && stats.accessed) {
+      props["accessed"] = stats.accessed;
+    }
+    if (!props["created"] && stats.created) {
+      props["created"] = stats.created;
+    }
+    if (!props["modified"] && stats.modified) {
+      props["modified"] = stats.modified;
+    }
+  }
 
   private async _prepareXmit(fromPath: string, toPath: string) {
     const from = await this.getEntry(fromPath);
