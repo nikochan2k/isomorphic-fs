@@ -140,14 +140,14 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: PatchOptions
   ): Promise<void> {
     options = { ...options };
+    const stats = await this.head(path, options);
+    this._fixProps(props, stats);
     path = normalizePath(path);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
         return;
       }
     }
-    const stats = await this.head(path, options);
-    this._fixProps(props, stats);
     await this._patch(path, props, options);
     if (this.afterPatch) {
       await this.afterPatch(path);
