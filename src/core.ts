@@ -14,7 +14,7 @@ export interface Times {
 
 export interface Stats extends Times, Props {
   size?: number;
-  hash?: string;
+  etag?: string;
 }
 
 export const EXCLUDE_PROP_NAMES = [

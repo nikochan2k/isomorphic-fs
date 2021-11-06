@@ -150,8 +150,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (props["size"]) {
       delete props["size"];
     }
-    if (props["hash"]) {
-      delete props["hash"];
+    if (props["etag"]) {
+      delete props["etag"];
     }
     if (!props["accessed"] && stats.accessed) {
       props["accessed"] = stats.accessed;
