@@ -4,9 +4,17 @@ import { NotFoundError } from "../errors";
 
 const c = new Converter();
 
-export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
-  it("init", async () => {
-    if (init) await init();
+export const testAll = (
+  fs: FileSystem,
+  options?: {
+    setup: () => Promise<void>;
+    teardown: () => Promise<void>;
+  }
+) => {
+  it("setup", async () => {
+    if (options?.setup) {
+      await options.setup();
+    }
   });
 
   it("rootdir", async () => {
@@ -141,5 +149,11 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
     const folder3 = await fs.getDirectory("/folder3");
     const folder3List = await folder3.ls();
     expect(0 <= folder3List.indexOf("/folder3/sample2.txt")).toBe(true);
+  });
+
+  it("teardown", async () => {
+    if (options?.teardown) {
+      await options.teardown();
+    }
   });
 };

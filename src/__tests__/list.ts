@@ -1,9 +1,17 @@
 import { FileSystem } from "../core";
 import { NotFoundError, TypeMismatchError } from "../errors";
 
-export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
-  it("init", async () => {
-    if (init) await init();
+export const testAll = (
+  fs: FileSystem,
+  options?: {
+    setup: () => Promise<void>;
+    teardown: () => Promise<void>;
+  }
+) => {
+  it("setup", async () => {
+    if (options?.setup) {
+      await options.setup();
+    }
   });
 
   it("rootdir", async () => {
@@ -29,6 +37,12 @@ export const testAll = (fs: FileSystem, init?: () => Promise<void>) => {
       expect(
         e.name === TypeMismatchError.name || e.name === NotFoundError.name
       ).toBe(true);
+    }
+  });
+
+  it("teardown", async () => {
+    if (options?.teardown) {
+      await options.teardown();
     }
   });
 };
