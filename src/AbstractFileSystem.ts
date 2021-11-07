@@ -66,13 +66,13 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (props["etag"]) {
       delete props["etag"];
     }
-    if (!props["accessed"] && stats.accessed) {
+    if (typeof props["accessed"] !== "number" && stats.accessed) {
       props["accessed"] = stats.accessed;
     }
-    if (!props["created"] && stats.created) {
+    if (typeof props["created"] !== "number" && stats.created) {
       props["created"] = stats.created;
     }
-    if (!props["modified"] && stats.modified) {
+    if (typeof props["modified"] !== "number" && stats.modified) {
       props["modified"] = stats.modified;
     }
   }
