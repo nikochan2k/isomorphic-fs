@@ -106,8 +106,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       });
     }
     const to = toEntry as AbstractFile;
+    let stats: Stats | undefined;
     try {
-      await to.head(options);
+      stats = await to.head(options);
       if (!options.force) {
         throw createError({
           name: SecurityError.name,
@@ -126,7 +127,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    const data = await this.load(options);
+    const data = await this.load(options, stats);
     await to.write(data, options);
   }
 
@@ -230,7 +231,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
   }
 
-  protected abstract _load(options: OpenOptions): Promise<Data>;
+  protected abstract _load(stats: Stats, options: OpenOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
   protected abstract _save(
     data: Data,
@@ -252,15 +253,18 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return stats;
   }
 
-  private async load(options: OpenOptions): Promise<Data> {
+  private async load(options: OpenOptions, stats?: Stats): Promise<Data> {
     const ignoreHook = options.ignoreHook;
     const path = this.path;
+    if (!stats) {
+      stats = await this.head(options);
+    }
     let data: Data | null = null;
     if (!ignoreHook && this.beforeGet) {
       data = await this.beforeGet(path, options);
     }
     if (!data) {
-      data = await this._load(options);
+      data = await this._load(stats, options);
     }
     if (!ignoreHook && this.afterGet) {
       this.afterGet(path, data).catch((e) => console.warn(e));
