@@ -60,10 +60,10 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public _fixProps(props: Props, stats: Stats) {
-    if (props["size"]) {
+    if (props["size"] != null) {
       delete props["size"];
     }
-    if (props["etag"]) {
+    if (props["etag"] != null) {
       delete props["etag"];
     }
     if (typeof props["accessed"] !== "number" && stats.accessed) {
