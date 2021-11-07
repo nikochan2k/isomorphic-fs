@@ -4,8 +4,8 @@ import { NotFoundError } from "../errors";
 export const testAll = (
   fs: FileSystem,
   options?: {
-    setup: () => Promise<void>;
-    teardown: () => Promise<void>;
+    setup?: () => Promise<void>;
+    teardown?: () => Promise<void>;
   }
 ) => {
   it("setup", async () => {
