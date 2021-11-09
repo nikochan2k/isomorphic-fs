@@ -259,15 +259,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async toURL(path: string, options?: URLOptions): Promise<string> {
     this._checkPath(path);
     const stats = await this.stat(path);
-    if (stats.size == null) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.repository,
-        path,
-        e: { message: `"${path}" is not a file` },
-      });
-    }
-    return this._toURL(path, options);
+    return this._toURL(path, stats.size == null, options);
   }
 
   public unlink = (path: string, options?: DeleteOptions | undefined) =>
@@ -291,7 +283,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     props: Props,
     options: PatchOptions
   ): Promise<void>;
-  public abstract _toURL(path: string, options?: URLOptions): Promise<string>;
+  public abstract _toURL(
+    path: string,
+    isDirectory: boolean,
+    options?: URLOptions
+  ): Promise<string>;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
     const from = await this.getEntry(fromPath);
