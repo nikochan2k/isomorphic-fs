@@ -86,10 +86,15 @@ export const testAll = (
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
+
     await folder.mkdir();
-    const stats = await folder.stat();
-    if (stats.size != null) {
-      throw new Error("Cannot mkdir: " + folder.path);
+    try {
+      const stats = await folder.stat();
+      if (stats.size != null) {
+        throw new Error("Cannot mkdir: " + folder.path);
+      }
+    } catch (e) {
+      expect(e.name).toBe(NotFoundError.name);
     }
 
     dirs = await dir.readdir();
