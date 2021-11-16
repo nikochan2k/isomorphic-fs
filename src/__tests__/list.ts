@@ -21,8 +21,10 @@ export const testAll = (
 
   it("nothing", async () => {
     try {
-      await fs.list("/nothing");
-      throw new Error("/nothing exists");
+      const list = await fs.list("/nothing");
+      if (0 < list.length) {
+        throw new Error("/nothing exists");
+      }
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }

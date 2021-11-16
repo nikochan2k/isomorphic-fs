@@ -73,27 +73,29 @@ export const testAll = (
   it("mkdir test", async () => {
     const dir = await fs.getDirectory("/");
     let dirs = await dir.readdir();
-    expect(dirs.length).toBe(3);
     expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
 
     const folder = await fs.getDirectory("/folder");
     try {
-      await folder.stat();
-      throw new Error("Found folder: " + folder.path);
+      const stats = await folder.stat();
+      if (stats.size != null) {
+        throw new Error("Found folder: " + folder.path);
+      }
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
     await folder.mkdir();
-    await folder.stat();
+    const stats = await folder.stat();
+    if (stats.size != null) {
+      throw new Error("Cannot mkdir: " + folder.path);
+    }
 
     dirs = await dir.readdir();
-    expect(dirs.length).toBe(4);
     expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
-    expect(0 <= dirs.indexOf("/folder")).toBe(true);
   });
 
   it("create file in dir", async () => {
