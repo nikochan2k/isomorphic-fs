@@ -33,8 +33,10 @@ export const testAll = (
   it("file_list", async () => {
     await fs.write("/file_list", new ArrayBuffer(1));
     try {
-      await fs.list("/file_list");
-      throw new Error("/nothing exists");
+      const list = await fs.list("/file_list");
+      if (0 < list.length) {
+        throw new Error("/nothing exists");
+      }
     } catch (e) {
       expect(
         e.name === TypeMismatchError.name || e.name === NotFoundError.name
