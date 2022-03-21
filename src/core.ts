@@ -1,4 +1,4 @@
-import { Data, DataType, ReturnDataType } from "univ-conv";
+import { ConvertOptions, Data, DataType, ReturnData } from "univ-conv";
 
 type Primitive = boolean | number | string | null | undefined;
 
@@ -71,16 +71,9 @@ export interface MkcolOptions extends Options {
    */
   recursive: boolean;
 }
+export interface ReadOptions extends Options, Partial<ConvertOptions> {}
 
-export interface OpenOptions extends Options {
-  bufferSize?: number;
-}
-
-export interface ReadOptions<T extends DataType> extends OpenOptions {
-  type?: T;
-}
-
-export interface WriteOptions extends OpenOptions {
+export interface WriteOptions extends Options, Partial<ConvertOptions> {
   append?: boolean;
   create?: boolean;
 }
@@ -116,7 +109,7 @@ export interface Hook {
   afterPost?: (path: string) => Promise<void>;
   afterPut?: (path: string) => Promise<void>;
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
-  beforeGet?: (path: string, options: OpenOptions) => Promise<Data | null>;
+  beforeGet?: (path: string, options: ReadOptions) => Promise<Data | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
   beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
@@ -165,7 +158,7 @@ export interface FileSystem {
   delete(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   getDirectory(path: string): Promise<Directory>;
   getFile(path: string): Promise<File>;
-  hash(path: string, options?: OpenOptions): Promise<string>;
+  hash(path: string, options?: ReadOptions): Promise<string>;
   head(path: string, options?: HeadOptions): Promise<Stats>;
   list(path: string, options?: ListOptions): Promise<string[]>;
   ls(path: string, options?: ListOptions): Promise<string[]>;
@@ -184,8 +177,9 @@ export interface FileSystem {
   patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
   read<T extends DataType>(
     path: string,
-    options?: ReadOptions<T>
-  ): Promise<ReturnDataType<T>>;
+    type: T,
+    options?: ReadOptions
+  ): Promise<ReturnData<T>>;
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
@@ -220,10 +214,11 @@ export interface Directory extends Entry {
 }
 
 export interface File extends Entry {
-  hash(options?: OpenOptions): Promise<string>;
+  hash(options?: ReadOptions): Promise<string>;
   read<T extends DataType>(
-    options?: ReadOptions<T>
-  ): Promise<ReturnDataType<T>>;
+    type: T,
+    options?: ReadOptions
+  ): Promise<ReturnData<T>>;
   write(data: Data, options?: WriteOptions): Promise<void>;
 }
 

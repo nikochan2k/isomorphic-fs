@@ -1,12 +1,14 @@
 import { createHash } from "sha256-uint8array";
 import {
-  Converter,
-  converter as defaultConverter,
   Data,
   DataType,
-  handleReadableStreamData,
-  isBrowser,
-  ReturnDataType,
+  DEFAULT_CONVERTER,
+  handleReadable,
+  handleReadableStream,
+  readableConverter,
+  readableStreamConverter,
+  ReturnData,
+  uint8ArrayConverter,
 } from "univ-conv";
 import { HeadOptions } from ".";
 import { AbstractDirectory } from "./AbstractDirectory";
@@ -16,7 +18,6 @@ import {
   DeleteOptions,
   ErrorLike,
   File,
-  OpenOptions,
   Options,
   ReadOptions,
   Stats,
@@ -39,7 +40,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   private afterPut?: (path: string) => Promise<void>;
   private beforeGet?: (
     path: string,
-    options: OpenOptions
+    options: ReadOptions
   ) => Promise<Data | null>;
   private beforePost?: (
     path: string,
@@ -131,17 +132,28 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     await to.write(data, options);
   }
 
-  public async hash(options?: OpenOptions): Promise<string> {
+  public async hash(options?: ReadOptions): Promise<string> {
     options = { ...options };
-    const converter = this._getConverter(options.bufferSize);
     const data = await this.load(options);
-    const streamData = await converter.toReadableStreamData(data);
-
     const hash = createHash();
-    await handleReadableStreamData(streamData, async (chunk) => {
-      const buffer = await converter.toUint8Array(chunk as Data);
-      hash.update(buffer);
-    });
+    if (readableConverter().typeEquals(data)) {
+      await handleReadable(data, async (chunk) => {
+        const u8 = await uint8ArrayConverter().convert(chunk, {
+          bufferSize: options?.bufferSize,
+        });
+        hash.update(u8);
+      });
+    } else if (readableStreamConverter().typeEquals(data)) {
+      await handleReadableStream(data, async (chunk) => {
+        const u8 = await uint8ArrayConverter().convert(chunk, {
+          bufferSize: options?.bufferSize,
+        });
+        hash.update(u8);
+      });
+    } else {
+      const u8 = await uint8ArrayConverter().convert(data);
+      hash.update(u8);
+    }
 
     return toHex(hash.digest());
   }
@@ -152,13 +164,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async read<T extends DataType>(
-    options?: ReadOptions<T>
-  ): Promise<ReturnDataType<T>> {
+    type: T,
+    options?: ReadOptions
+  ): Promise<ReturnData<T>> {
     options = { ...options };
-    options.type = (options.type ?? (isBrowser ? "Blob" : "Uint8Array")) as T;
     const data = await this.load(options);
-    const converter = this._getConverter(options?.bufferSize);
-    return converter.convert(data, options.type);
+    const converter = this._getConverter();
+    return converter.convert(data, type, options);
   }
 
   public async write(data: Data, options?: WriteOptions): Promise<void> {
@@ -227,11 +239,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  protected _getConverter(bufferSize?: number) {
-    return bufferSize ? new Converter({ bufferSize }) : defaultConverter;
+  protected _getConverter() {
+    return DEFAULT_CONVERTER;
   }
 
-  protected abstract _load(stats: Stats, options: OpenOptions): Promise<Data>;
+  protected abstract _load(stats: Stats, options: ReadOptions): Promise<Data>;
   protected abstract _rm(): Promise<void>;
   protected abstract _save(
     data: Data,
@@ -253,7 +265,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return stats;
   }
 
-  private async load(options: OpenOptions, stats?: Stats): Promise<Data> {
+  private async load(options: ReadOptions, stats?: Stats): Promise<Data> {
     const ignoreHook = options.ignoreHook;
     const path = this.path;
     if (!stats) {

@@ -1,4 +1,4 @@
-import { Data, DataType, ReturnDataType } from "univ-conv";
+import { Data, DataType, ReturnData } from "univ-conv";
 import { createError, INVALID_CHARS, TypeMismatchError } from ".";
 import { AbstractFile } from "./AbstractFile";
 import {
@@ -14,7 +14,6 @@ import {
   ListOptions,
   MkcolOptions,
   MoveOptions,
-  OpenOptions,
   PatchOptions,
   Props,
   ReadOptions,
@@ -145,7 +144,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     return this._getFile(path);
   }
 
-  public async hash(path: string, options?: OpenOptions): Promise<string> {
+  public async hash(path: string, options?: ReadOptions): Promise<string> {
     this._checkPath(path);
     const file = await this.getFile(path);
     return file.hash(options);
@@ -240,11 +239,12 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async read<T extends DataType>(
     path: string,
-    options?: ReadOptions<T>
-  ): Promise<ReturnDataType<T>> {
+    type: T,
+    options?: ReadOptions
+  ): Promise<ReturnData<T>> {
     this._checkPath(path);
     const file = await this.getFile(path);
-    return file.read(options);
+    return file.read(type, options);
   }
 
   public readdir = (path: string, options?: ListOptions | undefined) =>

@@ -1,8 +1,8 @@
-import { Converter } from "univ-conv";
+import { DEFAULT_CONVERTER } from "univ-conv";
 import { FileSystem } from "../core";
 import { NotFoundError } from "../errors";
 
-const c = new Converter();
+const c = DEFAULT_CONVERTER;
 
 export const testAll = (
   fs: FileSystem,
@@ -53,7 +53,7 @@ export const testAll = (
 
   it("read text file", async () => {
     const file = await fs.getFile("/test.txt");
-    const buffer = await file.read({ type: "Uint8Array" });
+    const buffer = await file.read("uint8array");
     expect(buffer.byteLength).toBe(4);
     const text = await c.toText(buffer);
     expect(text).toBe("test");
@@ -62,11 +62,11 @@ export const testAll = (
   it("continuous read and write", async () => {
     const file = await fs.getFile("/otani.txt");
     await file.write("大谷翔平");
-    let text = await file.read({ type: "UTF8" });
+    let text = await file.read("text");
     expect(text).toBe("大谷翔平");
 
     await file.write("ホームラン", { append: true, create: false });
-    text = await file.read({ type: "UTF8" });
+    text = await file.read("text");
     expect(text).toBe("大谷翔平ホームラン");
   });
 
@@ -117,7 +117,7 @@ export const testAll = (
     const stats = await file.stat();
     const modified = Math.floor((stats.modified ?? 0) / 1000);
     expect(before <= modified && modified <= after).toBe(true);
-    const text = await file.read({ type: "UTF8" });
+    const text = await file.read("text");
     expect(text).toBe("Sample");
 
     const dir = await fs.getDirectory("/folder/");
