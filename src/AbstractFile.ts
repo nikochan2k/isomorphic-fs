@@ -1,5 +1,6 @@
 import { createHash } from "sha256-uint8array";
 import {
+  bufferConverter,
   Data,
   DataType,
   DEFAULT_CONVERTER,
@@ -138,10 +139,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const hash = createHash();
     if (readableConverter().typeEquals(data)) {
       await handleReadable(data, async (chunk) => {
-        const u8 = await uint8ArrayConverter().convert(chunk, {
+        const buffer = await bufferConverter().convert(chunk, {
           bufferSize: options?.bufferSize,
         });
-        hash.update(u8);
+        hash.update(buffer);
       });
     } else if (readableStreamConverter().typeEquals(data)) {
       await handleReadableStream(data, async (chunk) => {
