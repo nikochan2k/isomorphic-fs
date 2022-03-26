@@ -154,6 +154,9 @@ export abstract class AbstractFileSystem implements FileSystem {
     this._checkPath(path);
     options = { ...options };
     if (path.endsWith("/")) {
+      if (!this.supportDirectory()) {
+        return {};
+      }
       if (options.type === "file") {
         throw createError({
           name: TypeMismatchError.name,
