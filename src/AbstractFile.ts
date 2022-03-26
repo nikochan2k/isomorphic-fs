@@ -240,6 +240,20 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
+  protected async _checkFile(options: Options) {
+    const path = this.path;
+    const stats = await this.fs.head(path, options);
+    if (stats.size == null) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.fs.repository,
+        path,
+        e: { message: `"${path}" is not a file` },
+      });
+    }
+    return stats;
+  }
+
   protected _getConverter() {
     return DEFAULT_CONVERTER;
   }
@@ -251,20 +265,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     stats: Stats | undefined,
     options: WriteOptions
   ): Promise<void>;
-
-  private async _checkFile(options: Options) {
-    const path = this.path;
-    const stats = await this.head(options);
-    if (stats.size == null) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.fs.repository,
-        path,
-        e: { message: `"${path}" is not a file` },
-      });
-    }
-    return stats;
-  }
 
   private async load(options: ReadOptions, stats?: Stats): Promise<Data> {
     const ignoreHook = options.ignoreHook;

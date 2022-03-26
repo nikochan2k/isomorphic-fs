@@ -56,7 +56,11 @@ export abstract class AbstractDirectory
     try {
       await this._checkDirectory(options);
     } catch (e: unknown) {
-      if ((e as Error).name === NotFoundError.name) {
+      const name = (e as Error).name;
+      if (name === TypeMismatchError.name) {
+        throw e;
+      }
+      if (name === NotFoundError.name) {
         if (!options.force) {
           throw e;
         }
@@ -232,14 +236,15 @@ export abstract class AbstractDirectory
   public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
-  private async _checkDirectory(options: Options) {
-    const stats = await this.head(options);
+  protected async _checkDirectory(options: Options) {
+    const path = this.path;
+    const stats = await this.fs.head(path, options);
     if (stats.size != null) {
       throw createError({
         name: TypeMismatchError.name,
         repository: this.fs.repository,
-        path: this.path,
-        e: { message: `"${this.path}" is not a directory` },
+        path,
+        e: { message: `"${path}" is not a directory` },
       });
     }
   }
