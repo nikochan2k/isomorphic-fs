@@ -14,7 +14,7 @@ export const testAll = (
     }
   });
 
-  if (fs.canCreateDirectory) {
+  if (fs.canCreateDirectory()) {
     it("rootdir", async () => {
       const stat = await fs.head("/");
       expect(stat.size).toBeUndefined();

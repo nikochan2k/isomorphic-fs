@@ -17,7 +17,7 @@ export const testAll = (
     }
   });
 
-  if (fs.canCreateDirectory) {
+  if (fs.canCreateDirectory()) {
     it("rootdir", async () => {
       const dir = await fs.getDirectory("/");
       const paths = await dir.readdir();
@@ -131,7 +131,7 @@ export const testAll = (
     expect(errors.length).toBe(0);
     const stats = await to.stat();
     expect(stats.size).toBeUndefined();
-    if (fs.canCreateDirectory) {
+    if (fs.canCreateDirectory()) {
       const root = await fs.getDirectory("/");
       const list = await root.ls();
       expect(0 <= list.indexOf("/folder2")).toBe(true);
@@ -150,7 +150,7 @@ export const testAll = (
   it("move directory", async () => {
     const errors = await fs.move("/folder2", "/folder3");
     expect(errors.length).toBe(0);
-    if (fs.canCreateDirectory) {
+    if (fs.canCreateDirectory()) {
       const root = await fs.getDirectory("/");
       const list = await root.ls();
       expect(list.indexOf("/folder2") < 0).toBe(true);

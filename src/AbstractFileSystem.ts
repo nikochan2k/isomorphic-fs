@@ -36,13 +36,10 @@ export abstract class AbstractFileSystem implements FileSystem {
     options: PatchOptions
   ) => Promise<boolean>;
 
-  public canCreateDirectory: boolean;
-
   constructor(
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
   ) {
-    this.canCreateDirectory = options.canCreateDirectory ?? true;
     const hook = options.hook;
     this.beforeHead = hook?.beforeHead;
     this.beforePatch = hook?.beforePatch;
@@ -77,6 +74,10 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (typeof props["modified"] !== "number" && stats.modified) {
       props["modified"] = stats.modified;
     }
+  }
+
+  public canCreateDirectory() {
+    return true;
   }
 
   public async copy(

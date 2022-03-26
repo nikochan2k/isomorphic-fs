@@ -26,7 +26,6 @@ export const EXCLUDE_PROP_NAMES = [
 ];
 
 export interface FileSystemOptions {
-  canCreateDirectory?: boolean;
   hook?: Hook;
 }
 
@@ -139,14 +138,15 @@ export interface ErrorLike {
   name?: string;
   stack?: string;
 
-  [key: string]: any; // eslint-disable-line
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 export interface FileSystem {
-  canCreateDirectory: boolean;
   options: FileSystemOptions;
   repository: string;
 
+  canCreateDirectory(): boolean;
   copy(
     fromPath: string,
     toPath: string,

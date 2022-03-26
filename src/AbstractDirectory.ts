@@ -141,7 +141,7 @@ export abstract class AbstractDirectory
 
   public head(options?: HeadOptions): Promise<Stats> {
     const path = this.path;
-    if (!this.fs.canCreateDirectory) {
+    if (!this.fs.canCreateDirectory()) {
       throw createError({
         name: NotSupportedError.name,
         repository: this.fs.repository,
@@ -163,7 +163,9 @@ export abstract class AbstractDirectory
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
-      await this._checkDirectory(options);
+      if (this.path !== "/") {
+        await this._checkDirectory(options);
+      }
       list = await this._list();
     }
     if (!options.ignoreHook && this.afterList) {
@@ -175,7 +177,7 @@ export abstract class AbstractDirectory
   public ls = (options?: ListOptions | undefined) => this.list(options);
 
   public async mkcol(options?: MkcolOptions): Promise<void> {
-    if (!this.fs.canCreateDirectory) {
+    if (!this.fs.canCreateDirectory()) {
       throw createError({
         name: NotSupportedError.name,
         repository: this.fs.repository,
