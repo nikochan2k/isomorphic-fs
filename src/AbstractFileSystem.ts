@@ -20,7 +20,7 @@ import {
   URLOptions,
   WriteOptions,
 } from "./core";
-import { createError, TypeMismatchError } from "./errors";
+import { createError, NotFoundError, TypeMismatchError } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -291,7 +291,19 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract supportDirectory(): boolean;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
-    const from = await this.getEntry(fromPath);
+    let from: Entry;
+    try {
+      from = await this.getEntry(fromPath);
+    } catch (e) {
+      if (
+        !this.supportDirectory() &&
+        (e as ErrorLike).name === NotFoundError.name
+      ) {
+        from = await this.getDirectory(fromPath);
+      } else {
+        throw e;
+      }
+    }
     const to = await (from instanceof AbstractFile
       ? this.getFile(toPath)
       : this.getDirectory(toPath));
