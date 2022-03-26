@@ -146,7 +146,6 @@ export interface FileSystem {
   options: FileSystemOptions;
   repository: string;
 
-  canCreateDirectory(): boolean;
   copy(
     fromPath: string,
     toPath: string,
@@ -186,6 +185,7 @@ export interface FileSystem {
   readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(path: string, options?: HeadOptions): Promise<Stats>;
+  supportDirectory(): boolean;
   toURL(path: string, options?: URLOptions): Promise<string>;
   write(path: string, data: Data, options?: WriteOptions): Promise<void>;
 }

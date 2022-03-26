@@ -53,6 +53,10 @@ export abstract class AbstractDirectory
     options: DeleteOptions,
     errors: ErrorLike[]
   ): Promise<void> {
+    if (!this.fs.supportDirectory()) {
+      return;
+    }
+
     try {
       await this._checkDirectory(options);
     } catch (e: unknown) {
@@ -109,11 +113,13 @@ export abstract class AbstractDirectory
     }
 
     const toDir = to as Directory;
-    await toDir.mkcol({
-      force: options.force,
-      recursive: false,
-      ignoreHook: options.ignoreHook,
-    });
+    if (this.fs.supportDirectory()) {
+      await toDir.mkcol({
+        force: options.force,
+        recursive: false,
+        ignoreHook: options.ignoreHook,
+      });
+    }
 
     if (!options.recursive) {
       return;
@@ -141,7 +147,7 @@ export abstract class AbstractDirectory
 
   public head(options?: HeadOptions): Promise<Stats> {
     const path = this.path;
-    if (!this.fs.canCreateDirectory()) {
+    if (!this.fs.supportDirectory()) {
       throw createError({
         name: NotSupportedError.name,
         repository: this.fs.repository,
@@ -163,7 +169,7 @@ export abstract class AbstractDirectory
       list = await this.beforeList(this.path, options);
     }
     if (!list) {
-      if (this.path !== "/") {
+      if (this.fs.supportDirectory()) {
         await this._checkDirectory(options);
       }
       list = await this._list();
@@ -177,7 +183,7 @@ export abstract class AbstractDirectory
   public ls = (options?: ListOptions | undefined) => this.list(options);
 
   public async mkcol(options?: MkcolOptions): Promise<void> {
-    if (!this.fs.canCreateDirectory()) {
+    if (!this.fs.supportDirectory()) {
       throw createError({
         name: NotSupportedError.name,
         repository: this.fs.repository,

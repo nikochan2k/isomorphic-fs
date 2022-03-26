@@ -33,7 +33,6 @@ export abstract class AbstractEntry implements Entry {
 
   public async copy(to: Entry, options?: CopyOptions): Promise<ErrorLike[]> {
     options = { force: false, recursive: false, ...options };
-    await this.head(); // check existance
     const copyErrors: ErrorLike[] = [];
     await this._xmit(to, copyErrors, options);
     return copyErrors;
@@ -68,7 +67,6 @@ export abstract class AbstractEntry implements Entry {
 
   public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
     options = { force: false, ...options };
-    await this.head(options); // check existance
     const errors: ErrorLike[] = [];
     await this._xmit(to, errors, {
       bufferSize: options.bufferSize,

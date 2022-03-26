@@ -76,10 +76,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public canCreateDirectory() {
-    return true;
-  }
-
   public async copy(
     fromPath: string,
     toPath: string,
@@ -292,6 +288,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     isDirectory: boolean,
     options?: URLOptions
   ): Promise<string>;
+  public abstract supportDirectory(): boolean;
 
   private async _prepareXmit(fromPath: string, toPath: string) {
     const from = await this.getEntry(fromPath);
