@@ -20,7 +20,7 @@ import {
   URLOptions,
   WriteOptions,
 } from "./core";
-import { createError, NotSupportedError, TypeMismatchError } from "./errors";
+import { createError, TypeMismatchError } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -154,20 +154,6 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async head(path: string, options?: HeadOptions): Promise<Stats> {
-    if (
-      !this.canCreateDirectory &&
-      (options?.type === "directory" || path.endsWith("/"))
-    ) {
-      throw createError({
-        name: NotSupportedError.name,
-        repository: this.repository,
-        path,
-        e: {
-          message: "Stat/Head directory is not supported.",
-        },
-      });
-    }
-
     this._checkPath(path);
     options = { ...options };
     if (path.endsWith("/")) {

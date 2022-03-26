@@ -136,8 +136,20 @@ export abstract class AbstractDirectory
   }
 
   public head(options?: HeadOptions): Promise<Stats> {
+    const path = this.path;
+    if (!this.fs.canCreateDirectory) {
+      throw createError({
+        name: NotSupportedError.name,
+        repository: this.fs.repository,
+        path,
+        e: {
+          message: "Stat/Head directory is not supported.",
+        },
+      });
+    }
+
     options = { ...options, type: "directory" };
-    return this.fs.head(this.path, options);
+    return this.fs.head(path, options);
   }
 
   public async list(options?: ListOptions): Promise<string[]> {
