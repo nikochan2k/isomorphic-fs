@@ -17,13 +17,11 @@ export const testAll = (
     }
   });
 
-  if (fs.supportDirectory()) {
-    it("rootdir", async () => {
-      const dir = await fs.getDirectory("/");
-      const paths = await dir.readdir();
-      expect(paths.length).toBe(0);
-    });
-  }
+  it("rootdir", async () => {
+    const dir = await fs.getDirectory("/");
+    const paths = await dir.readdir();
+    expect(paths.length).toBe(0);
+  });
 
   it("add empty file", async () => {
     const file = await fs.getFile("/empty.txt");

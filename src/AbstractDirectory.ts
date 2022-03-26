@@ -17,7 +17,6 @@ import {
   createError,
   NotFoundError,
   NotReadableError,
-  NotSupportedError,
   SecurityError,
   TypeMismatchError,
 } from "./errors";
@@ -113,13 +112,11 @@ export abstract class AbstractDirectory
     }
 
     const toDir = to as Directory;
-    if (this.fs.supportDirectory()) {
-      await toDir.mkcol({
-        force: options.force,
-        recursive: false,
-        ignoreHook: options.ignoreHook,
-      });
-    }
+    await toDir.mkcol({
+      force: options.force,
+      recursive: false,
+      ignoreHook: options.ignoreHook,
+    });
 
     if (!options.recursive) {
       return;
@@ -146,20 +143,12 @@ export abstract class AbstractDirectory
   }
 
   public head(options?: HeadOptions): Promise<Stats> {
-    const path = this.path;
     if (!this.fs.supportDirectory()) {
-      throw createError({
-        name: NotSupportedError.name,
-        repository: this.fs.repository,
-        path,
-        e: {
-          message: "Stat/Head directory is not supported.",
-        },
-      });
+      return Promise.resolve({});
     }
 
     options = { ...options, type: "directory" };
-    return this.fs.head(path, options);
+    return this.fs.head(this.path, options);
   }
 
   public async list(options?: ListOptions): Promise<string[]> {
@@ -184,14 +173,7 @@ export abstract class AbstractDirectory
 
   public async mkcol(options?: MkcolOptions): Promise<void> {
     if (!this.fs.supportDirectory()) {
-      throw createError({
-        name: NotSupportedError.name,
-        repository: this.fs.repository,
-        path: this.path,
-        e: {
-          message: "Mkdir/Mkcol is not supported.",
-        },
-      });
+      return;
     }
 
     options = { force: false, recursive: false, ...options };
