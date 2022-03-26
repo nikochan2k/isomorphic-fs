@@ -17,6 +17,7 @@ import {
   createError,
   NotFoundError,
   NotReadableError,
+  NotSupportedError,
   SecurityError,
   TypeMismatchError,
 } from "./errors";
@@ -158,6 +159,17 @@ export abstract class AbstractDirectory
   public ls = (options?: ListOptions | undefined) => this.list(options);
 
   public async mkcol(options?: MkcolOptions): Promise<void> {
+    if (!this.fs.canCreateDirectory) {
+      throw createError({
+        name: NotSupportedError.name,
+        repository: this.fs.repository,
+        path: this.path,
+        e: {
+          message: "Mkdir/Mkcol is not supported.",
+        },
+      });
+    }
+
     options = { force: false, recursive: false, ...options };
     try {
       await this._checkDirectory(options);

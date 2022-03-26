@@ -14,10 +14,12 @@ export const testAll = (
     }
   });
 
-  it("rootdir", async () => {
-    const list = await fs.list("/");
-    expect(list.length).toBe(0);
-  });
+  if (fs.canCreateDirectory) {
+    it("rootdir", async () => {
+      const list = await fs.list("/");
+      expect(list.length).toBe(0);
+    });
+  }
 
   it("nothing", async () => {
     try {

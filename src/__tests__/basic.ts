@@ -17,11 +17,13 @@ export const testAll = (
     }
   });
 
-  it("rootdir", async () => {
-    const dir = await fs.getDirectory("/");
-    const paths = await dir.readdir();
-    expect(paths.length).toBe(0);
-  });
+  if (fs.canCreateDirectory) {
+    it("rootdir", async () => {
+      const dir = await fs.getDirectory("/");
+      const paths = await dir.readdir();
+      expect(paths.length).toBe(0);
+    });
+  }
 
   it("add empty file", async () => {
     const file = await fs.getFile("/empty.txt");
@@ -70,13 +72,15 @@ export const testAll = (
     expect(text).toBe("大谷翔平ホームラン");
   });
 
-  it("mkdir test", async () => {
+  it("listdir test", async () => {
     const dir = await fs.getDirectory("/");
     let dirs = await dir.readdir();
     expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
+  });
 
+  it("mkdir test", async () => {
     const folder = await fs.getDirectory("/folder");
     try {
       const stats = await folder.stat();
@@ -96,11 +100,6 @@ export const testAll = (
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
     }
-
-    dirs = await dir.readdir();
-    expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
-    expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
-    expect(0 <= dirs.indexOf("/otani.txt")).toBe(true);
   });
 
   it("create file in dir", async () => {
@@ -132,9 +131,11 @@ export const testAll = (
     expect(errors.length).toBe(0);
     const stats = await to.stat();
     expect(stats.size).toBeUndefined();
-    const root = await fs.getDirectory("/");
-    const list = await root.ls();
-    expect(0 <= list.indexOf("/folder2")).toBe(true);
+    if (fs.canCreateDirectory) {
+      const root = await fs.getDirectory("/");
+      const list = await root.ls();
+      expect(0 <= list.indexOf("/folder2")).toBe(true);
+    }
     const toList = await to.ls();
     expect(0 <= toList.indexOf("/folder2/sample.txt")).toBe(true);
   });
@@ -149,10 +150,12 @@ export const testAll = (
   it("move directory", async () => {
     const errors = await fs.move("/folder2", "/folder3");
     expect(errors.length).toBe(0);
-    const root = await fs.getDirectory("/");
-    const list = await root.ls();
-    expect(list.indexOf("/folder2") < 0).toBe(true);
-    expect(0 <= list.indexOf("/folder3")).toBe(true);
+    if (fs.canCreateDirectory) {
+      const root = await fs.getDirectory("/");
+      const list = await root.ls();
+      expect(list.indexOf("/folder2") < 0).toBe(true);
+      expect(0 <= list.indexOf("/folder3")).toBe(true);
+    }
     const folder3 = await fs.getDirectory("/folder3");
     const folder3List = await folder3.ls();
     expect(0 <= folder3List.indexOf("/folder3/sample2.txt")).toBe(true);

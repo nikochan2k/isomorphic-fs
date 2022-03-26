@@ -13,8 +13,8 @@ export interface Times {
 }
 
 export interface Stats extends Times, Props {
-  size?: number;
   etag?: string;
+  size?: number;
 }
 
 export const EXCLUDE_PROP_NAMES = [
@@ -26,6 +26,7 @@ export const EXCLUDE_PROP_NAMES = [
 ];
 
 export interface FileSystemOptions {
+  canCreateDirectory?: boolean;
   hook?: Hook;
 }
 
@@ -95,8 +96,8 @@ export interface XmitOptions extends Options {
 }
 
 export interface URLOptions {
-  urlType?: URLType;
   expires?: number;
+  urlType?: URLType;
 }
 
 export interface Hook {
@@ -137,10 +138,12 @@ export interface ErrorLike {
   message?: string;
   name?: string;
   stack?: string;
+
   [key: string]: any; // eslint-disable-line
 }
 
 export interface FileSystem {
+  canCreateDirectory: boolean;
   options: FileSystemOptions;
   repository: string;
 
