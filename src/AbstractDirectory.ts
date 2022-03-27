@@ -52,12 +52,10 @@ export abstract class AbstractDirectory
     options: DeleteOptions,
     errors: ErrorLike[]
   ): Promise<void> {
-    if (!this.fs.supportDirectory()) {
-      return;
-    }
-
     try {
-      await this._checkDirectory(options);
+      if (this.fs.supportDirectory()) {
+        await this._checkDirectory(options);
+      }
     } catch (e: unknown) {
       const name = (e as Error).name;
       if (name === TypeMismatchError.name) {
