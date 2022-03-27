@@ -190,7 +190,7 @@ export abstract class AbstractDirectory
       return;
     } catch (e: unknown) {
       if ((e as ErrorLike).name === NotFoundError.name) {
-        if (options.recursive) {
+        if (options.recursive && this.path !== "/") {
           const parent = await this.getParent();
           await parent.mkcol({
             force: true,
