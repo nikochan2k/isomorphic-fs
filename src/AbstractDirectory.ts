@@ -124,15 +124,22 @@ export abstract class AbstractDirectory
     for (const fromPath of fromPaths) {
       let toPath: string | undefined;
       try {
-        const stats = await this.fs.head(fromPath, options);
-        const fromEntry = (await (stats.size != null
-          ? this.fs.getFile(fromPath)
-          : this.fs.getDirectory(fromPath))) as Entry as AbstractEntry;
+        let isDirectory: boolean;
+        if (fromPath.endsWith("/")) {
+          isDirectory = true;
+        } else {
+          const stats = await this.fs.head(fromPath, options);
+          isDirectory = stats.size != null;
+        }
+
+        const fromEntry = (await (isDirectory
+          ? this.fs.getDirectory(fromPath)
+          : this.fs.getFile(fromPath))) as Entry as AbstractEntry;
         const name = getName(fromPath);
         toPath = joinPaths(toDir.path, name);
-        const toEntry = (await (stats.size != null
-          ? this.fs.getFile(toPath)
-          : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
+        const toEntry = (await (isDirectory
+          ? this.fs.getDirectory(toPath)
+          : this.fs.getFile(toPath))) as Entry as AbstractEntry;
         await fromEntry._xmit(toEntry, copyErrors, options);
       } catch (e: unknown) {
         copyErrors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
