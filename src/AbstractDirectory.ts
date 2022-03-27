@@ -234,9 +234,6 @@ export abstract class AbstractDirectory
 
   protected async _checkDirectory(options: Options) {
     const path = this.path;
-    if (path.endsWith("/")) {
-      return;
-    }
     const stats = await this.fs.head(path, options);
     if (stats.size != null) {
       throw createError({
