@@ -244,6 +244,10 @@ export function createError(options: {
   name?: string;
 }) {
   let e = options.e;
+  if (isFileSystemError(e)) {
+    return e;
+  }
+
   if (typeof e === "object") {
     if (Object.isFrozen(e) || Object.isSealed(e)) {
       e = { ...e };
@@ -278,4 +282,12 @@ export function createError(options: {
   }
 
   return e;
+}
+
+export function isFileSystemError(e?: ErrorLike): boolean {
+  if (!e) {
+    return false;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return e["repository"] && e["path"];
 }

@@ -2,17 +2,17 @@ import { ConvertOptions, Data, DataType, ReturnData } from "univ-conv";
 
 type Primitive = boolean | number | string | null | undefined;
 
-export interface Props {
-  [key: string]: Primitive;
-}
-
 export interface Times {
   accessed?: number;
   created?: number;
   modified?: number;
 }
 
-export interface Stats extends Times, Props {
+export interface Props extends Times {
+  [key: string]: Primitive;
+}
+
+export interface Stats extends Props {
   etag?: string;
   size?: number;
 }
