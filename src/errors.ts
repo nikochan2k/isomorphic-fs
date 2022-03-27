@@ -284,10 +284,11 @@ export function createError(options: {
   return e;
 }
 
-export function isFileSystemError(e?: ErrorLike): boolean {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function isFileSystemError(e?: any): boolean {
   if (!e) {
     return false;
   }
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  // eslint-disable-next-line
   return e["repository"] && e["path"];
 }
