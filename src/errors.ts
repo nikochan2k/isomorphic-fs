@@ -242,10 +242,10 @@ export function createError(options: {
   path: string;
   e?: ErrorLike;
   name?: string;
-}) {
+}): ErrorLike {
   let e = options.e;
   if (isFileSystemError(e)) {
-    return e;
+    return e as ErrorLike;
   }
 
   if (typeof e === "object") {
