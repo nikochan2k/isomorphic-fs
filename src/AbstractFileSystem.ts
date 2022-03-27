@@ -119,6 +119,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       options.type = "directory";
     }
 
+    path = normalizePath(path);
     if (options.type === "file") {
       return this.getFile(path);
     }

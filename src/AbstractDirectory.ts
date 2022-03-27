@@ -20,7 +20,7 @@ import {
   SecurityError,
   TypeMismatchError,
 } from "./errors";
-import { getName, joinPaths } from "./util";
+import { getName, joinPaths, normalizePath } from "./util";
 
 export abstract class AbstractDirectory
   extends AbstractEntry
@@ -121,7 +121,7 @@ export abstract class AbstractDirectory
     }
 
     const fromPaths = await this.list();
-    for (const fromPath of fromPaths) {
+    for (let fromPath of fromPaths) {
       let toPath: string | undefined;
       try {
         let isDirectory: boolean;
@@ -132,6 +132,7 @@ export abstract class AbstractDirectory
           isDirectory = stats.size == null;
         }
 
+        fromPath = normalizePath(fromPath);
         const fromEntry = (await (isDirectory
           ? this.fs.getDirectory(fromPath)
           : this.fs.getFile(fromPath))) as Entry as AbstractEntry;
