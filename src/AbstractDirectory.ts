@@ -129,7 +129,7 @@ export abstract class AbstractDirectory
           isDirectory = true;
         } else {
           const stats = await this.fs.head(fromPath, options);
-          isDirectory = stats.size != null;
+          isDirectory = stats.size == null;
         }
 
         const fromEntry = (await (isDirectory
