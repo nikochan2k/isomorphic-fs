@@ -242,6 +242,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   protected async _checkFile(options: Options) {
     const path = this.path;
+    if (path.endsWith("/")) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.fs.repository,
+        path,
+        e: { message: `"${path}" is not a file` },
+      });
+    }
     const stats = await this.fs.head(path, options);
     if (stats.size == null) {
       throw createError({
