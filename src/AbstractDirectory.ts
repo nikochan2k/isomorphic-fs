@@ -5,8 +5,10 @@ import {
   DeleteOptions,
   Directory,
   Entry,
+  EntryType,
   ErrorLike,
   HeadOptions,
+  Item,
   ListOptions,
   MkcolOptions,
   Options,
@@ -26,12 +28,12 @@ export abstract class AbstractDirectory
   extends AbstractEntry
   implements Directory
 {
-  private afterList?: (path: string, list: string[]) => Promise<void>;
+  private afterList?: (path: string, list: Item[]) => Promise<void>;
   private afterMkcol?: (path: string) => Promise<void>;
   private beforeList?: (
     path: string,
     options: ListOptions
-  ) => Promise<string[] | null>;
+  ) => Promise<Item[] | null>;
   private beforeMkcol?: (
     psth: string,
     options: MkcolOptions
@@ -148,29 +150,36 @@ export abstract class AbstractDirectory
     }
   }
 
+  public dir = (options?: ListOptions | undefined) => this.list(options);
+
   public head(options?: HeadOptions): Promise<Stats> {
     if (!this.fs.supportDirectory()) {
       return Promise.resolve({});
     }
 
-    options = { ...options, type: "directory" };
+    options = { ...options, type: EntryType.Directory };
     return this.fs.head(this.path, options);
   }
 
   public async list(options?: ListOptions): Promise<string[]> {
     options = { ...options };
-    let list: string[] | null | undefined;
+    let items: Item[] | null | undefined;
     if (!options.ignoreHook && this.beforeList) {
-      list = await this.beforeList(this.path, options);
+      items = await this.beforeList(this.path, options);
     }
-    if (!list) {
+    if (!items) {
       if (this.fs.supportDirectory()) {
         await this._checkDirectory(options);
       }
-      list = await this._list();
+      items = await this._list();
     }
     if (!options.ignoreHook && this.afterList) {
-      await this.afterList(this.path, list);
+      await this.afterList(this.path, items);
+    }
+
+    const list: string[] = [];
+    for (const item of items) {
+      list.push(normalizePath(item.path));
     }
     return list;
   }
@@ -228,7 +237,7 @@ export abstract class AbstractDirectory
 
   public readdir = (options?: ListOptions | undefined) => this.list(options);
 
-  public abstract _list(): Promise<string[]>;
+  public abstract _list(): Promise<Item[]>;
   public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 

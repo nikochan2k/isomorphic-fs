@@ -5,6 +5,7 @@ import {
   DeleteOptions,
   Directory,
   Entry,
+  EntryType,
   ErrorLike,
   File,
   FileSystem,
@@ -107,6 +108,9 @@ export abstract class AbstractFileSystem implements FileSystem {
     return entry.delete(options);
   }
 
+  public dir = (path: string, options?: ListOptions | undefined) =>
+    this.list(path, options);
+
   public getDirectory(path: string): Promise<Directory> {
     this._checkPath(path);
     return this._getDirectory(path);
@@ -116,14 +120,14 @@ export abstract class AbstractFileSystem implements FileSystem {
     this._checkPath(path);
     options = { ...options };
     if (!options.type && path.endsWith("/")) {
-      options.type = "directory";
+      options.type = EntryType.Directory;
     }
 
     path = normalizePath(path);
-    if (options.type === "file") {
+    if (options.type === EntryType.File) {
       return this.getFile(path);
     }
-    if (options.type === "directory") {
+    if (options.type === EntryType.Directory) {
       return this.getDirectory(path);
     }
 
@@ -158,7 +162,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       if (!this.supportDirectory()) {
         return {};
       }
-      if (options.type === "file") {
+      if (options.type === EntryType.Directory) {
         throw createError({
           name: TypeMismatchError.name,
           repository: this.repository,
@@ -168,7 +172,7 @@ export abstract class AbstractFileSystem implements FileSystem {
           },
         });
       }
-      options.type = "directory";
+      options.type = EntryType.Directory;
     }
     path = normalizePath(path);
     let stats: Stats | null | undefined;

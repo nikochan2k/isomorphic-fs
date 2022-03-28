@@ -50,8 +50,18 @@ export interface DeleteOptions extends Options {
   recursive: boolean;
 }
 
+export enum EntryType {
+  File = "f",
+  Directory = "d",
+}
+
+export interface Item extends Stats {
+  path: string;
+  type?: EntryType;
+}
+
 export interface HeadOptions extends Options {
-  type?: "file" | "directory";
+  type?: EntryType;
 }
 
 export type PatchOptions = Options;
@@ -103,7 +113,7 @@ export interface Hook {
   afterDelete?: (path: string) => Promise<void>;
   afterGet?: (path: string, data: Data) => Promise<void>;
   afterHead?: (path: string, stats: Stats) => Promise<void>;
-  afterList?: (path: string, list: string[]) => Promise<void>;
+  afterList?: (path: string, list: Item[]) => Promise<void>;
   afterMkcol?: (path: string) => Promise<void>;
   afterPatch?: (path: string) => Promise<void>;
   afterPost?: (path: string) => Promise<void>;
@@ -111,7 +121,7 @@ export interface Hook {
   beforeDelete?: (path: string, options: DeleteOptions) => Promise<boolean>;
   beforeGet?: (path: string, options: ReadOptions) => Promise<Data | null>;
   beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
-  beforeList?: (path: string, options: ListOptions) => Promise<string[] | null>;
+  beforeList?: (path: string, options: ListOptions) => Promise<Item[] | null>;
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
   beforePatch?: (
     path: string,
@@ -158,6 +168,7 @@ export interface FileSystem {
   ): Promise<ErrorLike[]>;
   del(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
   delete(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
+  dir(path: string, options?: ListOptions): Promise<string[]>;
   getDirectory(path: string): Promise<Directory>;
   getFile(path: string): Promise<File>;
   hash(path: string, options?: ReadOptions): Promise<string>;
@@ -209,6 +220,7 @@ export interface Entry {
 }
 
 export interface Directory extends Entry {
+  dir(options?: ListOptions): Promise<string[]>;
   list(options?: ListOptions): Promise<string[]>;
   ls(options?: ListOptions): Promise<string[]>;
   mkcol(options?: MkcolOptions): Promise<void>;

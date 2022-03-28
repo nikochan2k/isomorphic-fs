@@ -17,6 +17,7 @@ import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   DeleteOptions,
+  EntryType,
   ErrorLike,
   File,
   Options,
@@ -160,7 +161,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public head(options?: HeadOptions): Promise<Stats> {
-    options = { ...options, type: "file" };
+    options = { ...options, type: EntryType.File };
     return this.fs.head(this.path, options);
   }
 
