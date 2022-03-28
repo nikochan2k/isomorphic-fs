@@ -36,6 +36,18 @@ import {
 } from "./errors";
 import { toHex } from "./util";
 
+function _checkPath(repository: string, path: string) {
+  if (path.endsWith("/")) {
+    throw createError({
+      name: TypeMismatchError.name,
+      repository,
+      path,
+      e: { message: `"${path}" must not end with slash` },
+    });
+  }
+  return path;
+}
+
 export abstract class AbstractFile extends AbstractEntry implements File {
   private afterGet?: (path: string, data: Data) => Promise<void>;
   private afterPost?: (path: string) => Promise<void>;
@@ -58,15 +70,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ) => Promise<boolean>;
 
   constructor(fs: AbstractFileSystem, path: string) {
-    super(fs, path);
-    if (path.endsWith("/")) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: fs.repository,
-        path,
-        e: { message: `"${path}" must not end with slash` },
-      });
-    }
+    super(fs, _checkPath(fs.repository, path));
     const hook = fs.options?.hook;
     if (hook) {
       this.beforeGet = hook.beforeGet;

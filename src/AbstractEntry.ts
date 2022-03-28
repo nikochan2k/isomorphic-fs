@@ -23,6 +23,7 @@ export abstract class AbstractEntry implements Entry {
   ) => Promise<boolean>;
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
+    fs._checkPath(path);
     this.path = normalizePath(path);
     const hook = fs.options.hook;
     if (hook) {

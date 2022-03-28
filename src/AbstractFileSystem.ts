@@ -82,8 +82,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<ErrorLike[]> {
-    this._checkPath(fromPath);
-    this._checkPath(toPath);
     options = { force: false, recursive: false, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.copy(to, options);
@@ -102,7 +100,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     path: string,
     options?: DeleteOptions
   ): Promise<ErrorLike[]> {
-    this._checkPath(path);
     options = { force: false, recursive: false, ...options };
     const entry = await this.getEntry(path, options);
     return entry.delete(options);
@@ -112,18 +109,15 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.list(path, options);
 
   public getDirectory(path: string): Promise<Directory> {
-    this._checkPath(path);
     return this._getDirectory(path);
   }
 
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
-    this._checkPath(path);
     options = { ...options };
     if (path.endsWith("/")) {
       if (!options.type) {
         options.type = EntryType.Directory;
       }
-      path = normalizePath(path);
     }
 
     if (options.type === EntryType.File) {
@@ -138,12 +132,10 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public getFile(path: string): Promise<File> {
-    this._checkPath(path);
     return this._getFile(path);
   }
 
   public async hash(path: string, options?: ReadOptions): Promise<string> {
-    this._checkPath(path);
     const file = await this.getFile(path);
     return file.hash(options);
   }
@@ -180,7 +172,6 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async list(path: string, options?: ListOptions): Promise<string[]> {
-    this._checkPath(path);
     const dir = await this.getDirectory(path);
     return dir.list(options);
   }
@@ -189,7 +180,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.list(path, options);
 
   public async mkcol(path: string, options?: MkcolOptions): Promise<void> {
-    this._checkPath(path);
     const dir = await this.getDirectory(path);
     return dir.mkcol(options);
   }
@@ -202,8 +192,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: MoveOptions
   ): Promise<ErrorLike[]> {
-    this._checkPath(fromPath);
-    this._checkPath(toPath);
     options = { force: false, ...options };
     const { from, to } = await this._prepareXmit(fromPath, toPath);
     return from.move(to, options);
@@ -220,7 +208,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     props: Props,
     options?: PatchOptions
   ): Promise<void> {
-    this._checkPath(path);
     options = { ...options };
 
     if (path.endsWith("/")) {
@@ -248,7 +235,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     type: T,
     options?: ReadOptions
   ): Promise<ReturnData<T>> {
-    this._checkPath(path);
     const file = await this.getFile(path);
     return file.read(type, options);
   }
@@ -263,8 +249,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.head(path, options);
 
   public async toURL(path: string, options?: URLOptions): Promise<string> {
-    this._checkPath(path);
-    const stats = await this.stat(path);
+    const stats = await this.head(path);
     return this._toURL(path, stats.size == null, options);
   }
 
@@ -276,7 +261,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     data: Data,
     options?: WriteOptions
   ): Promise<void> {
-    this._checkPath(path);
     const file = await this.getFile(path);
     return file.write(data, options);
   }

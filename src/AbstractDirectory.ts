@@ -98,7 +98,9 @@ export abstract class AbstractDirectory
       }
     }
 
-    return this._rmdir();
+    if (this.path !== "/") {
+      await this._rmdir();
+    }
   }
 
   public async _xmit(
@@ -120,7 +122,7 @@ export abstract class AbstractDirectory
 
     const toDir = to as Directory;
     await toDir.mkcol({
-      force: options.force,
+      force: options.force ?? true,
       recursive: false,
       ignoreHook: options.ignoreHook,
     });
@@ -168,25 +170,28 @@ export abstract class AbstractDirectory
   public ls = (options?: ListOptions | undefined) => this.list(options);
 
   public async mkcol(options?: MkcolOptions): Promise<void> {
-    if (!this.fs.supportDirectory()) {
+    const fs = this.fs;
+    if (!fs.supportDirectory()) {
       return;
     }
 
     options = { force: false, recursive: false, ...options };
+    const repository = fs.repository;
+    const path = this.path;
     try {
       await this._checkDirectory(options);
       if (!options.force) {
         throw createError({
           name: SecurityError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: { message: `"${this.path}" has already existed` },
+          repository,
+          path,
+          e: { message: `"${path}" has already existed` },
         });
       }
       return;
-    } catch (e: unknown) {
+    } catch (e) {
       if ((e as ErrorLike).name === NotFoundError.name) {
-        if (options.recursive && this.path !== "/") {
+        if (options.recursive && path !== "/") {
           const parent = await this.getParent();
           await parent.mkcol({
             force: true,
@@ -197,20 +202,20 @@ export abstract class AbstractDirectory
       } else {
         throw createError({
           name: NotReadableError.name,
-          repository: this.fs.repository,
-          path: this.path,
+          repository,
+          path,
           e: e as ErrorLike,
         });
       }
     }
     if (!options.ignoreHook && this.beforeMkcol) {
-      if (await this.beforeMkcol(this.path, options)) {
+      if (await this.beforeMkcol(path, options)) {
         return;
       }
     }
     await this._mkcol();
     if (!options.ignoreHook && this.afterMkcol) {
-      await this.afterMkcol(this.path);
+      await this.afterMkcol(path);
     }
   }
 

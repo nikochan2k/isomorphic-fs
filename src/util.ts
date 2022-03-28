@@ -27,13 +27,13 @@ export function getPathParts(path: string) {
   return pathParts;
 }
 
-export function getParentPath(path: string, leadingSlash = true) {
+export function getParentPath(path: string) {
   let parts = getPathParts(path);
   if (parts.length <= 1) {
-    return leadingSlash ? "/" : "";
+    return "/";
   }
   parts = parts.slice(0, -1);
-  return (leadingSlash ? "/" : "") + parts.join("/");
+  return "/" + parts.join("/");
 }
 
 export function getName(path: string): string {
