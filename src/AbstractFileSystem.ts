@@ -21,7 +21,7 @@ import {
   URLOptions,
   WriteOptions,
 } from "./core";
-import { createError, NotFoundError, TypeMismatchError } from "./errors";
+import { createError, NotFoundError } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -119,11 +119,13 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
     this._checkPath(path);
     options = { ...options };
-    if (!options.type && path.endsWith("/")) {
-      options.type = EntryType.Directory;
+    if (path.endsWith("/")) {
+      if (!options.type) {
+        options.type = EntryType.Directory;
+      }
+      path = normalizePath(path);
     }
 
-    path = normalizePath(path);
     if (options.type === EntryType.File) {
       return this.getFile(path);
     }
@@ -137,15 +139,6 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public getFile(path: string): Promise<File> {
     this._checkPath(path);
-    if (path.endsWith("/")) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.repository,
-        path,
-        e: { message: `"${path}" must not end with slash` },
-      });
-    }
-
     return this._getFile(path);
   }
 
@@ -158,23 +151,20 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async head(path: string, options?: HeadOptions): Promise<Stats> {
     this._checkPath(path);
     options = { ...options };
+
     if (path.endsWith("/")) {
+      if (!options.type) {
+        options.type = EntryType.Directory;
+      }
+      path = normalizePath(path);
+    }
+
+    if (options.type === EntryType.Directory) {
       if (!this.supportDirectory()) {
         return {};
       }
-      if (options.type === EntryType.Directory) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.repository,
-          path,
-          e: {
-            message: `"options.type" is file, but "${path}" ends with slash`,
-          },
-        });
-      }
-      options.type = EntryType.Directory;
     }
-    path = normalizePath(path);
+
     let stats: Stats | null | undefined;
     if (!options.ignoreHook && this.beforeHead) {
       stats = await this.beforeHead(path, options);
@@ -185,6 +175,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (!options.ignoreHook && this.afterHead) {
       await this.afterHead(path, stats);
     }
+
     return stats;
   }
 
@@ -231,9 +222,16 @@ export abstract class AbstractFileSystem implements FileSystem {
   ): Promise<void> {
     this._checkPath(path);
     options = { ...options };
+
+    if (path.endsWith("/")) {
+      if (!options.type) {
+        options.type = EntryType.Directory;
+      }
+      path = normalizePath(path);
+    }
+
     const stats = await this.head(path, options);
     this._fixProps(props, stats);
-    path = normalizePath(path);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
         return;

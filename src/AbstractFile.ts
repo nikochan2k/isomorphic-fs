@@ -59,6 +59,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
+    if (path.endsWith("/")) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: fs.repository,
+        path,
+        e: { message: `"${path}" must not end with slash` },
+      });
+    }
     const hook = fs.options?.hook;
     if (hook) {
       this.beforeGet = hook.beforeGet;

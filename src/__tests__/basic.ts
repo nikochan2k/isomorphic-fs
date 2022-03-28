@@ -132,9 +132,7 @@ export const testAll = (
     if (fs.supportDirectory()) {
       const root = await fs.getDirectory("/");
       const list = await root.ls();
-      expect(
-        0 <= list.indexOf("/folder2") || 0 <= list.indexOf("/folder2/")
-      ).toBe(true);
+      expect(0 <= list.indexOf("/folder2")).toBe(true);
     }
     const toList = await to.ls();
     expect(0 <= toList.indexOf("/folder2/sample.txt")).toBe(true);
@@ -153,12 +151,8 @@ export const testAll = (
     if (fs.supportDirectory()) {
       const root = await fs.getDirectory("/");
       const list = await root.ls();
-      expect(
-        list.indexOf("/folder2") < 0 && list.indexOf("/folder2/") < 0
-      ).toBe(true);
-      expect(
-        0 <= list.indexOf("/folder3") || 0 <= list.indexOf("/folder3/")
-      ).toBe(true);
+      expect(list.indexOf("/folder2") < 0).toBe(true);
+      expect(0 <= list.indexOf("/folder3")).toBe(true);
     }
     const folder3 = await fs.getDirectory("/folder3");
     const folder3List = await folder3.ls();

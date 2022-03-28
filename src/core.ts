@@ -64,7 +64,9 @@ export interface HeadOptions extends Options {
   type?: EntryType;
 }
 
-export type PatchOptions = Options;
+export interface PatchOptions extends Options {
+  type?: EntryType;
+}
 
 export type ListOptions = Options;
 

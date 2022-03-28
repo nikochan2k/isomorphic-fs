@@ -54,8 +54,10 @@ export abstract class AbstractDirectory
     options: DeleteOptions,
     errors: ErrorLike[]
   ): Promise<void> {
+    const fs = this.fs;
+
     try {
-      if (this.fs.supportDirectory()) {
+      if (fs.supportDirectory()) {
         await this._checkDirectory(options);
       }
     } catch (e: unknown) {
@@ -71,7 +73,7 @@ export abstract class AbstractDirectory
       } else {
         throw createError({
           name: NotReadableError.name,
-          repository: this.fs.repository,
+          repository: fs.repository,
           path: this.path,
           e: e as ErrorLike,
         });
@@ -79,10 +81,12 @@ export abstract class AbstractDirectory
     }
 
     if (options.recursive) {
-      const children = await this.list(options);
+      const children = await this._items(options);
       for (const child of children) {
         try {
-          const childEntry = await this.fs.getEntry(child);
+          const childEntry = await fs.getEntry(child.path, {
+            type: child.type,
+          });
           await childEntry.delete(options);
         } catch (e: unknown) {
           if (options.force) {
@@ -102,12 +106,15 @@ export abstract class AbstractDirectory
     copyErrors: ErrorLike[],
     options: XmitOptions
   ): Promise<void> {
+    const fs = this.fs;
+    const path = this.path;
+
     if (to instanceof AbstractFile) {
       throw createError({
         name: TypeMismatchError.name,
-        repository: this.fs.repository,
-        path: this.path,
-        e: { message: `"${this.path}" is not a directory` },
+        repository: fs.repository,
+        path,
+        e: { message: `"${path}" is not a directory` },
       });
     }
 
@@ -122,27 +129,19 @@ export abstract class AbstractDirectory
       return;
     }
 
-    const fromPaths = await this.list();
-    for (let fromPath of fromPaths) {
+    const fromItems = await this._items();
+    for (const fromItem of fromItems) {
+      const fromPath = fromItem.path;
       let toPath: string | undefined;
       try {
-        let isDirectory: boolean;
-        if (fromPath.endsWith("/")) {
-          isDirectory = true;
-        } else {
-          const stats = await this.fs.head(fromPath, options);
-          isDirectory = stats.size == null;
-        }
-
-        fromPath = normalizePath(fromPath);
-        const fromEntry = (await (isDirectory
-          ? this.fs.getDirectory(fromPath)
-          : this.fs.getFile(fromPath))) as Entry as AbstractEntry;
+        const fromEntry = (await fs.getEntry(fromPath, {
+          type: fromItem.type,
+        })) as AbstractEntry;
         const name = getName(fromPath);
         toPath = joinPaths(toDir.path, name);
-        const toEntry = (await (isDirectory
-          ? this.fs.getDirectory(toPath)
-          : this.fs.getFile(toPath))) as Entry as AbstractEntry;
+        const toEntry = (await (fromEntry instanceof AbstractFile
+          ? this.fs.getFile(toPath)
+          : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
         await fromEntry._xmit(toEntry, copyErrors, options);
       } catch (e: unknown) {
         copyErrors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
@@ -162,26 +161,8 @@ export abstract class AbstractDirectory
   }
 
   public async list(options?: ListOptions): Promise<string[]> {
-    options = { ...options };
-    let items: Item[] | null | undefined;
-    if (!options.ignoreHook && this.beforeList) {
-      items = await this.beforeList(this.path, options);
-    }
-    if (!items) {
-      if (this.fs.supportDirectory()) {
-        await this._checkDirectory(options);
-      }
-      items = await this._list();
-    }
-    if (!options.ignoreHook && this.afterList) {
-      await this.afterList(this.path, items);
-    }
-
-    const list: string[] = [];
-    for (const item of items) {
-      list.push(normalizePath(item.path));
-    }
-    return list;
+    const items = await this._items(options);
+    return items.map((item) => item.path);
   }
 
   public ls = (options?: ListOptions | undefined) => this.list(options);
@@ -252,5 +233,35 @@ export abstract class AbstractDirectory
         e: { message: `"${path}" is not a directory` },
       });
     }
+  }
+
+  protected async _items(options?: ListOptions): Promise<Item[]> {
+    options = { ...options };
+    const path = this.path;
+
+    let items: Item[] | null | undefined;
+    if (!options.ignoreHook && this.beforeList) {
+      items = await this.beforeList(path, options);
+    }
+    if (!items) {
+      if (this.fs.supportDirectory()) {
+        await this._checkDirectory(options);
+      }
+      items = await this._list();
+    }
+    if (!options.ignoreHook && this.afterList) {
+      await this.afterList(path, items);
+    }
+
+    for (const item of items) {
+      if (item.path.endsWith("/")) {
+        if (!item.type) {
+          item.type = EntryType.Directory;
+        }
+        item.path = normalizePath(item.path);
+      }
+    }
+
+    return items;
   }
 }
