@@ -12,7 +12,7 @@ export const testAll = (
     if (options?.setup) {
       await options.setup();
     }
-  });
+  }, 10000);
 
   it("rootdir", async () => {
     const list = await fs.list("/");
