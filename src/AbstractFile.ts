@@ -88,20 +88,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ): Promise<void> {
     try {
       await this._checkFile(options);
-    } catch (e: unknown) {
+    } catch (e) {
       if ((e as ErrorLike).name === NotFoundError.name) {
         if (!options.force) {
           throw e;
         }
         return;
-      } else {
-        throw createError({
-          name: NotReadableError.name,
-          repository: this.fs.repository,
-          path: this.path,
-          e: e as ErrorLike,
-        });
       }
+      throw createError({
+        name: NotReadableError.name,
+        repository: this.fs.repository,
+        path: this.path,
+        e: e as ErrorLike,
+      });
     }
 
     return this._rm();

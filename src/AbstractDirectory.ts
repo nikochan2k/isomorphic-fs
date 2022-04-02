@@ -88,9 +88,12 @@ export abstract class AbstractDirectory
             type: child.type,
           });
           await childEntry.delete(options);
-        } catch (e: unknown) {
+        } catch (e) {
           if (options.force) {
-            errors.push(e as ErrorLike);
+            // eslint-disable-next-line
+            if ((e as any).name !== NotFoundError.name) {
+              errors.push(e as ErrorLike);
+            }
           } else {
             throw e;
           }

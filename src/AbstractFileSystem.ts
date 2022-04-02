@@ -21,7 +21,7 @@ import {
   URLOptions,
   WriteOptions,
 } from "./core";
-import { createError, NotFoundError } from "./errors";
+import { createError, NotFoundError, TypeMismatchError } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
 
 export abstract class AbstractFileSystem implements FileSystem {
@@ -66,14 +66,20 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (props["etag"] != null) {
       delete props["etag"];
     }
-    if (typeof props["accessed"] !== "number" && stats.accessed) {
-      props["accessed"] = stats.accessed;
+    if (
+      typeof props.accessed !== "number" ||
+      props.accessed === stats.accessed
+    ) {
+      delete props.accessed;
     }
-    if (typeof props["created"] !== "number" && stats.created) {
-      props["created"] = stats.created;
+    if (typeof props.created !== "number" || props.created === stats.created) {
+      delete props.created;
     }
-    if (typeof props["modified"] !== "number" && stats.modified) {
-      props["modified"] = stats.modified;
+    if (
+      typeof props.modified !== "number" ||
+      props.modified === stats.modified
+    ) {
+      delete props.modified;
     }
   }
 
@@ -163,6 +169,22 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
     if (!stats) {
       stats = await this._head(path, options);
+    }
+    if (stats.size != null && options.type === EntryType.Directory) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.repository,
+        path: path,
+        e: { message: `"${path}" is not a directory` },
+      });
+    }
+    if (stats.size == null && options.type === EntryType.File) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.repository,
+        path: path,
+        e: { message: `"${path}" is not a file` },
+      });
     }
     if (!options.ignoreHook && this.afterHead) {
       await this.afterHead(path, stats);

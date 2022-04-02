@@ -216,6 +216,7 @@ export interface Entry {
   move(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
   mv(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
   patch(props: Props, options?: PatchOptions): Promise<void>;
+  remove(options?: DeleteOptions): Promise<ErrorLike[]>;
   rm(options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(options?: HeadOptions): Promise<Stats>;
   toURL(options?: URLOptions): Promise<string>;

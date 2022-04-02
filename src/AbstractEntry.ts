@@ -64,8 +64,6 @@ export abstract class AbstractEntry implements Entry {
     return this.fs.getDirectory(parentPath);
   }
 
-  public abstract head(options?: HeadOptions): Promise<Stats>;
-
   public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
     options = { force: false, ...options };
     const errors: ErrorLike[] = [];
@@ -92,6 +90,8 @@ export abstract class AbstractEntry implements Entry {
   public patch = (props: Props, options?: PatchOptions) =>
     this.fs.patch(this.path, props, options);
 
+  public remove = (options?: DeleteOptions | undefined) => this.delete(options);
+
   public rm = (options?: DeleteOptions | undefined) => this.delete(options);
 
   public stat = (options?: HeadOptions | undefined) => this.head(options);
@@ -109,4 +109,5 @@ export abstract class AbstractEntry implements Entry {
     copyErrors: (ErrorLike | string)[],
     options: XmitOptions
   ): Promise<void>;
+  public abstract head(options?: HeadOptions): Promise<Stats>;
 }
