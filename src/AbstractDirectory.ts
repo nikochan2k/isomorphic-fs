@@ -108,27 +108,46 @@ export abstract class AbstractDirectory
 
   public async _xmit(
     to: Entry,
-    copyErrors: ErrorLike[],
+    errors: ErrorLike[],
     options: XmitOptions
   ): Promise<void> {
     const fs = this.fs;
     const path = this.path;
 
     if (to instanceof AbstractFile) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: fs.repository,
-        path,
-        e: { message: `"${path}" is not a directory` },
-      });
+      errors.push(
+        createError({
+          name: TypeMismatchError.name,
+          repository: fs.repository,
+          path,
+          e: { message: `"${path}" is not a directory` },
+          from: this.path,
+          to: to.path,
+        })
+      );
+      return;
     }
 
     const toDir = to as Directory;
-    await toDir.mkcol({
-      force: options.force ?? true,
-      recursive: false,
-      ignoreHook: options.ignoreHook,
-    });
+    try {
+      await toDir.mkcol({
+        force: options.force ?? true,
+        recursive: false,
+        ignoreHook: options.ignoreHook,
+      });
+    } catch (e) {
+      errors.push(
+        createError({
+          name: TypeMismatchError.name,
+          repository: fs.repository,
+          path,
+          e: { message: `"${path}" is not a directory` },
+          from: this.path,
+          to: to.path,
+        })
+      );
+      return;
+    }
 
     if (!options.recursive) {
       return;
@@ -147,9 +166,9 @@ export abstract class AbstractDirectory
         const toEntry = (await (fromEntry instanceof AbstractFile
           ? this.fs.getFile(toPath)
           : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
-        await fromEntry._xmit(toEntry, copyErrors, options);
-      } catch (e: unknown) {
-        copyErrors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
+        await fromEntry._xmit(toEntry, errors, options);
+      } catch (e) {
+        errors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
       }
     }
   }

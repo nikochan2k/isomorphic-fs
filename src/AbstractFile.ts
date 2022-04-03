@@ -108,41 +108,69 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _xmit(
     toEntry: AbstractEntry,
-    _copyErrors: ErrorLike[],
+    errors: ErrorLike[],
     options: XmitOptions
   ): Promise<void> {
     if (toEntry instanceof AbstractDirectory) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: toEntry.fs.repository,
-        path: toEntry.path,
-        e: { message: `"${toEntry.path}" is not a file` },
-      });
+      errors.push(
+        createError({
+          name: TypeMismatchError.name,
+          repository: toEntry.fs.repository,
+          path: toEntry.path,
+          e: { message: `"${toEntry.path}" is not a file` },
+          from: this.path,
+          to: toEntry.path,
+        })
+      );
+      return;
     }
     const to = toEntry as AbstractFile;
     let stats: Stats | undefined;
     try {
       stats = await to.head(options);
       if (!options.force) {
-        throw createError({
-          name: SecurityError.name,
-          repository: to.fs.repository,
-          path: to.path,
-        });
+        errors.push(
+          createError({
+            name: SecurityError.name,
+            repository: to.fs.repository,
+            path: to.path,
+            from: this.path,
+            to: toEntry.path,
+          })
+        );
+        return;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       if ((e as ErrorLike).name !== NotFoundError.name) {
-        throw createError({
+        errors.push(
+          createError({
+            name: NotReadableError.name,
+            repository: to.fs.repository,
+            path: to.path,
+            e: e as ErrorLike,
+            from: this.path,
+            to: toEntry.path,
+          })
+        );
+        return;
+      }
+    }
+
+    try {
+      const data = await this.load(options, stats);
+      await to.write(data, options);
+    } catch (e) {
+      errors.push(
+        createError({
           name: NotReadableError.name,
           repository: to.fs.repository,
           path: to.path,
           e: e as ErrorLike,
-        });
-      }
+          from: this.path,
+          to: toEntry.path,
+        })
+      );
     }
-
-    const data = await this.load(options, stats);
-    await to.write(data, options);
   }
 
   public async hash(options?: ReadOptions): Promise<string> {

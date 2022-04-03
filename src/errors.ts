@@ -242,6 +242,7 @@ export function createError(options: {
   path: string;
   e?: ErrorLike;
   name?: string;
+  [key: string]: any; // eslint-disable-line
 }): ErrorLike {
   let e = options.e;
   if (isFileSystemError(e)) {

@@ -34,9 +34,9 @@ export abstract class AbstractEntry implements Entry {
 
   public async copy(to: Entry, options?: CopyOptions): Promise<ErrorLike[]> {
     options = { force: false, recursive: false, ...options };
-    const copyErrors: ErrorLike[] = [];
-    await this._xmit(to, copyErrors, options);
-    return copyErrors;
+    const errors: ErrorLike[] = [];
+    await this._xmit(to, errors, options);
+    return errors;
   }
 
   public cp = (to: Entry, options?: CopyOptions | undefined) =>
@@ -106,7 +106,7 @@ export abstract class AbstractEntry implements Entry {
   ): Promise<void>;
   public abstract _xmit(
     entry: Entry,
-    copyErrors: (ErrorLike | string)[],
+    errors: (ErrorLike | string)[],
     options: XmitOptions
   ): Promise<void>;
   public abstract head(options?: HeadOptions): Promise<Stats>;
