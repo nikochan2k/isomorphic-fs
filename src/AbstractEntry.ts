@@ -36,6 +36,7 @@ export abstract class AbstractEntry implements Entry {
     options = { force: false, recursive: false, ...options };
     const errors: ErrorLike[] = [];
     await this._xmit(to, errors, options);
+    console.warn(errors);
     return errors;
   }
 
@@ -79,6 +80,8 @@ export abstract class AbstractEntry implements Entry {
         recursive: true,
       });
       Array.prototype.push.apply(errors, deleteErrors);
+    } else {
+      console.warn(errors);
     }
 
     return errors;
