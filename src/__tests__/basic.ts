@@ -83,7 +83,7 @@ export const testAll = (
     try {
       const stats = await folder.stat();
       if (stats.size != null) {
-        throw new Error("Found folder: " + folder.path);
+        throw new Error("Found file: " + folder.path);
       }
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
@@ -93,7 +93,7 @@ export const testAll = (
     try {
       const stats = await folder.stat();
       if (stats.size != null) {
-        throw new Error("Cannot mkdir: " + folder.path);
+        throw new Error("File has created: " + folder.path);
       }
     } catch (e) {
       expect(e.name).toBe(NotFoundError.name);
@@ -110,10 +110,11 @@ export const testAll = (
     }
     const before = Math.floor(Date.now() / 1000);
     await file.write("Sample");
-    const after = before + 1;
+    const after = Math.floor(Date.now() + 1 / 1000);
     const stats = await file.stat();
     const modified = Math.floor((stats.modified ?? 0) / 1000);
-    expect(before <= modified && modified <= after).toBe(true);
+    expect(modified).toBeGreaterThanOrEqual(before);
+    expect(modified).toBeLessThan(after);
     const text = await file.read("text");
     expect(text).toBe("Sample");
 
