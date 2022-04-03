@@ -52,7 +52,7 @@
     "eslint-config-prettier": "^8.5.0",
     "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.6.1",
+    "prettier": "^2.6.2",
     "rimraf": "^3.0.2",
     "ts-jest": "^27.1.4",
     "typescript": "^4.6.3"
@@ -60,7 +60,7 @@
   "dependencies": {
     "sha256-uint8array": "^0.10.3",
     "tslib": "^2.3.1",
-    "univ-conv": "^0.6.16"
+    "univ-conv": "^0.6.17"
   },
   "author": "Yoshihiro Seki",
   "license": "MIT"
