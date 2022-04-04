@@ -17,9 +17,10 @@ import {
 } from "./core";
 import {
   createError,
+  isFileSystemError,
   NotFoundError,
   NotReadableError,
-  SecurityError,
+  PathExistError,
   TypeMismatchError,
 } from "./errors";
 import { getName, joinPaths, normalizePath } from "./util";
@@ -191,10 +192,10 @@ export abstract class AbstractDirectory
 
   public ls = (options?: ListOptions | undefined) => this.list(options);
 
-  public async mkcol(options?: MkcolOptions): Promise<void> {
+  public async mkcol(options?: MkcolOptions): Promise<boolean> {
     const fs = this.fs;
     if (!fs.supportDirectory()) {
-      return;
+      return false;
     }
 
     options = { force: false, recursive: false, ...options };
@@ -204,13 +205,12 @@ export abstract class AbstractDirectory
       await this._checkDirectory(options);
       if (!options.force) {
         throw createError({
-          name: SecurityError.name,
+          name: PathExistError.name,
           repository,
           path,
           e: { message: `"${path}" has already existed` },
         });
       }
-      return;
     } catch (e) {
       if ((e as ErrorLike).name === NotFoundError.name) {
         if (options.recursive && path !== "/") {
@@ -221,6 +221,8 @@ export abstract class AbstractDirectory
             ignoreHook: options.ignoreHook,
           });
         }
+      } else if (isFileSystemError(e)) {
+        throw e;
       } else {
         throw createError({
           name: NotReadableError.name,
@@ -232,13 +234,14 @@ export abstract class AbstractDirectory
     }
     if (!options.ignoreHook && this.beforeMkcol) {
       if (await this.beforeMkcol(path, options)) {
-        return;
+        return false;
       }
     }
-    await this._mkcol();
+    const result = await this._mkcol();
     if (!options.ignoreHook && this.afterMkcol) {
       await this.afterMkcol(path);
     }
+    return result;
   }
 
   public mkdir = (options?: MkcolOptions | undefined) => this.mkcol(options);
@@ -246,7 +249,7 @@ export abstract class AbstractDirectory
   public readdir = (options?: ListOptions | undefined) => this.list(options);
 
   public abstract _list(): Promise<Item[]>;
-  public abstract _mkcol(): Promise<void>;
+  public abstract _mkcol(): Promise<boolean>;
   public abstract _rmdir(): Promise<void>;
 
   protected async _checkDirectory(options: Options) {

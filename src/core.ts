@@ -177,8 +177,8 @@ export interface FileSystem {
   head(path: string, options?: HeadOptions): Promise<Stats>;
   list(path: string, options?: ListOptions): Promise<string[]>;
   ls(path: string, options?: ListOptions): Promise<string[]>;
-  mkcol(path: string, options?: MkcolOptions): Promise<void>;
-  mkdir(path: string, options?: MkcolOptions): Promise<void>;
+  mkcol(path: string, options?: MkcolOptions): Promise<boolean>;
+  mkdir(path: string, options?: MkcolOptions): Promise<boolean>;
   move(
     fromPath: string,
     toPath: string,
@@ -226,8 +226,8 @@ export interface Directory extends Entry {
   dir(options?: ListOptions): Promise<string[]>;
   list(options?: ListOptions): Promise<string[]>;
   ls(options?: ListOptions): Promise<string[]>;
-  mkcol(options?: MkcolOptions): Promise<void>;
-  mkdir(options?: MkcolOptions): Promise<void>;
+  mkcol(options?: MkcolOptions): Promise<boolean>;
+  mkdir(options?: MkcolOptions): Promise<boolean>;
   readdir(options?: ListOptions): Promise<string[]>;
 }
 

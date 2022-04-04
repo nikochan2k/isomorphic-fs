@@ -201,7 +201,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public ls = (path: string, options?: ListOptions | undefined) =>
     this.list(path, options);
 
-  public async mkcol(path: string, options?: MkcolOptions): Promise<void> {
+  public async mkcol(path: string, options?: MkcolOptions): Promise<boolean> {
     const dir = await this.getDirectory(path);
     return dir.mkcol(options);
   }

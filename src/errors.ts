@@ -240,7 +240,7 @@ export const domExceptions: DOMExceptionType[] = [
 export function createError(options: {
   repository: string;
   path: string;
-  e?: ErrorLike;
+  e?: ErrorLike | string;
   name?: string;
   [key: string]: any; // eslint-disable-line
 }): ErrorLike {

@@ -28,6 +28,7 @@ import {
 } from "./core";
 import {
   createError,
+  isFileSystemError,
   NotFoundError,
   NotReadableError,
   PathExistError,
@@ -157,7 +158,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     try {
-      const data = await this.load(options, stats);
+      const data = await this._read(options, stats);
       await to.write(data, options);
     } catch (e) {
       errors.push(
@@ -175,7 +176,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async hash(options?: ReadOptions): Promise<string> {
     options = { ...options };
-    const data = await this.load(options);
+    const data = await this._read(options);
     const hash = createHash();
     if (readableConverter().typeEquals(data)) {
       await handleReadable(data, async (chunk) => {
@@ -209,7 +210,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options?: ReadOptions
   ): Promise<ReturnData<T>> {
     options = { ...options };
-    const data = await this.load(options);
+    const data = await this._read(options);
     const converter = this._getConverter();
     return converter.convert(data, type, options);
   }
@@ -242,6 +243,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           });
         }
         create = true;
+      } else if (isFileSystemError(e)) {
+        throw e;
       } else {
         throw createError({
           name: NotReadableError.name,
@@ -306,19 +309,22 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return DEFAULT_CONVERTER;
   }
 
-  protected abstract _load(stats: Stats, options: ReadOptions): Promise<Data>;
-  protected abstract _rm(): Promise<void>;
-  protected abstract _save(
-    data: Data,
-    stats: Stats | undefined,
-    options: WriteOptions
-  ): Promise<void>;
-
-  private async load(options: ReadOptions, stats?: Stats): Promise<Data> {
+  protected async _read(options: ReadOptions, stats?: Stats): Promise<Data> {
     const ignoreHook = options.ignoreHook;
     const path = this.path;
     if (!stats) {
       stats = await this.head(options);
+    }
+    if (stats.size == null) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.fs.repository,
+        path,
+        e: { message: `"${path}" must not end with slash` },
+      });
+    } else if (stats.size === 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      return this._getConverter().empty() as Data;
     }
     let data: Data | null = null;
     if (!ignoreHook && this.beforeGet) {
@@ -332,4 +338,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
     return data;
   }
+
+  protected abstract _load(stats: Stats, options: ReadOptions): Promise<Data>;
+  protected abstract _rm(): Promise<void>;
+  protected abstract _save(
+    data: Data,
+    stats: Stats | undefined,
+    options: WriteOptions
+  ): Promise<void>;
 }
