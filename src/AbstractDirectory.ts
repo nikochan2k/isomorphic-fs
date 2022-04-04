@@ -237,11 +237,11 @@ export abstract class AbstractDirectory
         return false;
       }
     }
-    const result = await this._mkcol();
+    await this._mkcol();
     if (!options.ignoreHook && this.afterMkcol) {
       await this.afterMkcol(path);
     }
-    return result;
+    return true;
   }
 
   public mkdir = (options?: MkcolOptions | undefined) => this.mkcol(options);
@@ -249,7 +249,7 @@ export abstract class AbstractDirectory
   public readdir = (options?: ListOptions | undefined) => this.list(options);
 
   public abstract _list(): Promise<Item[]>;
-  public abstract _mkcol(): Promise<boolean>;
+  public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
   protected async _checkDirectory(options: Options) {
