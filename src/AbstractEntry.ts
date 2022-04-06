@@ -8,12 +8,11 @@ import {
   HeadOptions,
   MoveOptions,
   PatchOptions,
-  Props,
   Stats,
   URLOptions,
   XmitOptions,
 } from "./core";
-import { getParentPath, normalizePath } from "./util";
+import { getParentPath } from "./util";
 
 export abstract class AbstractEntry implements Entry {
   private afterDelete?: (path: string) => Promise<void>;
@@ -23,8 +22,6 @@ export abstract class AbstractEntry implements Entry {
   ) => Promise<boolean>;
 
   constructor(public readonly fs: AbstractFileSystem, public path: string) {
-    fs._checkPath(path);
-    this.path = normalizePath(path);
     const hook = fs.options.hook;
     if (hook) {
       this.beforeDelete = hook?.beforeDelete;
@@ -92,7 +89,7 @@ export abstract class AbstractEntry implements Entry {
   public mv = (to: Entry, options?: MoveOptions | undefined) =>
     this.move(to, options);
 
-  public patch = (props: Props, options?: PatchOptions) =>
+  public patch = (props: Stats, options?: PatchOptions) =>
     this.fs.patch(this.path, props, options);
 
   public remove = (options?: DeleteOptions | undefined) => this.delete(options);

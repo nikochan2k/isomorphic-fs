@@ -8,13 +8,10 @@ export interface Times {
   modified?: number;
 }
 
-export interface Props extends Times {
-  [key: string]: Primitive;
-}
-
-export interface Stats extends Props {
+export interface Stats extends Times {
   etag?: string;
   size?: number;
+  [key: string]: Primitive;
 }
 
 export const EXCLUDE_PROP_NAMES = [
@@ -127,7 +124,7 @@ export interface Hook {
   beforeMkcol?: (path: string, options: MkcolOptions) => Promise<boolean>;
   beforePatch?: (
     path: string,
-    props: Props,
+    props: Stats,
     options: PatchOptions
   ) => Promise<boolean>;
   beforePost?: (
@@ -189,7 +186,7 @@ export interface FileSystem {
     toPath: string,
     options?: MoveOptions
   ): Promise<ErrorLike[]>;
-  patch(path: string, props: Props, options?: PatchOptions): Promise<void>;
+  patch(path: string, props: Stats, options?: PatchOptions): Promise<void>;
   read<T extends DataType>(
     path: string,
     type: T,
@@ -215,7 +212,7 @@ export interface Entry {
   head(options?: HeadOptions): Promise<Stats>;
   move(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
   mv(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
-  patch(props: Props, options?: PatchOptions): Promise<void>;
+  patch(props: Stats, options?: PatchOptions): Promise<void>;
   remove(options?: DeleteOptions): Promise<ErrorLike[]>;
   rm(options?: DeleteOptions): Promise<ErrorLike[]>;
   stat(options?: HeadOptions): Promise<Stats>;

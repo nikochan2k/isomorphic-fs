@@ -122,8 +122,6 @@ export abstract class AbstractDirectory
           repository: fs.repository,
           path,
           e: { message: `"${path}" is not a directory` },
-          from: this.path,
-          to: to.path,
         })
       );
       return;
@@ -141,10 +139,8 @@ export abstract class AbstractDirectory
         createError({
           name: TypeMismatchError.name,
           repository: fs.repository,
-          path,
-          e: { message: `"${path}" is not a directory` },
-          from: this.path,
-          to: to.path,
+          path: to.path,
+          e: { message: `"${to.path}" is not a directory` },
         })
       );
       return;

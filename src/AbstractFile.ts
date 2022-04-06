@@ -37,18 +37,6 @@ import {
 } from "./errors";
 import { toHex } from "./util";
 
-function _checkPath(repository: string, path: string) {
-  if (path.endsWith("/")) {
-    throw createError({
-      name: TypeMismatchError.name,
-      repository,
-      path,
-      e: { message: `"${path}" must not end with slash` },
-    });
-  }
-  return path;
-}
-
 export abstract class AbstractFile extends AbstractEntry implements File {
   private afterGet?: (path: string, data: Data) => Promise<void>;
   private afterPost?: (path: string) => Promise<void>;
@@ -71,7 +59,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ) => Promise<boolean>;
 
   constructor(fs: AbstractFileSystem, path: string) {
-    super(fs, _checkPath(fs.repository, path));
+    super(fs, path);
     const hook = fs.options?.hook;
     if (hook) {
       this.beforeGet = hook.beforeGet;
@@ -285,14 +273,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   protected async _checkFile(options: Options) {
     const path = this.path;
-    if (path.endsWith("/")) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.fs.repository,
-        path,
-        e: { message: `"${path}" is not a file` },
-      });
-    }
     const stats = await this.fs.head(path, options);
     if (stats.size == null) {
       throw createError({

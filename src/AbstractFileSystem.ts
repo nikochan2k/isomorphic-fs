@@ -15,7 +15,6 @@ import {
   MkcolOptions,
   MoveOptions,
   PatchOptions,
-  Props,
   ReadOptions,
   Stats,
   URLOptions,
@@ -33,7 +32,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   ) => Promise<Stats | null>;
   private beforePatch?: (
     path: string,
-    props: Props,
+    props: Stats,
     options: PatchOptions
   ) => Promise<boolean>;
 
@@ -46,41 +45,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.beforePatch = hook?.beforePatch;
     this.afterHead = hook?.afterHead;
     this.afterPatch = hook?.afterPatch;
-  }
-
-  public _checkPath(path: string) {
-    if (INVALID_CHARS.test(path)) {
-      throw createError({
-        name: SyntaxError.name,
-        repository: this.repository,
-        path,
-        e: { message: `"${path}" has invalid character` },
-      });
-    }
-  }
-
-  public _fixProps(props: Props, stats: Stats) {
-    if (props["size"] != null) {
-      delete props["size"];
-    }
-    if (props["etag"] != null) {
-      delete props["etag"];
-    }
-    if (
-      typeof props.accessed !== "number" ||
-      props.accessed === stats.accessed
-    ) {
-      delete props.accessed;
-    }
-    if (typeof props.created !== "number" || props.created === stats.created) {
-      delete props.created;
-    }
-    if (
-      typeof props.modified !== "number" ||
-      props.modified === stats.modified
-    ) {
-      delete props.modified;
-    }
   }
 
   public async copy(
@@ -115,11 +79,13 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.list(path, options);
 
   public getDirectory(path: string): Promise<Directory> {
+    path = this._checkPath(path);
     return this._getDirectory(path);
   }
 
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry> {
     options = { ...options };
+
     if (path.endsWith("/")) {
       if (!options.type) {
         options.type = EntryType.Directory;
@@ -138,6 +104,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public getFile(path: string): Promise<File> {
+    path = this._checkPath(path);
     return this._getFile(path);
   }
 
@@ -147,15 +114,14 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async head(path: string, options?: HeadOptions): Promise<Stats> {
-    this._checkPath(path);
     options = { ...options };
 
     if (path.endsWith("/")) {
       if (!options.type) {
         options.type = EntryType.Directory;
       }
-      path = normalizePath(path);
     }
+    path = this._checkPath(path);
 
     if (options.type === EntryType.Directory) {
       if (!this.supportDirectory()) {
@@ -174,7 +140,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       throw createError({
         name: TypeMismatchError.name,
         repository: this.repository,
-        path: path,
+        path,
         e: { message: `"${path}" is not a directory` },
       });
     }
@@ -182,7 +148,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       throw createError({
         name: TypeMismatchError.name,
         repository: this.repository,
-        path: path,
+        path,
         e: { message: `"${path}" is not a file` },
       });
     }
@@ -227,7 +193,7 @@ export abstract class AbstractFileSystem implements FileSystem {
 
   public async patch(
     path: string,
-    props: Props,
+    props: Stats,
     options?: PatchOptions
   ): Promise<void> {
     options = { ...options };
@@ -236,11 +202,11 @@ export abstract class AbstractFileSystem implements FileSystem {
       if (!options.type) {
         options.type = EntryType.Directory;
       }
-      path = normalizePath(path);
     }
+    path = this._checkPath(path);
 
     const stats = await this.head(path, options);
-    this._fixProps(props, stats);
+    this._fixProps(path, props, stats);
     if (this.beforePatch) {
       if (await this.beforePatch(path, props, options)) {
         return;
@@ -292,7 +258,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _patch(
     path: string,
-    props: Props,
+    props: Stats,
     options: PatchOptions
   ): Promise<void>;
   public abstract _toURL(
@@ -302,16 +268,63 @@ export abstract class AbstractFileSystem implements FileSystem {
   ): Promise<string>;
   public abstract supportDirectory(): boolean;
 
+  protected _checkPath(path: string) {
+    if (INVALID_CHARS.test(path)) {
+      throw createError({
+        name: SyntaxError.name,
+        repository: this.repository,
+        path,
+        e: { message: `"${path}" has invalid character` },
+      });
+    }
+    return normalizePath(path);
+  }
+
+  protected _fixProps(path: string, props: Stats, stats: Stats) {
+    if (props.size != null) {
+      console.warn(`Cannot change size: ${path}`);
+      delete props.size; // Cannot change size
+    }
+    if (props.etag != null) {
+      console.warn(`Cannot change etag: ${path}`);
+      delete props.etag;
+    }
+    if (typeof props.accessed !== "number") {
+      console.warn(`Access time (${props.accessed}) is illegal: ${path}`); // eslint-disable-line
+      delete props.accessed;
+    }
+    if (typeof props.created !== "number") {
+      console.warn(`Create time (${props.created}) is illegal: ${path}`); // eslint-disable-line
+      delete props.created;
+    }
+    if (typeof props.modified !== "number") {
+      console.warn(`Modify time (${props.modified}) is illegal: ${path}`); // eslint-disable-line
+      delete props.modified;
+    }
+    for (const key of Object.keys(stats)) {
+      if (stats[key] === props[key]) {
+        delete props[key];
+      } else if (
+        typeof stats[key] === typeof props[key] &&
+        typeof props[key] !== "undefined"
+      ) {
+        console.warn(`Illetal type stats[${key}]: ${props[key]}`); // eslint-disable-line
+        delete props[key];
+      }
+    }
+  }
+
   private async _prepareXmit(fromPath: string, toPath: string) {
     let from: Entry;
     try {
       from = await this.getEntry(fromPath);
     } catch (e) {
-      if (
-        !this.supportDirectory() &&
-        (e as ErrorLike).name === NotFoundError.name
-      ) {
-        from = await this.getDirectory(fromPath);
+      if ((e as ErrorLike).name === NotFoundError.name) {
+        if (this.supportDirectory()) {
+          from = await this.getDirectory(fromPath);
+        } else {
+          throw e;
+        }
       } else {
         throw e;
       }
