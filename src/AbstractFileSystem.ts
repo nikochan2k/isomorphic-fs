@@ -212,7 +212,7 @@ export abstract class AbstractFileSystem implements FileSystem {
         return;
       }
     }
-    await this._patch(path, props, options);
+    await this._patch(path, stats, props, options);
     if (this.afterPatch) {
       await this.afterPatch(path);
     }
@@ -258,6 +258,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _patch(
     path: string,
+    stats: Stats,
     props: Stats,
     options: PatchOptions
   ): Promise<void>;
