@@ -266,6 +266,9 @@ export abstract class AbstractFileSystem implements FileSystem {
     isDirectory: boolean,
     options?: URLOptions
   ): Promise<string>;
+  public abstract canPatchAccessed(): boolean;
+  public abstract canPatchCreated(): boolean;
+  public abstract canPatchModified(): boolean;
   public abstract supportDirectory(): boolean;
 
   protected _checkPath(path: string) {
@@ -289,21 +292,44 @@ export abstract class AbstractFileSystem implements FileSystem {
       console.warn(`Cannot change etag: ${path}`);
       delete props.etag;
     }
-    if (typeof props.accessed !== "number") {
-      console.warn(`Access time (${props.accessed}) is illegal: ${path}`); // eslint-disable-line
+    if (this.canPatchAccessed()) {
+      if (typeof props.accessed !== "number") {
+        console.warn(`Access time (${props.accessed}) is illegal: ${path}`); // eslint-disable-line
+        delete props.accessed;
+      }
+    } else {
+      console.warn(
+        `Cannot patch access time on the FileSystem: ${this.constructor.name}`
+      ); // eslint-disable-line
       delete props.accessed;
     }
-    if (typeof props.created !== "number") {
-      console.warn(`Create time (${props.created}) is illegal: ${path}`); // eslint-disable-line
+    if (this.canPatchCreated()) {
+      if (typeof props.created !== "number") {
+        console.warn(`Creation time (${props.created}) is illegal: ${path}`); // eslint-disable-line
+        delete props.created;
+      }
+    } else {
+      console.warn(
+        `Cannot patch creation time on the FileSystem: ${this.constructor.name}`
+      ); // eslint-disable-line
       delete props.created;
     }
-    if (typeof props.modified !== "number") {
-      console.warn(`Modify time (${props.modified}) is illegal: ${path}`); // eslint-disable-line
+    if (this.canPatchModified()) {
+      if (typeof props.modified !== "number") {
+        console.warn(
+          `Modification time (${props.modified}) is illegal: ${path}` // eslint-disable-line
+        );
+        delete props.modified;
+      }
+    } else {
+      console.warn(
+        `Cannot patch modification time on the FileSystem: ${this.constructor.name}`
+      ); // eslint-disable-line
       delete props.modified;
     }
     for (const key of Object.keys(stats)) {
       if (stats[key] === props[key]) {
-        delete props[key];
+        delete props[key]; // Not changed
       } else if (
         typeof stats[key] === typeof props[key] &&
         typeof props[key] !== "undefined"

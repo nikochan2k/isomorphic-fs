@@ -21,7 +21,10 @@ export abstract class AbstractEntry implements Entry {
     options: DeleteOptions
   ) => Promise<boolean>;
 
-  constructor(public readonly fs: AbstractFileSystem, public path: string) {
+  constructor(
+    public readonly fs: AbstractFileSystem,
+    public readonly path: string
+  ) {
     const hook = fs.options.hook;
     if (hook) {
       this.beforeDelete = hook?.beforeDelete;
