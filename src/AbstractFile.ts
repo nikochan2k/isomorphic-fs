@@ -209,7 +209,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const fs = this.fs;
     const repository = fs.repository;
     if (
-      !fs.supportRangeWrite() &&
+      !this.supportRangeWrite() &&
       (typeof options?.start === "number" ||
         typeof options?.length === "number")
     ) {
@@ -285,6 +285,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
+  public abstract supportRangeRead(): boolean;
+  public abstract supportRangeWrite(): boolean;
+
   protected async _checkFile(options: Options) {
     const path = this.path;
     const stats = await this.fs.head(path, options);
@@ -308,7 +311,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const repository = fs.repository;
     const path = this.path;
     if (
-      !fs.supportRangeRead() &&
+      !this.supportRangeRead() &&
       (typeof options?.start === "number" ||
         typeof options?.length === "number")
     ) {
