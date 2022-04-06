@@ -331,7 +331,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       if (stats[key] === props[key]) {
         delete props[key]; // Not changed
       } else if (
-        typeof stats[key] === typeof props[key] &&
+        typeof stats[key] !== typeof props[key] &&
         typeof props[key] !== "undefined"
       ) {
         console.warn(`Illetal type stats[${key}]: ${props[key]}`); // eslint-disable-line
