@@ -31,6 +31,7 @@ import {
   isFileSystemError,
   NotFoundError,
   NotReadableError,
+  NotSupportedError,
   PathExistError,
   SecurityError,
   TypeMismatchError,
@@ -204,10 +205,23 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async write(data: Data, options?: WriteOptions): Promise<void> {
-    options = { ...options };
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
+    if (
+      !fs.supportRangeWrite() &&
+      (typeof options?.start === "number" ||
+        typeof options?.length === "number")
+    ) {
+      throw createError({
+        name: NotSupportedError.name,
+        repository,
+        path,
+        e: { message: "Range write is not supported" },
+      });
+    }
+
+    options = { ...options };
     let stats: Stats | undefined;
     let create: boolean;
     try {
@@ -290,8 +304,23 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   protected async _read(options: ReadOptions, stats?: Stats): Promise<Data> {
-    const ignoreHook = options.ignoreHook;
+    const fs = this.fs;
+    const repository = fs.repository;
     const path = this.path;
+    if (
+      !fs.supportRangeRead() &&
+      (typeof options?.start === "number" ||
+        typeof options?.length === "number")
+    ) {
+      throw createError({
+        name: NotSupportedError.name,
+        repository,
+        path,
+        e: { message: "Range read is not supported" },
+      });
+    }
+
+    const ignoreHook = options.ignoreHook;
     if (!stats) {
       stats = await this.head(options);
     }

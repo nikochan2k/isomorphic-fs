@@ -271,6 +271,8 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract canPatchCreated(): boolean;
   public abstract canPatchModified(): boolean;
   public abstract supportDirectory(): boolean;
+  public abstract supportRangeRead(): boolean;
+  public abstract supportRangeWrite(): boolean;
 
   protected _checkPath(path: string) {
     if (INVALID_CHARS.test(path)) {
