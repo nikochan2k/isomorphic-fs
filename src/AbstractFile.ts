@@ -173,6 +173,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           bufferSize: options?.bufferSize,
         });
         hash.update(buffer);
+        return true;
       });
     } else if (readableStreamConverter().typeEquals(data)) {
       await handleReadableStream(data, async (chunk) => {
@@ -180,6 +181,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           bufferSize: options?.bufferSize,
         });
         hash.update(u8);
+        return true;
       });
     } else {
       const u8 = await uint8ArrayConverter().convert(data);
