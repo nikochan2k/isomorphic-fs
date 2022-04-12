@@ -24,7 +24,7 @@ export const testAll = (
       await fs.stat("/nothing");
       throw new Error("/nothing exists");
     } catch (e) {
-      expect(e.name).toBe(NotFoundError.name);
+      expect((e as any).name).toBe(NotFoundError.name);
     }
   });
 

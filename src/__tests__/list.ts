@@ -26,7 +26,7 @@ export const testAll = (
         throw new Error("/nothing exists");
       }
     } catch (e) {
-      expect(e.name).toBe(NotFoundError.name);
+      expect((e as any).name).toBe(NotFoundError.name);
     }
   });
 
@@ -39,7 +39,8 @@ export const testAll = (
       }
     } catch (e) {
       expect(
-        e.name === TypeMismatchError.name || e.name === NotFoundError.name
+        (e as any).name === TypeMismatchError.name ||
+          (e as any).name === NotFoundError.name
       ).toBe(true);
     }
   });
