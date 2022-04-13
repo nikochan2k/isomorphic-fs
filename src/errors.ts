@@ -4,13 +4,15 @@ export class FileSystemException extends Error {
   public code: number | undefined;
 
   constructor(params: ErrorLike) {
-    super(params.message);
-    for (const [key, value] of Object.entries(params)) {
-      if (key === "message") {
-        continue;
-      }
-      (this as any)[key] = value; // eslint-disable-line
-    }
+    super(FileSystemException.toMessage(params));
+    this.name = params.name ?? "";
+    this.code = params.code;
+    this.stack = params.stack;
+  }
+
+  private static toMessage(params: ErrorLike) {
+    delete params.stack;
+    return JSON.stringify(params);
   }
 }
 
