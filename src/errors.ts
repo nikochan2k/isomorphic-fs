@@ -7,12 +7,12 @@ export class FileSystemException extends Error {
     super(FileSystemException.toMessage(params));
     this.name = params.name ?? "";
     this.code = params.code;
-    this.stack = params.stack;
   }
 
   private static toMessage(params: ErrorLike) {
+    params = { ...params };
     delete params.stack;
-    return JSON.stringify(params);
+    return JSON.stringify(params, null, 2);
   }
 }
 
