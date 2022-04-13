@@ -17,7 +17,7 @@ import {
 } from "./core";
 import {
   createError,
-  isFileSystemError,
+  isFileSystemException,
   NotFoundError,
   NotReadableError,
   PathExistError,
@@ -217,7 +217,7 @@ export abstract class AbstractDirectory
             ignoreHook: options.ignoreHook,
           });
         }
-      } else if (isFileSystemError(e)) {
+      } else if (isFileSystemException(e)) {
         throw e;
       } else {
         throw createError({

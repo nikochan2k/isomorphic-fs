@@ -28,7 +28,7 @@ import {
 } from "./core";
 import {
   createError,
-  isFileSystemError,
+  isFileSystemException,
   NotFoundError,
   NotReadableError,
   NotSupportedError,
@@ -247,7 +247,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           });
         }
         create = true;
-      } else if (isFileSystemError(e)) {
+      } else if (isFileSystemException(e)) {
         throw e;
       } else {
         throw createError({

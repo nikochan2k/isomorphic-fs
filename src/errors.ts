@@ -1,208 +1,216 @@
 import { ErrorLike } from "./core";
 
-interface DOMExceptionType {
-  code?: number;
-  name: string;
-  message: string;
+export class FileSystemException extends Error {
+  public code: number | undefined;
+
+  constructor(params: ErrorLike) {
+    super(params.message);
+    for (const [key, value] of Object.entries(params)) {
+      if (key === "message") {
+        continue;
+      }
+      (this as any)[key] = value; // eslint-disable-line
+    }
+  }
 }
 
 /* Use RangeError instead. */
-export const IndexSizeError: DOMExceptionType = {
+export const IndexSizeError: ErrorLike = {
   code: 1,
   name: "IndexSizeError",
   message: "The index is not in the allowed range.",
 };
 
-export const HierarchyRequestError: DOMExceptionType = {
+export const HierarchyRequestError: ErrorLike = {
   code: 3,
   name: "HierarchyRequestError",
   message: "The operation would yield an incorrect node tree. [DOM]",
 };
 
-export const WrongDocumentError: DOMExceptionType = {
+export const WrongDocumentError: ErrorLike = {
   code: 4,
   name: "WrongDocumentError",
   message: "The object is in the wrong document. [DOM]",
 };
 
-export const InvalidCharacterError: DOMExceptionType = {
+export const InvalidCharacterError: ErrorLike = {
   code: 5,
   name: "InvalidCharacterError",
   message: "The string contains invalid characters.",
 };
 
-export const NoModificationAllowedError: DOMExceptionType = {
+export const NoModificationAllowedError: ErrorLike = {
   code: 7,
   name: "NoModificationAllowedError",
   message: "The string contains invalid characters.",
 };
 
-export const NotFoundError: DOMExceptionType = {
+export const NotFoundError: ErrorLike = {
   code: 8,
   name: "NotFoundError",
   message: "The object can not be found here.",
 };
 
-export const NotSupportedError: DOMExceptionType = {
+export const NotSupportedError: ErrorLike = {
   code: 9,
   name: "NotSupportedError",
   message: "The operation is not supported.",
 };
 
-export const InUseAttributeError: DOMExceptionType = {
+export const InUseAttributeError: ErrorLike = {
   code: 10,
   name: "InUseAttributeError",
   message: "The attribute is in use.",
 };
 
-export const InvalidStateError: DOMExceptionType = {
+export const InvalidStateError: ErrorLike = {
   code: 11,
   name: "InvalidStateError",
   message: "The object is in an invalid state.",
 };
 
-export const SyntaxError: DOMExceptionType = {
+export const SyntaxError: ErrorLike = {
   code: 12,
   name: "SyntaxError",
   message: "The string did not match the expected pattern.",
 };
 
-export const InvalidModificationError: DOMExceptionType = {
+export const InvalidModificationError: ErrorLike = {
   code: 13,
   name: "InvalidModificationError",
   message: "The object can not be modified in this way.",
 };
 
-export const NamespaceError: DOMExceptionType = {
+export const NamespaceError: ErrorLike = {
   code: 14,
   name: "NamespaceError",
   message: "The operation is not allowed by Namespaces in XML. [XML-NAMES]",
 };
 
 /* Use TypeError for invalid arguments, "NotSupportedError" DOMException for unsupported operations, and "NotAllowedError" DOMException for denied requests instead. */
-export const InvalidAccessError: DOMExceptionType = {
+export const InvalidAccessError: ErrorLike = {
   code: 15,
   name: "InvalidAccessError",
   message: "The object does not support the operation or argument.",
 };
 
 /* Use TypeError instead. */
-export const TypeMismatchError: DOMExceptionType = {
+export const TypeMismatchError: ErrorLike = {
   code: 17,
   name: "TypeMismatchError",
   message: "The type of the object does not match the expected type.",
 };
 
-export const SecurityError: DOMExceptionType = {
+export const SecurityError: ErrorLike = {
   code: 18,
   name: "SecurityError",
   message: "The operation is insecure.",
 };
 
-export const NetworkError: DOMExceptionType = {
+export const NetworkError: ErrorLike = {
   code: 19,
   name: "NetworkError",
   message: "A network error occurred.",
 };
 
-export const AbortError: DOMExceptionType = {
+export const AbortError: ErrorLike = {
   code: 20,
   name: "AbortError",
   message: "The operation was aborted.",
 };
 
-export const URLMismatchError: DOMExceptionType = {
+export const URLMismatchError: ErrorLike = {
   code: 21,
   name: "URLMismatchError",
   message: "The given URL does not match another URL.",
 };
 
-export const QuotaExceededError: DOMExceptionType = {
+export const QuotaExceededError: ErrorLike = {
   code: 22,
   name: "QuotaExceededError",
   message: "The quota has been exceeded.",
 };
 
-export const TimeoutError: DOMExceptionType = {
+export const TimeoutError: ErrorLike = {
   code: 23,
   name: "TimeoutError",
   message: "The operation timed out.",
 };
 
-export const InvalidNodeTypeError: DOMExceptionType = {
+export const InvalidNodeTypeError: ErrorLike = {
   code: 24,
   name: "InvalidNodeTypeError",
   message:
     "The supplied node is incorrect or has an incorrect ancestor for this operation.",
 };
 
-export const DataCloneError: DOMExceptionType = {
+export const DataCloneError: ErrorLike = {
   code: 25,
   name: "DataCloneError",
   message: "The object can not be cloned.",
 };
 
-export const EncodingError: DOMExceptionType = {
+export const EncodingError: ErrorLike = {
   name: "EncodingError",
   message: "The encoding operation (either encoded or decoding) failed.",
 };
 
-export const NotReadableError: DOMExceptionType = {
+export const NotReadableError: ErrorLike = {
   name: "NotReadableError",
   message: "The I/O read operation failed.",
 };
 
-export const UnknownError: DOMExceptionType = {
+export const UnknownError: ErrorLike = {
   name: "UnknownError",
   message: "The operation failed for an unknown transient reason.",
 };
 
-export const ConstraintError: DOMExceptionType = {
+export const ConstraintError: ErrorLike = {
   name: "ConstraintError",
   message:
     "A mutation operation in a transaction failed because a constraint was not satisfied.",
 };
 
-export const DataError: DOMExceptionType = {
+export const DataError: ErrorLike = {
   name: "DataError",
   message: "Provided data is inadequate.",
 };
 
-export const TransactionInactiveError: DOMExceptionType = {
+export const TransactionInactiveError: ErrorLike = {
   name: "TransactionInactiveError",
   message:
     "A request was placed against a transaction which is currently not active, or which is finished.",
 };
 
-export const ReadOnlyError: DOMExceptionType = {
+export const ReadOnlyError: ErrorLike = {
   name: "ReadOnlyError",
   message: 'The mutating operation was attempted in a "readonly" transaction.',
 };
 
-export const VersionError: DOMExceptionType = {
+export const VersionError: ErrorLike = {
   name: "VersionError",
   message:
     "An attempt was made to open a database using a lower version than the existing version.",
 };
 
-export const OperationError: DOMExceptionType = {
+export const OperationError: ErrorLike = {
   name: "OperationError",
   message: "The operation failed for an operation-specific reason.",
 };
 
-export const NotAllowedError: DOMExceptionType = {
+export const NotAllowedError: ErrorLike = {
   name: "NotAllowedError",
   message:
     "The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.",
 };
 
-export const PathExistError: DOMExceptionType = {
+export const PathExistError: ErrorLike = {
   code: 12,
   name: "PathExistError",
   message: "The request file or directry has already existed.",
 };
 
-export const domExceptions: DOMExceptionType[] = [
+export const domExceptions: ErrorLike[] = [
   IndexSizeError,
   HierarchyRequestError,
   WrongDocumentError,
@@ -245,7 +253,7 @@ export function createError(options: {
   [key: string]: any; // eslint-disable-line
 }): ErrorLike {
   let e = options.e;
-  if (isFileSystemError(e)) {
+  if (isFileSystemException(e)) {
     return e as ErrorLike;
   }
 
@@ -259,7 +267,7 @@ export function createError(options: {
 
   let repository = options.repository;
   if (repository.endsWith("/")) {
-    repository = repository.substr(0, repository.length - 1);
+    repository = repository.substring(0, repository.length - 1);
   }
   if (!repository.startsWith("/")) {
     repository = "/" + repository;
@@ -277,7 +285,7 @@ export function createError(options: {
         if (!e.message) {
           e.message = de.message;
         }
-        return e;
+        return new FileSystemException(e);
       }
     }
   }
@@ -285,11 +293,6 @@ export function createError(options: {
   return e;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function isFileSystemError(e?: any): boolean {
-  if (!e) {
-    return false;
-  }
-  // eslint-disable-next-line
-  return e["repository"] && e["path"];
+export function isFileSystemException(e?: unknown): boolean {
+  return e instanceof FileSystemException;
 }
