@@ -347,7 +347,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       from = await this.getEntry(fromPath);
     } catch (e) {
       if ((e as ErrorLike).name === NotFoundError.name) {
-        if (this.supportDirectory()) {
+        if (!this.supportDirectory()) {
           from = await this.getDirectory(fromPath);
         } else {
           throw e;
