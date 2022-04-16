@@ -309,26 +309,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   protected async _read(options: ReadOptions, stats?: Stats): Promise<Data> {
-    const fs = this.fs;
-    const repository = fs.repository;
-    const path = this.path;
-    if (
-      !this.supportRangeRead() &&
-      (typeof options?.start === "number" ||
-        typeof options?.length === "number")
-    ) {
-      throw createError({
-        name: NotSupportedError.name,
-        repository,
-        path,
-        e: { message: "Range read is not supported" },
-      });
-    }
-
     const ignoreHook = options.ignoreHook;
     if (!stats) {
       stats = await this.head(options);
     }
+
+    const path = this.path;
     if (stats.size == null) {
       throw createError({
         name: TypeMismatchError.name,
@@ -350,6 +336,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     if (!ignoreHook && this.afterGet) {
       this.afterGet(path, data).catch((e) => console.warn(e));
     }
+
+    if (
+      data &&
+      !this.supportRangeRead() &&
+      (typeof options?.start === "number" ||
+        typeof options?.length === "number")
+    ) {
+      data = await DEFAULT_CONVERTER.slice(data, options); // eslint-disable-line
+    }
+
     return data;
   }
 
