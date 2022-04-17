@@ -201,19 +201,34 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options?: ReadOptions
   ): Promise<ReturnData<T>> {
     options = { ...options };
-    const data = await this._read(options);
     const converter = this._getConverter();
+    if (options.length === 0) {
+      return converter.empty(type);
+    }
+
+    const data = await this._read(options);
     return converter.convert(data, type, options);
   }
 
   public async write(data: Data, options?: WriteOptions): Promise<void> {
+    const length = options?.length;
+    if (length === 0) {
+      return;
+    }
+
+    const start = options?.start;
+    if (options?.append && 0 < (start as number)) {
+      throw new Error(
+        "Cannot set options.append and options.start at the same time"
+      );
+    }
+
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
     if (
       !this.supportRangeWrite() &&
-      (typeof options?.start === "number" ||
-        typeof options?.length === "number")
+      (typeof start === "number" || typeof length === "number")
     ) {
       throw createError({
         name: NotSupportedError.name,
@@ -287,6 +302,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
+  public abstract supportAppend(): boolean;
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
 
