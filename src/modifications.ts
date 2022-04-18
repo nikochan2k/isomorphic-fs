@@ -1,9 +1,9 @@
 import { Readable } from "stream";
-import { closeStream, Data, DEFAULT_CONVERTER } from "univ-conv";
+import { BlockData, closeStream, Data, DEFAULT_CONVERTER } from "univ-conv";
 
 export interface Modification {
   data: Data;
-  start: number;
+  start?: number;
   length?: number;
 }
 
@@ -24,10 +24,8 @@ export class ModifiedReadable extends Readable {
       try {
         const iEnd = this.iStart + size;
         for (const mod of this.mods) {
-          const mStart = mod.start;
-          const mEnd =
-            mod.start +
-            (mod.length == null ? Number.MAX_SAFE_INTEGER : mod.length);
+          const mStart = mod.start ?? 0;
+          const mEnd = mStart + (mod.length ?? Number.MAX_SAFE_INTEGER);
           if (mStart <= this.iStart && iEnd <= mEnd) {
             /*
             (10)
@@ -188,8 +186,8 @@ export function createModifiedReadableStream(
           try {
             const iEnd = iStart + size;
             for (const mod of mods) {
-              const mStart = mod.start;
-              const mEnd = mod.start + (mod.length ?? Number.MAX_SAFE_INTEGER);
+              const mStart = mod.start ?? 0;
+              const mEnd = mStart + (mod.length ?? Number.MAX_SAFE_INTEGER);
               if (mStart <= iStart && iEnd <= mEnd) {
                 /*
                 (10)
@@ -327,4 +325,22 @@ export function createModifiedReadableStream(
       closeStream(src, e);
     },
   });
+}
+
+export async function modify(src: BlockData, ...mods: Modification[]) {
+  const u8 = await DEFAULT_CONVERTER.convert(src, "uint8array"); // eslint-disable-line @typescript-eslint/no-unsafe-argument
+  const size = u8.length;
+  for (const mod of mods) {
+    const start = mod.start ?? 0;
+    if (size <= start) {
+      continue;
+    }
+    let length = mod.length ?? Number.MAX_SAFE_INTEGER;
+    if (size < start + length) {
+      length = size - start;
+    }
+    const data = await DEFAULT_CONVERTER.toUint8Array(mod.data, { length });
+    u8.set(data, start);
+  }
+  return u8;
 }

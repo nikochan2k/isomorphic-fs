@@ -6,6 +6,8 @@ import {
   DEFAULT_CONVERTER,
   handleReadable,
   handleReadableStream,
+  isBrowser,
+  isNode,
   readableConverter,
   readableStreamConverter,
   ReturnData,
@@ -31,11 +33,15 @@ import {
   isFileSystemException,
   NotFoundError,
   NotReadableError,
-  NotSupportedError,
   PathExistError,
   SecurityError,
   TypeMismatchError,
 } from "./errors";
+import {
+  createModifiedReadableStream,
+  ModifiedReadable,
+  modify,
+} from "./modifications";
 import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {
@@ -211,31 +217,54 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async write(data: Data, options?: WriteOptions): Promise<void> {
-    const length = options?.length;
+    options = { ...options };
+    const length = options.length;
     if (length === 0) {
       return;
     }
 
-    const start = options?.start;
-    if (options?.append && 0 < (start as number)) {
-      throw new Error(
-        "Cannot set options.append and options.start at the same time"
+    const start = options.start;
+    if (options.append && start != null) {
+      options.append = false;
+      console.warn(
+        "Set options.append to false because options.start is not null."
       );
     }
 
     const path = this.path;
     const fs = this.fs;
     const repository = fs.repository;
-    if (
+    const converter = this._getConverter();
+    const rc = readableConverter();
+    const rsc = readableStreamConverter();
+    if (!this.supportAppend() && options.append) {
+      options.append = false;
+      const head = await this._read({ bufferSize: options.bufferSize });
+      if (rc.typeEquals(head) || rc.typeEquals(data)) {
+        data = await converter.merge([head, data], "readable");
+      } else if (rsc.typeEquals(head) || rsc.typeEquals(data)) {
+        data = await converter.merge([head, data], "readablestream");
+      } else if (isBrowser) {
+        data = await converter.merge([head, data], "blob");
+      } else if (isNode) {
+        data = await converter.merge([head, data], "buffer");
+      } else {
+        data = await converter.merge([head, data], "uint8array");
+      }
+    } else if (
       !this.supportRangeWrite() &&
       (typeof start === "number" || typeof length === "number")
     ) {
-      throw createError({
-        name: NotSupportedError.name,
-        repository,
-        path,
-        e: { message: "Range write is not supported" },
-      });
+      delete options.start;
+      delete options.length;
+      const src = await this._read({ bufferSize: options.bufferSize });
+      if (rc.typeEquals(src)) {
+        data = new ModifiedReadable(src, { data, start, length });
+      } else if (rsc.typeEquals(src)) {
+        data = createModifiedReadableStream(src, { data, start, length });
+      } else {
+        data = await modify(src, { data, start, length });
+      }
     }
 
     options = { ...options };
