@@ -335,9 +335,14 @@ export async function modify(src: BlockData, ...mods: Modification[]) {
     if (size <= start) {
       continue;
     }
-    let length = mod.length ?? Number.MAX_SAFE_INTEGER;
-    if (size < start + length) {
+    let length: number;
+    if (mod.length == null) {
       length = size - start;
+    } else {
+      length = mod.length;
+      if (size < start + length) {
+        length = size - start;
+      }
     }
     const data = await DEFAULT_CONVERTER.toUint8Array(mod.data, { length });
     u8.set(data, start);
