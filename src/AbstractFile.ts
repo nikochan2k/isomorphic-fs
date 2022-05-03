@@ -37,11 +37,7 @@ import {
   SecurityError,
   TypeMismatchError,
 } from "./errors";
-import {
-  createModifiedReadableStream,
-  ModifiedReadable,
-  modify,
-} from "./modifications";
+import { createModifiedReadableStream, ModifiedReadable, modify } from "./mods";
 import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {

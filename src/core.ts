@@ -237,4 +237,10 @@ export interface File extends Entry {
   write(data: Data, options?: WriteOptions): Promise<void>;
 }
 
+export interface Modification {
+  data: Data;
+  start?: number;
+  length?: number;
+}
+
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;
