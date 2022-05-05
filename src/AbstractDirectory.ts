@@ -10,6 +10,9 @@ import {
   Item,
   ListOptions,
   MkcolOptions,
+  OnExists,
+  OnNoParent,
+  OnNotExist,
   Options,
   Stats,
   XmitOptions,
@@ -55,14 +58,15 @@ export abstract class AbstractDirectory
       await this._checkDirectory(options);
     } catch (e) {
       const errors = options.errors;
-      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
-        if (!options.force) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
+        if (options.onNotExist === OnNotExist.Error) {
           this.fs._handleFileSystemError(e, errors);
+          return false;
         }
       } else {
         this._handleNotReadableError(errors, { e });
+        return false;
       }
-      return false;
     }
 
     let result = true;
@@ -105,11 +109,7 @@ export abstract class AbstractDirectory
     }
 
     const toDir = to as Directory;
-    let result = await toDir.mkcol({
-      force: options.force ?? true,
-      recursive: false,
-      ignoreHook: options.ignoreHook,
-    });
+    let result = await toDir.mkdir(options);
     if (!result) {
       return false;
     }
@@ -164,14 +164,14 @@ export abstract class AbstractDirectory
   public async mkcol(options?: MkcolOptions): Promise<boolean> {
     const fs = this.fs;
     if (!fs.supportDirectory()) {
-      return false;
+      return true;
     }
 
-    options = { force: false, recursive: false, ...options };
+    options = { ...this.fs.defaultMkdirOptions, ...options };
     const path = this.path;
     try {
       await this._checkDirectory(options);
-      if (!options.force) {
+      if (options.onExists === OnExists.Error) {
         this.fs._handleError(PathExistError.name, path, options.errors, {
           message: `"${path}" has already existed`,
         });
@@ -179,7 +179,7 @@ export abstract class AbstractDirectory
       }
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.recursive && path !== "/") {
+        if (options.onNoParent === OnNoParent.MakeParents && path !== "/") {
           const parent = await this.getParent();
           if (!parent) {
             return false;
@@ -194,11 +194,12 @@ export abstract class AbstractDirectory
 
     try {
       if (!options.ignoreHook && this.beforeMkcol) {
-        if (await this.beforeMkcol(path, options)) {
-          return false;
+        const result = await this.beforeMkcol(path, options);
+        if (result != null) {
+          return result;
         }
       }
-      await this._mkcol();
+      await this._mkdir();
       if (!options.ignoreHook && this.afterMkcol) {
         await this.afterMkcol(path);
       }
@@ -214,7 +215,7 @@ export abstract class AbstractDirectory
   public readdir = (options?: ListOptions | undefined) => this.list(options);
 
   public abstract _list(): Promise<Item[]>;
-  public abstract _mkcol(): Promise<void>;
+  public abstract _mkdir(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
   protected async _checkDirectory(options: Options): Promise<void> {

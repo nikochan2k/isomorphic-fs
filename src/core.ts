@@ -25,6 +25,10 @@ export const EXCLUDE_PROP_NAMES = [
 ];
 
 export interface FileSystemOptions {
+  defaultCopyOptions?: CopyOptions;
+  defaultDeleteOptions?: DeleteOptions;
+  defaultMkdirOptions?: MkcolOptions;
+  defaultMoveOptions?: MoveOptions;
   hook?: Hook;
 }
 
@@ -35,24 +39,19 @@ export interface Options {
   ignoreHook?: boolean;
 }
 
+export enum OnNotExist {
+  Error = "error",
+  Ignore = "ignore",
+}
+
 export interface DeleteOptions extends Options {
-  /**
-   * When `true`, exceptions will be ignored if `path` does not exist.
-   * @default false
-   */
-  force: boolean;
-  /**
-   * If `true`, perform a recursive directory removal. In
-   * recursive mode, errors are not reported if `path` does not exist, and
-   * operations are retried on failure.
-   * @default false
-   */
+  onNotExist: OnNotExist;
   recursive: boolean;
 }
 
 export enum EntryType {
-  File = "f",
-  Directory = "d",
+  File = "file" /** File */,
+  Directory = "directory" /** Directory */,
 }
 
 export interface Item extends Stats {
@@ -70,18 +69,19 @@ export interface PatchOptions extends Options {
 
 export type ListOptions = Options;
 
+export enum OnExists {
+  Error = "error",
+  Ignore = "ignore",
+}
+
+export enum OnNoParent {
+  Error = "error",
+  MakeParents = "make_parents",
+}
+
 export interface MkcolOptions extends Options {
-  /**
-   * If it is true, exceptions will be ignored if the directory exist.
-   * @default false
-   */
-  force: boolean;
-  /**
-   * Indicates whether parent folders should be created.
-   * If a folder was created, the path to the first created folder will be returned.
-   * @default false
-   */
-  recursive: boolean;
+  onExists: OnExists;
+  onNoParent: OnNoParent;
 }
 export interface ReadOptions extends Options, Partial<ConvertOptions> {}
 
@@ -92,17 +92,20 @@ export interface WriteOptions extends Options, Partial<ConvertOptions> {
 
 export interface MoveOptions extends Options {
   bufferSize?: number;
-  force: boolean;
+  onExists: OnExists;
+  onNoParent: OnNoParent;
 }
 
 export interface CopyOptions extends Options {
   bufferSize?: number;
-  force: boolean;
+  onExists: OnExists;
+  onNoParent: OnNoParent;
   recursive: boolean;
 }
 export interface XmitOptions extends Options {
   bufferSize?: number;
-  force: boolean;
+  onExists: OnExists;
+  onNoParent: OnNoParent;
   recursive: boolean;
 }
 

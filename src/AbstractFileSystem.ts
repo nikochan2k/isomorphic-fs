@@ -13,6 +13,9 @@ import {
   ListOptions,
   MkcolOptions,
   MoveOptions,
+  OnExists,
+  OnNoParent,
+  OnNotExist,
   Options,
   PatchOptions,
   ReadOptions,
@@ -37,17 +40,22 @@ export interface ErrorParams {
 }
 
 export abstract class AbstractFileSystem implements FileSystem {
-  private afterHead?: (path: string, stats: Stats) => Promise<void>;
-  private afterPatch?: (path: string) => Promise<void>;
-  private beforeHead?: (
+  private readonly afterHead?: (path: string, stats: Stats) => Promise<void>;
+  private readonly afterPatch?: (path: string) => Promise<void>;
+  private readonly beforeHead?: (
     path: string,
     options: HeadOptions
   ) => Promise<Stats | null>;
-  private beforePatch?: (
+  private readonly beforePatch?: (
     path: string,
     props: Stats,
     options: PatchOptions
   ) => Promise<boolean | null>;
+
+  public readonly defaultDeleteOptions: DeleteOptions;
+  public readonly defaultMkdirOptions: MkcolOptions;
+  public readonly defaultMoveOptions: MoveOptions;
+  public readonly defaultCopyOptions: CopyOptions;
 
   constructor(
     public readonly repository: string,
@@ -58,6 +66,23 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.beforePatch = hook?.beforePatch;
     this.afterHead = hook?.afterHead;
     this.afterPatch = hook?.afterPatch;
+    this.defaultDeleteOptions = options.defaultDeleteOptions ?? {
+      onNotExist: OnNotExist.Error,
+      recursive: false,
+    };
+    this.defaultMkdirOptions = options.defaultMkdirOptions ?? {
+      onExists: OnExists.Error,
+      onNoParent: OnNoParent.Error,
+    };
+    this.defaultMoveOptions = options.defaultMoveOptions ?? {
+      onExists: OnExists.Error,
+      onNoParent: OnNoParent.Error,
+    };
+    this.defaultCopyOptions = options.defaultCopyOptions ?? {
+      onExists: OnExists.Error,
+      onNoParent: OnNoParent.Error,
+      recursive: false,
+    };
   }
 
   public async copy(
@@ -65,7 +90,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: CopyOptions
   ): Promise<boolean> {
-    options = { force: false, recursive: false, ...options };
     const result = await this._prepareXmit(fromPath, toPath);
     if (!result) {
       return false;
@@ -84,7 +108,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     this.delete(path, options);
 
   public async delete(path: string, options?: DeleteOptions): Promise<boolean> {
-    options = { force: false, recursive: false, ...options };
     const entry = await this.getEntry(path, options);
     if (!entry) {
       return false;
@@ -269,7 +292,6 @@ export abstract class AbstractFileSystem implements FileSystem {
     toPath: string,
     options?: MoveOptions
   ): Promise<boolean> {
-    options = { force: false, ...options };
     const result = await this._prepareXmit(fromPath, toPath);
     if (!result) {
       return false;

@@ -23,6 +23,8 @@ import {
   EntryType,
   ErrorLike,
   File,
+  OnExists,
+  OnNotExist,
   Options,
   ReadOptions,
   Stats,
@@ -79,13 +81,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     } catch (e) {
       const errors = options.errors;
       if (isFileSystemError(e) && e.name !== NotFoundError.name) {
-        if (!options.force) {
+        if (options.onNotExist === OnNotExist.Error) {
           this.fs._handleFileSystemError(e, options.errors);
+          return false;
         }
       } else {
         this._handleNotReadableError(errors, { e });
+        return false;
       }
-      return false;
     }
 
     try {
@@ -109,14 +112,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       return false;
     }
     const to = toEntry as AbstractFile;
-    let stats: Stats | undefined;
+    let stats: Stats;
     try {
       const s = await to.head(options);
       if (s == null) {
         return false;
       }
       stats = s;
-      if (!options.force) {
+      if (options.onExists === OnExists.Error) {
         this.fs._handleError(InvalidModificationError.name, this.path, errors, {
           from: this.path,
           to: toEntry.path,
@@ -124,14 +127,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         return false;
       }
     } catch (e) {
-      if ((e as ErrorLike).name !== NotFoundError.name) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
+        this.fs._handleFileSystemError(e, errors);
+      } else {
         this._handleNotReadableError(errors, {
           e: e as ErrorLike,
           from: this.path,
           to: toEntry.path,
         });
-        return false;
       }
+      return false;
     }
 
     const data = await this._read(options, stats);

@@ -40,7 +40,7 @@ export abstract class AbstractEntry implements Entry {
   }
 
   public async copy(to: Entry, options?: CopyOptions): Promise<boolean> {
-    options = { force: false, recursive: false, ...options };
+    options = { ...this.fs.defaultCopyOptions, ...options };
     return this._xmit(to, options);
   }
 
@@ -51,7 +51,7 @@ export abstract class AbstractEntry implements Entry {
 
   public async delete(options?: DeleteOptions): Promise<boolean> {
     try {
-      options = { force: false, recursive: false, ...options };
+      options = { ...this.fs.defaultDeleteOptions, ...options };
       if (!options.ignoreHook && this.beforeDelete) {
         const result = await this.beforeDelete(this.path, options);
         if (result != null) {
@@ -75,8 +75,8 @@ export abstract class AbstractEntry implements Entry {
   }
 
   public async move(to: Entry, options?: MoveOptions): Promise<boolean> {
-    options = { force: false, ...options };
     let result = await this._xmit(to, {
+      ...this.fs.defaultMoveOptions,
       ...options,
       recursive: true,
     });
@@ -85,10 +85,11 @@ export abstract class AbstractEntry implements Entry {
     }
 
     result = await this.delete({
+      ...this.fs.defaultDeleteOptions,
       ...options,
       recursive: true,
     });
-    return true;
+    return result;
   }
 
   public mv = (to: Entry, options?: MoveOptions | undefined) =>
