@@ -16,13 +16,15 @@ export const testAll = (
 
   it("rootdir", async () => {
     const list = await fs.list("/");
-    expect(list.length).toBe(0);
+    expect(list).not.toBeNull();
+    expect(list?.length).toBe(0);
   });
 
   it("nothing", async () => {
     try {
       const list = await fs.list("/nothing");
-      if (0 < list.length) {
+      expect(list).not.toBeNull();
+      if (0 < list!.length) {
         throw new Error("/nothing exists");
       }
     } catch (e) {
@@ -34,7 +36,8 @@ export const testAll = (
     await fs.write("/file_list", new ArrayBuffer(1));
     try {
       const list = await fs.list("/file_list");
-      if (0 < list.length) {
+      expect(list).not.toBeNull();
+      if (0 < list!.length) {
         throw new Error("/nothing exists");
       }
     } catch (e) {
