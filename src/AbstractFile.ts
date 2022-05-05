@@ -114,9 +114,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const to = toEntry as AbstractFile;
     let stats: Stats;
     try {
-      const s = await to.head(options);
+      const s = await to.head({ ...options, type: EntryType.File });
       if (s == null) {
         return false;
+      }
+      if (options.onExists === OnExists.Ignore) {
+        return true;
       }
       stats = s;
       if (options.onExists === OnExists.Error) {
@@ -334,16 +337,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportRangeWrite(): boolean;
 
   protected async _checkFile(options: Options): Promise<Stats> {
-    const path = this.path;
-    const stats = (await this.head({
+    return (await this.head({
+      type: EntryType.File,
       ignoreHook: options.ignoreHook,
     })) as Stats;
-    if (stats.size == null) {
-      this.fs._handleError(TypeMismatchError.name, this.path, options.errors, {
-        message: `"${path}" is not a file`,
-      });
-    }
-    return stats;
   }
 
   protected _getConverter() {
@@ -356,7 +353,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   ): Promise<Data | null> {
     const ignoreHook = options.ignoreHook;
     if (!stats) {
-      const s = await this.head(options);
+      const s = await this.head({ ...options, type: EntryType.File });
       if (s == null) {
         return null;
       }

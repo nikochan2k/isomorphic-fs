@@ -224,8 +224,8 @@ export abstract class AbstractDirectory
     }
 
     await this.head({
+      type: EntryType.Directory,
       ignoreHook: options?.ignoreHook,
-      errors: undefined,
     });
   }
 

@@ -72,6 +72,7 @@ export type ListOptions = Options;
 export enum OnExists {
   Error = "error",
   Ignore = "ignore",
+  Overwrite = "overwrite",
 }
 
 export enum OnNoParent {
