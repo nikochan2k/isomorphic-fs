@@ -1,4 +1,5 @@
 import { ConvertOptions, Data, DataType, ReturnData } from "univ-conv";
+import { FileSystemError } from "./errors";
 
 type Primitive = boolean | number | string | null | undefined;
 
@@ -11,6 +12,7 @@ export interface Times {
 export interface Stats extends Times {
   etag?: string;
   size?: number;
+
   [key: string]: Primitive;
 }
 
@@ -29,6 +31,7 @@ export interface FileSystemOptions {
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface Options {
+  errors?: FileSystemError[];
   ignoreHook?: boolean;
 }
 
@@ -144,7 +147,7 @@ export interface Hook {
 export interface ErrorLike {
   code?: number;
   message?: string;
-  name?: string;
+  name: string;
   stack?: string;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,48 +158,31 @@ export interface FileSystem {
   options: FileSystemOptions;
   repository: string;
 
-  copy(
-    fromPath: string,
-    toPath: string,
-    options?: CopyOptions
-  ): Promise<ErrorLike[]>;
-  cp(
-    fromPath: string,
-    toPath: string,
-    options?: CopyOptions
-  ): Promise<ErrorLike[]>;
-  del(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
-  delete(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
-  dir(path: string, options?: ListOptions): Promise<string[]>;
+  copy(fromPath: string, toPath: string, options?: CopyOptions): Promise<void>;
+  cp(fromPath: string, toPath: string, options?: CopyOptions): Promise<void>;
+  del(path: string, options?: DeleteOptions): Promise<void>;
+  delete(path: string, options?: DeleteOptions): Promise<void>;
+  dir(path: string, options?: ListOptions): Promise<string[] | null>;
   getDirectory(path: string): Promise<Directory>;
   getFile(path: string): Promise<File>;
-  hash(path: string, options?: ReadOptions): Promise<string>;
-  head(path: string, options?: HeadOptions): Promise<Stats>;
-  list(path: string, options?: ListOptions): Promise<string[]>;
-  ls(path: string, options?: ListOptions): Promise<string[]>;
+  hash(path: string, options?: ReadOptions): Promise<string | null>;
+  head(path: string, options?: HeadOptions): Promise<Stats | null>;
+  list(path: string, options?: ListOptions): Promise<string[] | null>;
+  ls(path: string, options?: ListOptions): Promise<string[] | null>;
   mkcol(path: string, options?: MkcolOptions): Promise<boolean>;
   mkdir(path: string, options?: MkcolOptions): Promise<boolean>;
-  move(
-    fromPath: string,
-    toPath: string,
-    options?: MoveOptions
-  ): Promise<ErrorLike[]>;
-  mv(
-    fromPath: string,
-    toPath: string,
-    options?: MoveOptions
-  ): Promise<ErrorLike[]>;
+  move(fromPath: string, toPath: string, options?: MoveOptions): Promise<void>;
+  mv(fromPath: string, toPath: string, options?: MoveOptions): Promise<void>;
   patch(path: string, props: Stats, options?: PatchOptions): Promise<void>;
   read<T extends DataType>(
     path: string,
-    type: T,
+    type?: T,
     options?: ReadOptions
-  ): Promise<ReturnData<T>>;
-  readdir(path: string, options?: ListOptions): Promise<string[]>;
-  rm(path: string, options?: DeleteOptions): Promise<ErrorLike[]>;
-  stat(path: string, options?: HeadOptions): Promise<Stats>;
-  supportDirectory(): boolean;
-  toURL(path: string, options?: URLOptions): Promise<string>;
+  ): Promise<ReturnData<T> | null>;
+  readdir(path: string, options?: ListOptions): Promise<string[] | null>;
+  rm(path: string, options?: DeleteOptions): Promise<void>;
+  stat(path: string, options?: HeadOptions): Promise<Stats | null>;
+  toURL(path: string, options?: URLOptions): Promise<string | null>;
   write(path: string, data: Data, options?: WriteOptions): Promise<void>;
 }
 
@@ -204,43 +190,43 @@ export interface Entry {
   fs: FileSystem;
   path: string;
 
-  copy(entry: Entry, options?: CopyOptions): Promise<ErrorLike[]>;
-  cp(entry: Entry, options?: CopyOptions): Promise<ErrorLike[]>;
-  del(options?: DeleteOptions): Promise<ErrorLike[]>;
-  delete(options?: DeleteOptions): Promise<ErrorLike[]>;
+  copy(entry: Entry, options?: CopyOptions): Promise<void>;
+  cp(entry: Entry, options?: CopyOptions): Promise<void>;
+  del(options?: DeleteOptions): Promise<void>;
+  delete(options?: DeleteOptions): Promise<void>;
   getParent(): Promise<Directory>;
-  head(options?: HeadOptions): Promise<Stats>;
-  move(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
-  mv(entry: Entry, options?: MoveOptions): Promise<ErrorLike[]>;
+  head(options?: HeadOptions): Promise<Stats | null>;
+  move(entry: Entry, options?: MoveOptions): Promise<void>;
+  mv(entry: Entry, options?: MoveOptions): Promise<void>;
   patch(props: Stats, options?: PatchOptions): Promise<void>;
-  remove(options?: DeleteOptions): Promise<ErrorLike[]>;
-  rm(options?: DeleteOptions): Promise<ErrorLike[]>;
-  stat(options?: HeadOptions): Promise<Stats>;
-  toURL(options?: URLOptions): Promise<string>;
+  remove(options?: DeleteOptions): Promise<void>;
+  rm(options?: DeleteOptions): Promise<void>;
+  stat(options?: HeadOptions): Promise<Stats | null>;
+  toURL(options?: URLOptions): Promise<string | null>;
 }
 
 export interface Directory extends Entry {
-  dir(options?: ListOptions): Promise<string[]>;
-  list(options?: ListOptions): Promise<string[]>;
-  ls(options?: ListOptions): Promise<string[]>;
+  dir(options?: ListOptions): Promise<string[] | null>;
+  list(options?: ListOptions): Promise<string[] | null>;
+  ls(options?: ListOptions): Promise<string[] | null>;
   mkcol(options?: MkcolOptions): Promise<boolean>;
   mkdir(options?: MkcolOptions): Promise<boolean>;
-  readdir(options?: ListOptions): Promise<string[]>;
+  readdir(options?: ListOptions): Promise<string[] | null>;
 }
 
 export interface File extends Entry {
-  hash(options?: ReadOptions): Promise<string>;
+  hash(options?: ReadOptions): Promise<string | null>;
   read<T extends DataType>(
-    type: T,
+    type?: T,
     options?: ReadOptions
-  ): Promise<ReturnData<T>>;
+  ): Promise<ReturnData<T> | null>;
   write(data: Data, options?: WriteOptions): Promise<void>;
 }
 
 export interface Modification {
   data: Data;
-  start?: number;
   length?: number;
+  start?: number;
 }
 
 export const DEFAULT_BUFFER_SIZE = 96 * 1024;

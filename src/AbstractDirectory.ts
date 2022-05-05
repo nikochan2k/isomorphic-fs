@@ -6,7 +6,6 @@ import {
   Directory,
   Entry,
   EntryType,
-  ErrorLike,
   HeadOptions,
   Item,
   ListOptions,
@@ -17,9 +16,8 @@ import {
 } from "./core";
 import {
   createError,
-  isFileSystemException,
+  isFileSystemError,
   NotFoundError,
-  NotReadableError,
   PathExistError,
   TypeMismatchError,
 } from "./errors";
@@ -51,54 +49,31 @@ export abstract class AbstractDirectory
     }
   }
 
-  public async _delete(
-    options: DeleteOptions,
-    errors: ErrorLike[]
-  ): Promise<void> {
+  public async _delete(options: DeleteOptions): Promise<void> {
     const fs = this.fs;
 
     try {
-      if (fs.supportDirectory()) {
-        await this._checkDirectory(options);
-      }
-    } catch (e: unknown) {
-      const name = (e as Error).name;
-      if (name === TypeMismatchError.name) {
-        throw e;
-      }
-      if (name === NotFoundError.name) {
+      await this._checkDirectory(options);
+    } catch (e) {
+      const errors = options.errors;
+      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
         if (!options.force) {
-          throw e;
+          this._handleFileSystemError(e, options.errors);
         }
-        return;
       } else {
-        throw createError({
-          name: NotReadableError.name,
-          repository: fs.repository,
-          path: this.path,
-          e: e as ErrorLike,
-        });
+        this._handleNotReadableError(errors, { e });
       }
+      return;
     }
 
     if (options.recursive) {
       const children = await this._items(options);
       for (const child of children) {
-        try {
-          const childEntry = await fs.getEntry(child.path, {
-            type: child.type,
-          });
-          await childEntry.delete(options);
-        } catch (e) {
-          if (options.force) {
-            // eslint-disable-next-line
-            if ((e as any).name !== NotFoundError.name) {
-              errors.push(e as ErrorLike);
-            }
-          } else {
-            throw e;
-          }
-        }
+        const childEntry = (await fs.getEntry(child.path, {
+          type: child.type,
+          errors: undefined,
+        })) as Entry;
+        await childEntry.delete(options);
       }
     }
 
@@ -107,44 +82,23 @@ export abstract class AbstractDirectory
     }
   }
 
-  public async _xmit(
-    to: Entry,
-    errors: ErrorLike[],
-    options: XmitOptions
-  ): Promise<void> {
+  public async _xmit(to: Entry, options: XmitOptions): Promise<void> {
     const fs = this.fs;
     const path = this.path;
 
     if (to instanceof AbstractFile) {
-      errors.push(
-        createError({
-          name: TypeMismatchError.name,
-          repository: fs.repository,
-          path,
-          e: { message: `"${path}" is not a directory` },
-        })
-      );
+      this._handleError(TypeMismatchError.name, options.errors, {
+        message: `"${path}" is not a directory`,
+      });
       return;
     }
 
     const toDir = to as Directory;
-    try {
-      await toDir.mkcol({
-        force: options.force ?? true,
-        recursive: false,
-        ignoreHook: options.ignoreHook,
-      });
-    } catch (e) {
-      errors.push(
-        createError({
-          name: TypeMismatchError.name,
-          repository: fs.repository,
-          path: to.path,
-          e: { message: `"${to.path}" is not a directory` },
-        })
-      );
-      return;
-    }
+    await toDir.mkcol({
+      force: options.force ?? true,
+      recursive: false,
+      ignoreHook: options.ignoreHook,
+    });
 
     if (!options.recursive) {
       return;
@@ -153,26 +107,30 @@ export abstract class AbstractDirectory
     const fromItems = await this._items();
     for (const fromItem of fromItems) {
       const fromPath = fromItem.path;
-      let toPath: string | undefined;
+      const fromEntry = (await fs.getEntry(fromPath, {
+        type: fromItem.type,
+      })) as AbstractEntry;
+      const name = getName(fromPath);
+      const toPath = joinPaths(toDir.path, name);
+      const toEntry = (await (fromEntry instanceof AbstractFile
+        ? this.fs.getFile(toPath)
+        : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
       try {
-        const fromEntry = (await fs.getEntry(fromPath, {
-          type: fromItem.type,
-        })) as AbstractEntry;
-        const name = getName(fromPath);
-        toPath = joinPaths(toDir.path, name);
-        const toEntry = (await (fromEntry instanceof AbstractFile
-          ? this.fs.getFile(toPath)
-          : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
-        await fromEntry._xmit(toEntry, errors, options);
+        await fromEntry._xmit(toEntry, options);
       } catch (e) {
-        errors.push({ ...(e as ErrorLike), from: fromPath, to: toPath });
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        this._handleNoModificationAllowedError(options.errors, {
+          ...(e as any), // eslint-disable-line @typescript-eslint/no-explicit-any
+          from: fromPath,
+          to: toPath,
+        });
       }
     }
   }
 
   public dir = (options?: ListOptions | undefined) => this.list(options);
 
-  public head(options?: HeadOptions): Promise<Stats> {
+  public head(options?: HeadOptions): Promise<Stats | null> {
     if (!this.fs.supportDirectory()) {
       return Promise.resolve({});
     }
@@ -204,40 +162,36 @@ export abstract class AbstractDirectory
           name: PathExistError.name,
           repository,
           path,
-          e: { message: `"${path}" has already existed` },
+          message: `"${path}" has already existed`,
         });
       }
     } catch (e) {
-      if ((e as ErrorLike).name === NotFoundError.name) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options.recursive && path !== "/") {
           const parent = await this.getParent();
-          await parent.mkcol({
-            force: true,
-            recursive: true,
-            ignoreHook: options.ignoreHook,
-          });
+          await parent.mkcol(options);
         }
-      } else if (isFileSystemException(e)) {
-        throw e;
       } else {
-        throw createError({
-          name: NotReadableError.name,
-          repository,
-          path,
-          e: e as ErrorLike,
-        });
-      }
-    }
-    if (!options.ignoreHook && this.beforeMkcol) {
-      if (await this.beforeMkcol(path, options)) {
+        this._handleNotReadableError(options.errors, { e });
         return false;
       }
     }
-    await this._mkcol();
-    if (!options.ignoreHook && this.afterMkcol) {
-      await this.afterMkcol(path);
+
+    try {
+      if (!options.ignoreHook && this.beforeMkcol) {
+        if (await this.beforeMkcol(path, options)) {
+          return false;
+        }
+      }
+      await this._mkcol();
+      if (!options.ignoreHook && this.afterMkcol) {
+        await this.afterMkcol(path);
+      }
+      return true;
+    } catch (e) {
+      this._handleNoModificationAllowedError(options.errors, { e });
+      return false;
     }
-    return true;
   }
 
   public mkdir = (options?: MkcolOptions | undefined) => this.mkcol(options);
@@ -249,45 +203,52 @@ export abstract class AbstractDirectory
   public abstract _rmdir(): Promise<void>;
 
   protected async _checkDirectory(options: Options) {
+    if (!this.fs.supportDirectory) {
+      return;
+    }
+
     const path = this.path;
-    const stats = await this.fs.head(path, options);
+    const stats = (await this.fs.head(path, {
+      ...options,
+      errors: undefined,
+    })) as Stats;
     if (stats.size != null) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.fs.repository,
-        path,
-        e: { message: `"${path}" is not a directory` },
-      });
+      this._handleError(TypeMismatchError.name, options.errors);
     }
   }
 
   protected async _items(options?: ListOptions): Promise<Item[]> {
-    options = { ...options };
-    const path = this.path;
+    try {
+      options = { ...options };
+      const path = this.path;
 
-    let items: Item[] | null | undefined;
-    if (!options.ignoreHook && this.beforeList) {
-      items = await this.beforeList(path, options);
-    }
-    if (!items) {
-      if (this.fs.supportDirectory()) {
-        await this._checkDirectory(options);
+      let items: Item[] | null | undefined;
+      if (!options.ignoreHook && this.beforeList) {
+        items = await this.beforeList(path, options);
       }
-      items = await this._list();
-    }
-    if (!options.ignoreHook && this.afterList) {
-      await this.afterList(path, items);
-    }
-
-    for (const item of items) {
-      if (item.path.endsWith("/")) {
-        if (!item.type) {
-          item.type = EntryType.Directory;
+      if (!items) {
+        if (this.fs.supportDirectory()) {
+          await this._checkDirectory(options);
         }
-        item.path = normalizePath(item.path);
+        items = await this._list();
       }
-    }
+      if (!options.ignoreHook && this.afterList) {
+        await this.afterList(path, items);
+      }
 
-    return items;
+      for (const item of items) {
+        if (item.path.endsWith("/")) {
+          if (!item.type) {
+            item.type = EntryType.Directory;
+          }
+          item.path = normalizePath(item.path);
+        }
+      }
+
+      return items;
+    } catch (e) {
+      this._handleNotReadableError(options?.errors, { e });
+      return [];
+    }
   }
 }

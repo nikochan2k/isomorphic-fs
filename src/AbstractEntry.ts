@@ -4,7 +4,6 @@ import {
   DeleteOptions,
   Directory,
   Entry,
-  ErrorLike,
   HeadOptions,
   MoveOptions,
   PatchOptions,
@@ -12,7 +11,21 @@ import {
   URLOptions,
   XmitOptions,
 } from "./core";
+import {
+  createError,
+  FileSystemError,
+  NoModificationAllowedError,
+  NotFoundError,
+  NotReadableError,
+} from "./errors";
 import { getParentPath } from "./util";
+
+interface ErrorParams {
+  e?: unknown;
+  message?: string;
+
+  [key: string]: any; // eslint-disable-line
+}
 
 export abstract class AbstractEntry implements Entry {
   private afterDelete?: (path: string) => Promise<void>;
@@ -32,14 +45,9 @@ export abstract class AbstractEntry implements Entry {
     }
   }
 
-  public async copy(to: Entry, options?: CopyOptions): Promise<ErrorLike[]> {
+  public async copy(to: Entry, options?: CopyOptions): Promise<void> {
     options = { force: false, recursive: false, ...options };
-    const errors: ErrorLike[] = [];
-    await this._xmit(to, errors, options);
-    if (0 < errors.length) {
-      console.warn(errors);
-    }
-    return errors;
+    await this._xmit(to, options);
   }
 
   public cp = (to: Entry, options?: CopyOptions | undefined) =>
@@ -47,19 +55,21 @@ export abstract class AbstractEntry implements Entry {
 
   public del = (options?: DeleteOptions | undefined) => this.delete(options);
 
-  public async delete(options?: DeleteOptions): Promise<ErrorLike[]> {
-    options = { force: false, recursive: false, ...options };
-    if (!options.ignoreHook && this.beforeDelete) {
-      if (await this.beforeDelete(this.path, options)) {
-        return [];
+  public async delete(options?: DeleteOptions): Promise<void> {
+    try {
+      options = { force: false, recursive: false, ...options };
+      if (!options.ignoreHook && this.beforeDelete) {
+        if (await this.beforeDelete(this.path, options)) {
+          return;
+        }
       }
+      await this._delete(options);
+      if (!options.ignoreHook && this.afterDelete) {
+        await this.afterDelete(this.path);
+      }
+    } catch (e) {
+      this._handleNoModificationAllowedError(options?.errors, { e });
     }
-    const errors: ErrorLike[] = [];
-    await this._delete(options, errors);
-    if (!options.ignoreHook && this.afterDelete) {
-      await this.afterDelete(this.path);
-    }
-    return errors;
   }
 
   public async getParent(): Promise<Directory> {
@@ -67,26 +77,20 @@ export abstract class AbstractEntry implements Entry {
     return this.fs.getDirectory(parentPath);
   }
 
-  public async move(to: Entry, options?: MoveOptions): Promise<ErrorLike[]> {
+  public async move(to: Entry, options?: MoveOptions): Promise<void> {
     options = { force: false, ...options };
-    const errors: ErrorLike[] = [];
-    await this._xmit(to, errors, {
-      bufferSize: options.bufferSize,
-      force: options.force,
+    await this._xmit(to, {
+      ...options,
       recursive: true,
     });
 
-    if (errors.length === 0) {
-      const deleteErrors = await this.delete({
-        force: options.force,
+    const errors = options.errors;
+    if (errors && errors.length === 0) {
+      await this.delete({
+        ...options,
         recursive: true,
       });
-      Array.prototype.push.apply(errors, deleteErrors);
-    } else {
-      console.warn(errors);
     }
-
-    return errors;
   }
 
   public mv = (to: Entry, options?: MoveOptions | undefined) =>
@@ -105,14 +109,54 @@ export abstract class AbstractEntry implements Entry {
 
   public toURL = (options?: URLOptions) => this.fs.toURL(this.path, options);
 
-  public abstract _delete(
-    option: DeleteOptions,
-    errors: (ErrorLike | string)[]
-  ): Promise<void>;
-  public abstract _xmit(
-    entry: Entry,
-    errors: (ErrorLike | string)[],
-    options: XmitOptions
-  ): Promise<void>;
-  public abstract head(options?: HeadOptions): Promise<Stats>;
+  public abstract _delete(option: DeleteOptions): Promise<void>;
+  public abstract _xmit(entry: Entry, options: XmitOptions): Promise<void>;
+  public abstract head(options?: HeadOptions): Promise<Stats | null>;
+
+  protected _handleError(
+    name: string,
+    errors?: FileSystemError[],
+    params?: ErrorParams
+  ) {
+    const error = createError({
+      name,
+      repository: this.fs.repository,
+      path: this.path,
+      ...params,
+    });
+    this._handleFileSystemError(error, errors);
+  }
+
+  protected _handleFileSystemError(
+    error: FileSystemError,
+    errors?: FileSystemError[]
+  ) {
+    if (errors) {
+      errors.push(error);
+      return;
+    } else {
+      throw error;
+    }
+  }
+
+  protected _handleNoModificationAllowedError(
+    errors?: FileSystemError[],
+    params?: ErrorParams
+  ) {
+    return this._handleError(NoModificationAllowedError.name, errors, params);
+  }
+
+  protected _handleNotFoundError(
+    errors?: FileSystemError[],
+    params?: ErrorParams
+  ) {
+    return this._handleError(NotFoundError.name, errors, params);
+  }
+
+  protected _handleNotReadableError(
+    errors?: FileSystemError[],
+    params?: ErrorParams
+  ) {
+    return this._handleError(NotReadableError.name, errors, params);
+  }
 }

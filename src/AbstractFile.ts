@@ -29,12 +29,10 @@ import {
   XmitOptions,
 } from "./core";
 import {
-  createError,
-  isFileSystemException,
+  InvalidModificationError,
+  isFileSystemError,
   NotFoundError,
-  NotReadableError,
   PathExistError,
-  SecurityError,
   TypeMismatchError,
 } from "./errors";
 import { createModifiedReadableStream, ModifiedReadable, modify } from "./mods";
@@ -74,25 +72,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  public async _delete(
-    options: DeleteOptions,
-    _errors: ErrorLike[] // eslint-disable-line
-  ): Promise<void> {
+  public async _delete(options: DeleteOptions): Promise<void> {
     try {
       await this._checkFile(options);
     } catch (e) {
-      if ((e as ErrorLike).name === NotFoundError.name) {
+      const errors = options.errors;
+      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
         if (!options.force) {
-          throw e;
+          this._handleFileSystemError(e, options.errors);
         }
-        return;
+      } else {
+        this._handleNotReadableError(errors, { e });
       }
-      throw createError({
-        name: NotReadableError.name,
-        repository: this.fs.repository,
-        path: this.path,
-        e: e as ErrorLike,
-      });
+      return;
     }
 
     return this._rm();
@@ -100,74 +92,66 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _xmit(
     toEntry: AbstractEntry,
-    errors: ErrorLike[],
     options: XmitOptions
   ): Promise<void> {
+    const errors = options.errors;
+
     if (toEntry instanceof AbstractDirectory) {
-      errors.push(
-        createError({
-          name: TypeMismatchError.name,
-          repository: toEntry.fs.repository,
-          path: toEntry.path,
-          e: { message: `"${toEntry.path}" is not a file` },
-          from: this.path,
-          to: toEntry.path,
-        })
-      );
+      this._handleError(TypeMismatchError.name, errors, {
+        message: `"${toEntry.path}" is not a file`,
+        from: this.path,
+        to: toEntry.path,
+      });
       return;
     }
     const to = toEntry as AbstractFile;
     let stats: Stats | undefined;
     try {
-      stats = await to.head(options);
+      const s = await to.head(options);
+      if (s === null) {
+        return;
+      }
+      stats = s;
       if (!options.force) {
-        errors.push(
-          createError({
-            name: SecurityError.name,
-            repository: to.fs.repository,
-            path: to.path,
-            from: this.path,
-            to: toEntry.path,
-          })
-        );
+        this._handleError(InvalidModificationError.name, errors, {
+          from: this.path,
+          to: toEntry.path,
+        });
         return;
       }
     } catch (e) {
       if ((e as ErrorLike).name !== NotFoundError.name) {
-        errors.push(
-          createError({
-            name: NotReadableError.name,
-            repository: to.fs.repository,
-            path: to.path,
-            e: e as ErrorLike,
-            from: this.path,
-            to: toEntry.path,
-          })
-        );
+        this._handleNotReadableError(errors, {
+          e: e as ErrorLike,
+          from: this.path,
+          to: toEntry.path,
+        });
         return;
       }
     }
 
+    const data = await this._read(options, stats);
+    if (data === null) {
+      return;
+    }
+
     try {
-      const data = await this._read(options, stats);
       await to.write(data, options);
     } catch (e) {
-      errors.push(
-        createError({
-          name: NotReadableError.name,
-          repository: to.fs.repository,
-          path: to.path,
-          e: e as ErrorLike,
-          from: this.path,
-          to: toEntry.path,
-        })
-      );
+      this._handleNotReadableError(errors, {
+        e: e as ErrorLike,
+        from: this.path,
+        to: toEntry.path,
+      });
     }
   }
 
-  public async hash(options?: ReadOptions): Promise<string> {
+  public async hash(options?: ReadOptions): Promise<string | null> {
     options = { ...options };
     const data = await this._read(options);
+    if (data === null) {
+      return null;
+    }
     const hash = createHash();
     if (readableConverter().typeEquals(data)) {
       await handleReadable(data, async (chunk) => {
@@ -193,15 +177,15 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return toHex(hash.digest());
   }
 
-  public head(options?: HeadOptions): Promise<Stats> {
+  public head(options?: HeadOptions): Promise<Stats | null> {
     options = { ...options, type: EntryType.File };
     return this.fs.head(this.path, options);
   }
 
   public async read<T extends DataType>(
-    type: T,
+    type?: T,
     options?: ReadOptions
-  ): Promise<ReturnData<T>> {
+  ): Promise<ReturnData<T> | null> {
     options = { ...options };
     const converter = this._getConverter();
     if (options.length === 0) {
@@ -209,6 +193,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     const data = await this._read(options);
+    if (data === null) {
+      return null;
+    }
+    if (type == null) {
+      return data as ReturnData<T>;
+    }
     return converter.convert(data, type, options);
   }
 
@@ -228,14 +218,15 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     const path = this.path;
-    const fs = this.fs;
-    const repository = fs.repository;
     const converter = this._getConverter();
     const rc = readableConverter();
     const rsc = readableStreamConverter();
     if (!this.supportAppend() && options.append) {
       options.append = false;
       const head = await this._read({ bufferSize: options.bufferSize });
+      if (head === null) {
+        return;
+      }
       if (rc.typeEquals(head) || rc.typeEquals(data)) {
         data = await converter.merge([head, data], "readable");
       } else if (rsc.typeEquals(head) || rsc.typeEquals(data)) {
@@ -254,6 +245,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       delete options.start;
       delete options.length;
       const src = await this._read({ bufferSize: options.bufferSize });
+      if (src === null) {
+        return;
+      }
       if (rc.typeEquals(src)) {
         data = new ModifiedReadable(src, { data, start, length });
       } else if (rsc.typeEquals(src)) {
@@ -263,67 +257,60 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
+    const errors = options.errors;
+
     options = { ...options };
     let stats: Stats | undefined;
     let create: boolean;
     try {
       stats = await this._checkFile(options);
       if (options?.create) {
-        throw createError({
-          name: PathExistError.name,
-          repository,
-          path,
-        });
+        this._handleError(PathExistError.name, errors);
+        return;
       }
       create = false;
-    } catch (e: unknown) {
-      if ((e as ErrorLike).name === NotFoundError.name) {
+    } catch (e) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options?.create === false) {
-          throw createError({
-            name: NotFoundError.name,
-            repository,
-            path,
-            e: e as ErrorLike,
-          });
+          this._handleFileSystemError(e, options.errors);
+          return;
         }
         create = true;
-      } else if (isFileSystemException(e)) {
-        throw e;
       } else {
-        throw createError({
-          name: NotReadableError.name,
-          repository,
-          path,
-          e: e as ErrorLike,
-        });
+        this._handleNotReadableError(errors, { e });
+        return;
       }
     }
 
-    options = { append: !!options?.append, create };
-    if (create) {
-      if (this.beforePost) {
-        if (await this.beforePost(path, data, stats, options)) {
-          return;
+    try {
+      options = { append: !!options?.append, create };
+      if (create) {
+        if (this.beforePost) {
+          if (await this.beforePost(path, data, stats, options)) {
+            return;
+          }
+        }
+      } else {
+        if (this.beforePut) {
+          if (await this.beforePut(path, data, stats, options)) {
+            return;
+          }
         }
       }
-    } else {
-      if (this.beforePut) {
-        if (await this.beforePut(path, data, stats, options)) {
-          return;
+
+      await this._save(data, stats, options);
+
+      if (create) {
+        if (this.afterPost) {
+          this.afterPost(path).catch((e) => console.warn(e));
+        }
+      } else {
+        if (this.afterPut) {
+          this.afterPut(path).catch((e) => console.warn(e));
         }
       }
-    }
-
-    await this._save(data, stats, options);
-
-    if (create) {
-      if (this.afterPost) {
-        this.afterPost(path).catch((e) => console.warn(e));
-      }
-    } else {
-      if (this.afterPut) {
-        this.afterPut(path).catch((e) => console.warn(e));
-      }
+    } catch (e) {
+      this._handleNoModificationAllowedError(errors, { e });
     }
   }
 
@@ -331,15 +318,15 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
 
-  protected async _checkFile(options: Options) {
+  protected async _checkFile(options: Options): Promise<Stats> {
     const path = this.path;
-    const stats = await this.fs.head(path, options);
+    const stats = (await this.fs.head(path, {
+      ...options,
+      errors: undefined,
+    })) as Stats;
     if (stats.size == null) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.fs.repository,
-        path,
-        e: { message: `"${path}" is not a file` },
+      this._handleError(TypeMismatchError.name, options.errors, {
+        message: `"${path}" is not a file`,
       });
     }
     return stats;
@@ -349,45 +336,58 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return DEFAULT_CONVERTER;
   }
 
-  protected async _read(options: ReadOptions, stats?: Stats): Promise<Data> {
+  protected async _read(
+    options: ReadOptions,
+    stats?: Stats
+  ): Promise<Data | null> {
     const ignoreHook = options.ignoreHook;
     if (!stats) {
-      stats = await this.head(options);
+      const s = await this.head(options);
+      if (s === null) {
+        return null;
+      }
+      stats = s;
     }
+
+    const errors = options.errors;
 
     const path = this.path;
     if (stats.size == null) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.fs.repository,
-        path,
-        e: { message: `"${path}" must not end with slash` },
+      this._handleError(TypeMismatchError.name, errors, {
+        message: `"${path}" must not end with slash`,
       });
+      return null;
     } else if (stats.size === 0) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       return this._getConverter().empty() as Data;
     }
-    let data: Data | null = null;
-    if (!ignoreHook && this.beforeGet) {
-      data = await this.beforeGet(path, options);
-    }
-    if (!data) {
-      data = await this._load(stats, options);
-    }
-    if (!ignoreHook && this.afterGet) {
-      this.afterGet(path, data).catch((e) => console.warn(e));
-    }
 
-    if (
-      data &&
-      !this.supportRangeRead() &&
-      (typeof options?.start === "number" ||
-        typeof options?.length === "number")
-    ) {
-      data = await DEFAULT_CONVERTER.slice(data, options); // eslint-disable-line
-    }
+    try {
+      let data: Data | null = null;
+      if (!ignoreHook && this.beforeGet) {
+        data = await this.beforeGet(path, options);
+      }
+      if (!data) {
+        data = await this._load(stats, options);
+      }
+      if (!ignoreHook && this.afterGet) {
+        this.afterGet(path, data).catch((e) => console.warn(e));
+      }
 
-    return data;
+      if (
+        data &&
+        !this.supportRangeRead() &&
+        (typeof options?.start === "number" ||
+          typeof options?.length === "number")
+      ) {
+        data = await DEFAULT_CONVERTER.slice(data, options); // eslint-disable-line
+      }
+
+      return data;
+    } catch (e) {
+      this._handleNotReadableError(errors, { e });
+      return null;
+    }
   }
 
   protected abstract _load(stats: Stats, options: ReadOptions): Promise<Data>;

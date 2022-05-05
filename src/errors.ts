@@ -1,11 +1,11 @@
 import { ErrorLike } from "./core";
 
-export class FileSystemException extends Error {
+export class FileSystemError extends Error {
   public code: number | undefined;
 
   constructor(params: ErrorLike) {
-    super(FileSystemException.toMessage(params));
-    this.name = params.name ?? "";
+    super(FileSystemError.toMessage(params));
+    this.name = params.name;
     this.code = params.code;
   }
 
@@ -247,38 +247,45 @@ export const domExceptions: ErrorLike[] = [
   NotAllowedError,
 ];
 
-export function createError(options: {
+interface ErrorParams {
+  name: string;
   repository: string;
   path: string;
-  e?: ErrorLike | string;
-  name?: string;
+  e?: unknown;
+  message?: string;
+
   [key: string]: any; // eslint-disable-line
-}): ErrorLike {
-  let e = options.e;
-  if (isFileSystemException(e)) {
-    return e as ErrorLike;
-  }
+}
 
-  if (typeof e === "object") {
-    if (Object.isFrozen(e) || Object.isSealed(e)) {
-      e = { ...e };
-    }
-  } else {
-    e = { message: e };
-  }
-
-  let repository = options.repository;
+function buildError(params: ErrorParams, e: ErrorLike) {
+  let repository = params.repository;
   if (repository.endsWith("/")) {
     repository = repository.substring(0, repository.length - 1);
   }
   if (!repository.startsWith("/")) {
     repository = "/" + repository;
   }
-  const path = options.path;
   e["repository"] = repository;
-  e["path"] = path;
+  for (const [key, value] of Object.entries(params)) {
+    if (key === "e" || key === "repository") continue;
+    e[key] = value; // eslint-disable-line
+  }
+}
 
-  const name = options.name;
+export function createError(params: ErrorParams): FileSystemError {
+  if (isFileSystemError(params.e)) {
+    return params.e;
+  }
+
+  let e = params.e as ErrorLike;
+  if (typeof e === "object") {
+    e = { ...e };
+  } else {
+    e = { name: "", message: e };
+  }
+  buildError(params, e);
+
+  const name = params.name;
   if (name) {
     for (const de of domExceptions) {
       if (de.name == name) {
@@ -287,14 +294,18 @@ export function createError(options: {
         if (!e.message) {
           e.message = de.message;
         }
-        return new FileSystemException(e);
+        break;
       }
     }
   }
 
-  return e;
+  return new FileSystemError(e);
 }
 
-export function isFileSystemException(e?: unknown): boolean {
-  return e instanceof FileSystemException;
+export function isFileSystemError(e?: unknown): e is FileSystemError {
+  return e instanceof FileSystemError;
+}
+
+export function isNotFoundError(e: unknown): e is FileSystemError {
+  return e instanceof FileSystemError && e.name === NotFoundError.name;
 }
