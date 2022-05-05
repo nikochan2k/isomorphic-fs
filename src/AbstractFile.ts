@@ -117,7 +117,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       return false;
     }
     const to = toEntry as AbstractFile;
-    let stats: Stats;
+    let stats: Stats | undefined;
     try {
       stats = await to.head({ ...options, type: EntryType.File });
       if (options.onExists === OnExists.Ignore) {
@@ -131,16 +131,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         return false;
       }
     } catch (e) {
-      if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        this.fs._handleFileSystemError(e, errors);
-      } else {
+      if (!(isFileSystemError(e) && e.name === NotFoundError.name)) {
         this._handleNotReadableError(errors, {
           e: e as ErrorLike,
           from: this.path,
           to: toEntry.path,
         });
+        return false;
       }
-      return false;
     }
 
     const data = await this._read(options, stats, errors);
@@ -258,7 +256,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const rsc = readableStreamConverter();
     if (!this.supportAppend() && options.append) {
       options.append = false;
-      const head = await this._read({ bufferSize: options.bufferSize });
+      const head = await this._read(
+        { bufferSize: options.bufferSize },
+        undefined,
+        errors
+      );
       if (head == null) {
         return false;
       }
@@ -279,7 +281,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     ) {
       delete options.start;
       delete options.length;
-      const src = await this._read({ bufferSize: options.bufferSize });
+      const src = await this._read(
+        { bufferSize: options.bufferSize },
+        undefined,
+        errors
+      );
       if (src === null) {
         return false;
       }

@@ -16,6 +16,7 @@ import {
   OnExists,
   OnNoParent,
   OnNotExist,
+  Options,
   PatchOptions,
   ReadOptions,
   Stats,
@@ -90,7 +91,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: CopyOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const result = await this._prepareXmit(fromPath, toPath);
+    const result = await this._prepareXmit(fromPath, toPath, options, errors);
     if (!result) {
       return false;
     }
@@ -356,7 +357,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: MoveOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const result = await this._prepareXmit(fromPath, toPath);
+    const result = await this._prepareXmit(fromPath, toPath, options, errors);
     if (!result) {
       return false;
     }
@@ -489,13 +490,14 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async write(
     path: string,
     data: Data,
-    options?: WriteOptions
+    options?: WriteOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean> {
-    const file = await this.getFile(path);
+    const file = await this.getFile(path, errors);
     if (!file) {
       return false;
     }
-    return file.write(data, options);
+    return file.write(data, options, errors);
   }
 
   public abstract _getDirectory(path: string): Promise<Directory>;
@@ -589,14 +591,19 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  private async _prepareXmit(fromPath: string, toPath: string) {
-    const from = await this.getEntry(fromPath);
+  private async _prepareXmit(
+    fromPath: string,
+    toPath: string,
+    options?: Options,
+    errors?: FileSystemError[]
+  ) {
+    const from = await this.getEntry(fromPath, options, errors);
     if (!from) {
       return null;
     }
     const to = await (from instanceof AbstractFile
-      ? this.getFile(toPath)
-      : this.getDirectory(toPath));
+      ? this.getFile(toPath, errors)
+      : this.getDirectory(toPath, errors));
     if (!to) {
       return null;
     }

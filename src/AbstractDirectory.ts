@@ -144,6 +144,7 @@ export abstract class AbstractDirectory
         fromPath,
         {
           type: fromItem.type,
+          ignoreHook: options.ignoreHook,
         },
         errors
       );
