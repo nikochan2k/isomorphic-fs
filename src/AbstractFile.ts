@@ -42,20 +42,20 @@ import { createModifiedReadableStream, ModifiedReadable, modify } from "./mods";
 import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {
-  private afterGet?: (path: string, data: Data) => Promise<void>;
-  private afterPost?: (path: string) => Promise<void>;
-  private afterPut?: (path: string) => Promise<void>;
-  private beforeGet?: (
+  private readonly afterGet?: (path: string, data: Data) => Promise<void>;
+  private readonly afterPost?: (path: string) => Promise<void>;
+  private readonly afterPut?: (path: string) => Promise<void>;
+  private readonly beforeGet?: (
     path: string,
     options: ReadOptions
   ) => Promise<Data | null>;
-  private beforePost?: (
+  private readonly beforePost?: (
     path: string,
     data: Data,
     stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean | null>;
-  private beforePut?: (
+  private readonly beforePut?: (
     path: string,
     data: Data,
     stats: Stats | undefined,

@@ -29,13 +29,13 @@ export abstract class AbstractDirectory
   extends AbstractEntry
   implements Directory
 {
-  private afterList?: (path: string, list: Item[]) => Promise<void>;
-  private afterMkcol?: (path: string) => Promise<void>;
-  private beforeList?: (
+  private readonly afterList?: (path: string, list: Item[]) => Promise<void>;
+  private readonly afterMkcol?: (path: string) => Promise<void>;
+  private readonly beforeList?: (
     path: string,
     options: ListOptions
   ) => Promise<Item[] | null>;
-  private beforeMkcol?: (
+  private readonly beforeMkcol?: (
     psth: string,
     options: MkcolOptions
   ) => Promise<boolean | null>;
@@ -184,7 +184,10 @@ export abstract class AbstractDirectory
           if (!parent) {
             return false;
           }
-          await parent.mkcol(options);
+          const result = await parent.mkcol(options);
+          if (!result) {
+            return false;
+          }
         }
       } else {
         this._handleNotReadableError(options.errors, { e });

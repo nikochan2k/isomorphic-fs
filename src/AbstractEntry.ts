@@ -22,8 +22,8 @@ import {
 import { getParentPath } from "./util";
 
 export abstract class AbstractEntry implements Entry {
-  private afterDelete?: (path: string) => Promise<void>;
-  private beforeDelete?: (
+  private readonly afterDelete?: (path: string) => Promise<void>;
+  private readonly beforeDelete?: (
     path: string,
     options: DeleteOptions
   ) => Promise<boolean | null>;
