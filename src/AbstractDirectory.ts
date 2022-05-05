@@ -35,7 +35,7 @@ export abstract class AbstractDirectory
   private beforeMkcol?: (
     psth: string,
     options: MkcolOptions
-  ) => Promise<boolean>;
+  ) => Promise<boolean | null>;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -48,7 +48,7 @@ export abstract class AbstractDirectory
     }
   }
 
-  public async _delete(options: DeleteOptions): Promise<void> {
+  public async _delete(options: DeleteOptions): Promise<boolean> {
     const fs = this.fs;
 
     try {
@@ -62,26 +62,38 @@ export abstract class AbstractDirectory
       } else {
         this._handleNotReadableError(errors, { e });
       }
-      return;
+      return false;
     }
 
+    let result = true;
     if (options.recursive) {
       const children = await this._items(options);
+      if (!children) {
+        return false;
+      }
+
       for (const child of children) {
         const childEntry = (await fs.getEntry(child.path, {
           type: child.type,
           ignoreHook: options.ignoreHook,
         })) as Entry;
-        await childEntry.delete(options);
+        result = (await childEntry.delete(options)) && result;
       }
     }
 
-    if (this.path !== "/") {
-      await this._rmdir();
+    if (result && this.path !== "/") {
+      try {
+        await this._rmdir();
+      } catch (e) {
+        this._handleNoModificationAllowedError(options.errors, { e });
+        return false;
+      }
     }
+
+    return true;
   }
 
-  public async _xmit(to: Entry, options: XmitOptions): Promise<void> {
+  public async _xmit(to: Entry, options: XmitOptions): Promise<boolean> {
     const fs = this.fs;
     const path = this.path;
 
@@ -89,21 +101,29 @@ export abstract class AbstractDirectory
       this.fs._handleError(TypeMismatchError.name, this.path, options.errors, {
         message: `"${path}" is not a directory`,
       });
-      return;
+      return false;
     }
 
     const toDir = to as Directory;
-    await toDir.mkcol({
+    let result = await toDir.mkcol({
       force: options.force ?? true,
       recursive: false,
       ignoreHook: options.ignoreHook,
     });
-
-    if (!options.recursive) {
-      return;
+    if (!result) {
+      return false;
     }
 
-    const fromItems = await this._items();
+    if (!options.recursive) {
+      return true;
+    }
+
+    const fromItems = await this._items(options);
+    if (!fromItems) {
+      return false;
+    }
+
+    result = true;
     for (const fromItem of fromItems) {
       const fromPath = fromItem.path;
       const fromEntry = (await fs.getEntry(fromPath, {
@@ -114,17 +134,10 @@ export abstract class AbstractDirectory
       const toEntry = (await (fromEntry instanceof AbstractFile
         ? this.fs.getFile(toPath)
         : this.fs.getDirectory(toPath))) as Entry as AbstractEntry;
-      try {
-        await fromEntry._xmit(toEntry, options);
-      } catch (e) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        this._handleNoModificationAllowedError(options.errors, {
-          ...(e as any), // eslint-disable-line @typescript-eslint/no-explicit-any
-          from: fromPath,
-          to: toPath,
-        });
-      }
+      result = (await fromEntry._xmit(toEntry, options)) && result;
     }
+
+    return result;
   }
 
   public dir = (options?: ListOptions | undefined) => this.list(options);
@@ -138,8 +151,11 @@ export abstract class AbstractDirectory
     return this.fs.head(this.path, options);
   }
 
-  public async list(options?: ListOptions): Promise<string[]> {
+  public async list(options?: ListOptions): Promise<string[] | null> {
     const items = await this._items(options);
+    if (!items) {
+      return null;
+    }
     return items.map((item) => item.path);
   }
 
@@ -165,6 +181,9 @@ export abstract class AbstractDirectory
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options.recursive && path !== "/") {
           const parent = await this.getParent();
+          if (!parent) {
+            return false;
+          }
           await parent.mkcol(options);
         }
       } else {
@@ -198,7 +217,7 @@ export abstract class AbstractDirectory
   public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
-  protected async _checkDirectory(options: Options) {
+  protected async _checkDirectory(options: Options): Promise<void> {
     if (!this.fs.supportDirectory) {
       return;
     }
@@ -209,7 +228,7 @@ export abstract class AbstractDirectory
     });
   }
 
-  protected async _items(options?: ListOptions): Promise<Item[]> {
+  protected async _items(options?: ListOptions): Promise<Item[] | null> {
     try {
       options = { ...options };
       const path = this.path;
@@ -239,7 +258,7 @@ export abstract class AbstractDirectory
       return items;
     } catch (e) {
       this._handleNotReadableError(options?.errors, { e });
-      return [];
+      return null;
     }
   }
 }

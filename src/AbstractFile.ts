@@ -19,6 +19,7 @@ import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   DeleteOptions,
+  Entry,
   EntryType,
   ErrorLike,
   File,
@@ -51,13 +52,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     data: Data,
     stats: Stats | undefined,
     options: WriteOptions
-  ) => Promise<boolean>;
+  ) => Promise<boolean | null>;
   private beforePut?: (
     path: string,
     data: Data,
     stats: Stats | undefined,
     options: WriteOptions
-  ) => Promise<boolean>;
+  ) => Promise<boolean | null>;
 
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
@@ -72,7 +73,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  public async _delete(options: DeleteOptions): Promise<void> {
+  public async _delete(options: DeleteOptions): Promise<boolean> {
     try {
       await this._checkFile(options);
     } catch (e) {
@@ -84,16 +85,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       } else {
         this._handleNotReadableError(errors, { e });
       }
-      return;
+      return false;
     }
 
-    return this._rm();
+    try {
+      await this._rm();
+      return true;
+    } catch (e) {
+      this._handleNoModificationAllowedError(options.errors, { e });
+      return false;
+    }
   }
 
-  public async _xmit(
-    toEntry: AbstractEntry,
-    options: XmitOptions
-  ): Promise<void> {
+  public async _xmit(toEntry: Entry, options: XmitOptions): Promise<boolean> {
     const errors = options.errors;
 
     if (toEntry instanceof AbstractDirectory) {
@@ -102,14 +106,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         from: this.path,
         to: toEntry.path,
       });
-      return;
+      return false;
     }
     const to = toEntry as AbstractFile;
     let stats: Stats | undefined;
     try {
       const s = await to.head(options);
-      if (s === null) {
-        return;
+      if (s == null) {
+        return false;
       }
       stats = s;
       if (!options.force) {
@@ -117,7 +121,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           from: this.path,
           to: toEntry.path,
         });
-        return;
+        return false;
       }
     } catch (e) {
       if ((e as ErrorLike).name !== NotFoundError.name) {
@@ -126,30 +130,32 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           from: this.path,
           to: toEntry.path,
         });
-        return;
+        return false;
       }
     }
 
     const data = await this._read(options, stats);
-    if (data === null) {
-      return;
+    if (data == null) {
+      return false;
     }
 
     try {
-      await to.write(data, options);
+      const result = await to.write(data, options);
+      return result;
     } catch (e) {
       this._handleNotReadableError(errors, {
         e: e as ErrorLike,
         from: this.path,
         to: toEntry.path,
       });
+      return false;
     }
   }
 
   public async hash(options?: ReadOptions): Promise<string | null> {
     options = { ...options };
     const data = await this._read(options);
-    if (data === null) {
+    if (data == null) {
       return null;
     }
     const hash = createHash();
@@ -202,11 +208,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return converter.convert(data, type, options);
   }
 
-  public async write(data: Data, options?: WriteOptions): Promise<void> {
+  public async write(data: Data, options?: WriteOptions): Promise<boolean> {
     options = { ...options };
     const length = options.length;
     if (length === 0) {
-      return;
+      return false;
     }
 
     const start = options.start;
@@ -224,8 +230,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     if (!this.supportAppend() && options.append) {
       options.append = false;
       const head = await this._read({ bufferSize: options.bufferSize });
-      if (head === null) {
-        return;
+      if (head == null) {
+        return false;
       }
       if (rc.typeEquals(head) || rc.typeEquals(data)) {
         data = await converter.merge([head, data], "readable");
@@ -246,7 +252,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       delete options.length;
       const src = await this._read({ bufferSize: options.bufferSize });
       if (src === null) {
-        return;
+        return false;
       }
       if (rc.typeEquals(src)) {
         data = new ModifiedReadable(src, { data, start, length });
@@ -266,19 +272,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       stats = await this._checkFile(options);
       if (options?.create) {
         this.fs._handleError(PathExistError.name, this.path, errors);
-        return;
+        return false;
       }
       create = false;
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options?.create === false) {
           this.fs._handleFileSystemError(e, options.errors);
-          return;
+          return false;
         }
         create = true;
       } else {
         this._handleNotReadableError(errors, { e });
-        return;
+        return false;
       }
     }
 
@@ -286,14 +292,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       options = { append: !!options?.append, create };
       if (create) {
         if (this.beforePost) {
-          if (await this.beforePost(path, data, stats, options)) {
-            return;
+          const result = await this.beforePost(path, data, stats, options);
+          if (result != null) {
+            return result;
           }
         }
       } else {
         if (this.beforePut) {
-          if (await this.beforePut(path, data, stats, options)) {
-            return;
+          const result = await this.beforePut(path, data, stats, options);
+          if (result != null) {
+            return result;
           }
         }
       }
@@ -309,8 +317,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
           this.afterPut(path).catch((e) => console.warn(e));
         }
       }
+      return true;
     } catch (e) {
       this._handleNoModificationAllowedError(errors, { e });
+      return false;
     }
   }
 
@@ -342,7 +352,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const ignoreHook = options.ignoreHook;
     if (!stats) {
       const s = await this.head(options);
-      if (s === null) {
+      if (s == null) {
         return null;
       }
       stats = s;

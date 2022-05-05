@@ -7,6 +7,7 @@ import {
   Entry,
   HeadOptions,
   MoveOptions,
+  Options,
   PatchOptions,
   Stats,
   URLOptions,
@@ -25,7 +26,7 @@ export abstract class AbstractEntry implements Entry {
   private beforeDelete?: (
     path: string,
     options: DeleteOptions
-  ) => Promise<boolean>;
+  ) => Promise<boolean | null>;
 
   constructor(
     public readonly fs: AbstractFileSystem,
@@ -38,9 +39,9 @@ export abstract class AbstractEntry implements Entry {
     }
   }
 
-  public async copy(to: Entry, options?: CopyOptions): Promise<void> {
+  public async copy(to: Entry, options?: CopyOptions): Promise<boolean> {
     options = { force: false, recursive: false, ...options };
-    await this._xmit(to, options);
+    return this._xmit(to, options);
   }
 
   public cp = (to: Entry, options?: CopyOptions | undefined) =>
@@ -48,42 +49,46 @@ export abstract class AbstractEntry implements Entry {
 
   public del = (options?: DeleteOptions | undefined) => this.delete(options);
 
-  public async delete(options?: DeleteOptions): Promise<void> {
+  public async delete(options?: DeleteOptions): Promise<boolean> {
     try {
       options = { force: false, recursive: false, ...options };
       if (!options.ignoreHook && this.beforeDelete) {
-        if (await this.beforeDelete(this.path, options)) {
-          return;
+        const result = await this.beforeDelete(this.path, options);
+        if (result != null) {
+          return result;
         }
       }
       await this._delete(options);
       if (!options.ignoreHook && this.afterDelete) {
         await this.afterDelete(this.path);
       }
+      return true;
     } catch (e) {
       this._handleNoModificationAllowedError(options?.errors, { e });
+      return false;
     }
   }
 
-  public async getParent(): Promise<Directory> {
+  public async getParent(options?: Options): Promise<Directory | null> {
     const parentPath = getParentPath(this.path);
-    return this.fs.getDirectory(parentPath);
+    return this.fs.getDirectory(parentPath, options);
   }
 
-  public async move(to: Entry, options?: MoveOptions): Promise<void> {
+  public async move(to: Entry, options?: MoveOptions): Promise<boolean> {
     options = { force: false, ...options };
-    await this._xmit(to, {
+    let result = await this._xmit(to, {
       ...options,
       recursive: true,
     });
-
-    const errors = options.errors;
-    if (errors && errors.length === 0) {
-      await this.delete({
-        ...options,
-        recursive: true,
-      });
+    if (!result) {
+      return false;
     }
+
+    result = await this.delete({
+      ...options,
+      recursive: true,
+    });
+    return true;
   }
 
   public mv = (to: Entry, options?: MoveOptions | undefined) =>
@@ -102,8 +107,8 @@ export abstract class AbstractEntry implements Entry {
 
   public toURL = (options?: URLOptions) => this.fs.toURL(this.path, options);
 
-  public abstract _delete(option: DeleteOptions): Promise<void>;
-  public abstract _xmit(entry: Entry, options: XmitOptions): Promise<void>;
+  public abstract _delete(option: DeleteOptions): Promise<boolean>;
+  public abstract _xmit(entry: Entry, options: XmitOptions): Promise<boolean>;
   public abstract head(options?: HeadOptions): Promise<Stats | null>;
 
   protected _handleNoModificationAllowedError(

@@ -213,7 +213,7 @@ export abstract class AbstractFileSystem implements FileSystem {
           name: TypeMismatchError.name,
           repository: this.repository,
           path: checked,
-          e: { message: `"${checked}" is not a directory` },
+          message: `"${checked}" is not a directory`,
         });
       }
       if (stats.size == null && options.type === EntryType.File) {
@@ -221,7 +221,7 @@ export abstract class AbstractFileSystem implements FileSystem {
           name: TypeMismatchError.name,
           repository: this.repository,
           path: checked,
-          e: { message: `"${checked}" is not a file` },
+          message: `"${checked}" is not a file`,
         });
       }
       if (!options.ignoreHook && this.afterHead) {
@@ -239,7 +239,10 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public async list(path: string, options?: ListOptions): Promise<string[]> {
+  public async list(
+    path: string,
+    options?: ListOptions
+  ): Promise<string[] | null> {
     const dir = await this.getDirectory(path, options);
     if (!dir) {
       return Promise.resolve([]);
@@ -352,7 +355,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: URLOptions
   ): Promise<string | null> {
     const stats = await this.head(path);
-    if (stats === null) {
+    if (stats == null) {
       return null;
     }
     return this._toURL(path, stats.size == null, options);
