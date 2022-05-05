@@ -10,6 +10,7 @@ import {
   Item,
   ListOptions,
   MkcolOptions,
+  Options,
   Stats,
   XmitOptions,
 } from "./core";
@@ -51,12 +52,12 @@ export abstract class AbstractDirectory
     const fs = this.fs;
 
     try {
-      await this._checkDirectory();
+      await this._checkDirectory(options);
     } catch (e) {
       const errors = options.errors;
       if (isFileSystemError(e) && e.name !== NotFoundError.name) {
         if (!options.force) {
-          this.fs._handleFileSystemError(e, options.errors);
+          this.fs._handleFileSystemError(e, errors);
         }
       } else {
         this._handleNotReadableError(errors, { e });
@@ -67,13 +68,10 @@ export abstract class AbstractDirectory
     if (options.recursive) {
       const children = await this._items(options);
       for (const child of children) {
-        const childEntry = await fs.getEntry(child.path, {
+        const childEntry = (await fs.getEntry(child.path, {
           type: child.type,
           ignoreHook: options.ignoreHook,
-        });
-        if (!childEntry) {
-          continue;
-        }
+        })) as Entry;
         await childEntry.delete(options);
       }
     }
@@ -156,7 +154,7 @@ export abstract class AbstractDirectory
     options = { force: false, recursive: false, ...options };
     const path = this.path;
     try {
-      await this._checkDirectory();
+      await this._checkDirectory(options);
       if (!options.force) {
         this.fs._handleError(PathExistError.name, path, options.errors, {
           message: `"${path}" has already existed`,
@@ -200,13 +198,13 @@ export abstract class AbstractDirectory
   public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
-  protected async _checkDirectory() {
+  protected async _checkDirectory(options: Options) {
     if (!this.fs.supportDirectory) {
       return;
     }
 
-    await this.fs.head(this.path, {
-      type: EntryType.Directory,
+    await this.head({
+      ignoreHook: options?.ignoreHook,
       errors: undefined,
     });
   }
@@ -216,7 +214,7 @@ export abstract class AbstractDirectory
       options = { ...options };
       const path = this.path;
 
-      await this._checkDirectory();
+      await this._checkDirectory(options);
 
       let items: Item[] | null | undefined;
       if (!options.ignoreHook && this.beforeList) {

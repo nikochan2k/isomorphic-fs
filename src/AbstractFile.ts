@@ -320,9 +320,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   protected async _checkFile(options: Options): Promise<Stats> {
     const path = this.path;
-    const stats = (await this.fs.head(path, {
-      ...options,
-      errors: undefined,
+    const stats = (await this.head({
+      ignoreHook: options.ignoreHook,
     })) as Stats;
     if (stats.size == null) {
       this.fs._handleError(TypeMismatchError.name, this.path, options.errors, {
