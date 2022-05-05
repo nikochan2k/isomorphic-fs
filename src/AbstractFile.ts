@@ -79,7 +79,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       const errors = options.errors;
       if (isFileSystemError(e) && e.name !== NotFoundError.name) {
         if (!options.force) {
-          this._handleFileSystemError(e, options.errors);
+          this.fs._handleFileSystemError(e, options.errors);
         }
       } else {
         this._handleNotReadableError(errors, { e });
@@ -97,7 +97,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const errors = options.errors;
 
     if (toEntry instanceof AbstractDirectory) {
-      this._handleError(TypeMismatchError.name, errors, {
+      this.fs._handleError(TypeMismatchError.name, this.path, errors, {
         message: `"${toEntry.path}" is not a file`,
         from: this.path,
         to: toEntry.path,
@@ -113,7 +113,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
       stats = s;
       if (!options.force) {
-        this._handleError(InvalidModificationError.name, errors, {
+        this.fs._handleError(InvalidModificationError.name, this.path, errors, {
           from: this.path,
           to: toEntry.path,
         });
@@ -265,14 +265,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     try {
       stats = await this._checkFile(options);
       if (options?.create) {
-        this._handleError(PathExistError.name, errors);
+        this.fs._handleError(PathExistError.name, this.path, errors);
         return;
       }
       create = false;
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options?.create === false) {
-          this._handleFileSystemError(e, options.errors);
+          this.fs._handleFileSystemError(e, options.errors);
           return;
         }
         create = true;
@@ -325,7 +325,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       errors: undefined,
     })) as Stats;
     if (stats.size == null) {
-      this._handleError(TypeMismatchError.name, options.errors, {
+      this.fs._handleError(TypeMismatchError.name, this.path, options.errors, {
         message: `"${path}" is not a file`,
       });
     }
@@ -353,7 +353,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     const path = this.path;
     if (stats.size == null) {
-      this._handleError(TypeMismatchError.name, errors, {
+      this.fs._handleError(TypeMismatchError.name, this.path, errors, {
         message: `"${path}" must not end with slash`,
       });
       return null;

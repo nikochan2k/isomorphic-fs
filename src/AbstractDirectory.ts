@@ -10,12 +10,10 @@ import {
   Item,
   ListOptions,
   MkcolOptions,
-  Options,
   Stats,
   XmitOptions,
 } from "./core";
 import {
-  createError,
   isFileSystemError,
   NotFoundError,
   PathExistError,
@@ -53,12 +51,12 @@ export abstract class AbstractDirectory
     const fs = this.fs;
 
     try {
-      await this._checkDirectory(options);
+      await this._checkDirectory();
     } catch (e) {
       const errors = options.errors;
       if (isFileSystemError(e) && e.name !== NotFoundError.name) {
         if (!options.force) {
-          this._handleFileSystemError(e, options.errors);
+          this.fs._handleFileSystemError(e, options.errors);
         }
       } else {
         this._handleNotReadableError(errors, { e });
@@ -69,10 +67,13 @@ export abstract class AbstractDirectory
     if (options.recursive) {
       const children = await this._items(options);
       for (const child of children) {
-        const childEntry = (await fs.getEntry(child.path, {
+        const childEntry = await fs.getEntry(child.path, {
           type: child.type,
-          errors: undefined,
-        })) as Entry;
+          ignoreHook: options.ignoreHook,
+        });
+        if (!childEntry) {
+          continue;
+        }
         await childEntry.delete(options);
       }
     }
@@ -87,7 +88,7 @@ export abstract class AbstractDirectory
     const path = this.path;
 
     if (to instanceof AbstractFile) {
-      this._handleError(TypeMismatchError.name, options.errors, {
+      this.fs._handleError(TypeMismatchError.name, this.path, options.errors, {
         message: `"${path}" is not a directory`,
       });
       return;
@@ -153,17 +154,14 @@ export abstract class AbstractDirectory
     }
 
     options = { force: false, recursive: false, ...options };
-    const repository = fs.repository;
     const path = this.path;
     try {
-      await this._checkDirectory(options);
+      await this._checkDirectory();
       if (!options.force) {
-        throw createError({
-          name: PathExistError.name,
-          repository,
-          path,
+        this.fs._handleError(PathExistError.name, path, options.errors, {
           message: `"${path}" has already existed`,
         });
+        return false;
       }
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
@@ -202,19 +200,15 @@ export abstract class AbstractDirectory
   public abstract _mkcol(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
-  protected async _checkDirectory(options: Options) {
+  protected async _checkDirectory() {
     if (!this.fs.supportDirectory) {
       return;
     }
 
-    const path = this.path;
-    const stats = (await this.fs.head(path, {
-      ...options,
+    await this.fs.head(this.path, {
+      type: EntryType.Directory,
       errors: undefined,
-    })) as Stats;
-    if (stats.size != null) {
-      this._handleError(TypeMismatchError.name, options.errors);
-    }
+    });
   }
 
   protected async _items(options?: ListOptions): Promise<Item[]> {
@@ -222,14 +216,13 @@ export abstract class AbstractDirectory
       options = { ...options };
       const path = this.path;
 
+      await this._checkDirectory();
+
       let items: Item[] | null | undefined;
       if (!options.ignoreHook && this.beforeList) {
         items = await this.beforeList(path, options);
       }
       if (!items) {
-        if (this.fs.supportDirectory()) {
-          await this._checkDirectory(options);
-        }
         items = await this._list();
       }
       if (!options.ignoreHook && this.afterList) {

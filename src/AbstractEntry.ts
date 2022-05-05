@@ -1,3 +1,4 @@
+import { ErrorParams } from ".";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   CopyOptions,
@@ -12,20 +13,12 @@ import {
   XmitOptions,
 } from "./core";
 import {
-  createError,
   FileSystemError,
   NoModificationAllowedError,
   NotFoundError,
   NotReadableError,
 } from "./errors";
 import { getParentPath } from "./util";
-
-interface ErrorParams {
-  e?: unknown;
-  message?: string;
-
-  [key: string]: any; // eslint-disable-line
-}
 
 export abstract class AbstractEntry implements Entry {
   private afterDelete?: (path: string) => Promise<void>;
@@ -113,50 +106,34 @@ export abstract class AbstractEntry implements Entry {
   public abstract _xmit(entry: Entry, options: XmitOptions): Promise<void>;
   public abstract head(options?: HeadOptions): Promise<Stats | null>;
 
-  protected _handleError(
-    name: string,
-    errors?: FileSystemError[],
-    params?: ErrorParams
-  ) {
-    const error = createError({
-      name,
-      repository: this.fs.repository,
-      path: this.path,
-      ...params,
-    });
-    this._handleFileSystemError(error, errors);
-  }
-
-  protected _handleFileSystemError(
-    error: FileSystemError,
-    errors?: FileSystemError[]
-  ) {
-    if (errors) {
-      errors.push(error);
-      return;
-    } else {
-      throw error;
-    }
-  }
-
   protected _handleNoModificationAllowedError(
     errors?: FileSystemError[],
     params?: ErrorParams
   ) {
-    return this._handleError(NoModificationAllowedError.name, errors, params);
+    return this.fs._handleError(
+      NoModificationAllowedError.name,
+      this.path,
+      errors,
+      params
+    );
   }
 
   protected _handleNotFoundError(
     errors?: FileSystemError[],
     params?: ErrorParams
   ) {
-    return this._handleError(NotFoundError.name, errors, params);
+    return this.fs._handleError(NotFoundError.name, this.path, errors, params);
   }
 
   protected _handleNotReadableError(
     errors?: FileSystemError[],
     params?: ErrorParams
   ) {
-    return this._handleError(NotReadableError.name, errors, params);
+    return this.fs._handleError(
+      NotReadableError.name,
+      this.path,
+      errors,
+      params
+    );
   }
 }

@@ -21,11 +21,19 @@ import {
 } from "./core";
 import {
   createError,
+  FileSystemError,
   NoModificationAllowedError,
   NotReadableError,
   TypeMismatchError,
 } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
+
+export interface ErrorParams {
+  e?: unknown;
+  message?: string;
+
+  [key: string]: any; // eslint-disable-line
+}
 
 export abstract class AbstractFileSystem implements FileSystem {
   private afterHead?: (path: string, stats: Stats) => Promise<void>;
@@ -130,6 +138,33 @@ export abstract class AbstractFileSystem implements FileSystem {
     return file.hash(options);
   }
 
+  public _handleError(
+    name: string,
+    path: string,
+    errors?: FileSystemError[],
+    params?: ErrorParams
+  ) {
+    const error = createError({
+      name,
+      repository: this.repository,
+      path: path,
+      ...params,
+    });
+    this._handleFileSystemError(error, errors);
+  }
+
+  public _handleFileSystemError(
+    error: FileSystemError,
+    errors?: FileSystemError[]
+  ) {
+    if (errors) {
+      errors.push(error);
+      return;
+    } else {
+      throw error;
+    }
+  }
+
   public async head(
     path: string,
     options?: HeadOptions
@@ -137,8 +172,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     try {
       options = { ...options };
 
-      if (path.endsWith("/")) {
-        if (!options.type) {
+      if (!options.type) {
+        if (path.endsWith("/")) {
           options.type = EntryType.Directory;
         }
       }
@@ -188,10 +223,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  public async list(
-    path: string,
-    options?: ListOptions
-  ): Promise<string[] | null> {
+  public async list(path: string, options?: ListOptions): Promise<string[]> {
     const dir = await this.getDirectory(path);
     return dir.list(options);
   }
