@@ -1,4 +1,4 @@
-import { FileSystem } from "../core";
+import { ErrorLike, FileSystem } from "../core";
 import { NotFoundError, TypeMismatchError } from "../errors";
 
 export const testAll = (
@@ -28,7 +28,7 @@ export const testAll = (
         throw new Error("/nothing exists");
       }
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
   });
 
@@ -42,8 +42,8 @@ export const testAll = (
       }
     } catch (e) {
       expect(
-        (e as any).name === TypeMismatchError.name ||
-          (e as any).name === NotFoundError.name
+        (e as ErrorLike).name === TypeMismatchError.name ||
+          (e as ErrorLike).name === NotFoundError.name
       ).toBe(true);
     }
   });

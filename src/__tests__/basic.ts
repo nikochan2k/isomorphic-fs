@@ -1,5 +1,5 @@
 import { DEFAULT_CONVERTER } from "univ-conv";
-import { File, FileSystem, OnExists, OnNoParent } from "../core";
+import { ErrorLike, File, FileSystem, OnExists, OnNoParent } from "../core";
 import { NotFoundError } from "../errors";
 
 const c = DEFAULT_CONVERTER;
@@ -32,7 +32,7 @@ export const testAll = (
       await file!.stat();
       throw new Error("Found file: " + file!.path);
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
     const buffer = await c.toArrayBuffer("");
     await file!.write(buffer);
@@ -47,7 +47,7 @@ export const testAll = (
       await file!.stat();
       throw new Error("Found file: " + file!.path);
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
     const buffer = await c.toArrayBuffer("test");
     await file!.write(buffer);
@@ -96,7 +96,7 @@ export const testAll = (
         throw new Error("Found file: " + folder!.path);
       }
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
 
     await folder!.mkdir();
@@ -107,7 +107,7 @@ export const testAll = (
         throw new Error("File has created: " + folder!.path);
       }
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
   });
 
@@ -119,7 +119,7 @@ export const testAll = (
       await file!.stat();
       throw new Error("Found file: " + file.path);
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
     const before = Math.floor(Date.now() / 1000);
     await file.write("Sample");

@@ -1,4 +1,4 @@
-import { FileSystem } from "../core";
+import { ErrorLike, FileSystem } from "../core";
 import { NotFoundError } from "../errors";
 
 export const testAll = (
@@ -24,7 +24,7 @@ export const testAll = (
       await fs.stat("/nothing");
       throw new Error("/nothing exists");
     } catch (e) {
-      expect((e as any).name).toBe(NotFoundError.name);
+      expect((e as ErrorLike).name).toBe(NotFoundError.name);
     }
   });
 
