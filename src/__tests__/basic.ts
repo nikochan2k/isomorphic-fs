@@ -20,7 +20,7 @@ export const testAll = (
   it("rootdir", async () => {
     const dir = await fs.getDirectory("/");
     const paths = await dir.readdir();
-    expect(paths.length).toBe(0);
+    expect(paths?.length).toBe(0);
   });
 
   it("add empty file", async () => {
@@ -34,7 +34,7 @@ export const testAll = (
     const buffer = await c.toArrayBuffer("");
     await file.write(buffer);
     const stats = await file.stat();
-    expect(stats.size).toBe(0);
+    expect(stats?.size).toBe(0);
   });
 
   it("add text file", async () => {
@@ -48,14 +48,14 @@ export const testAll = (
     const buffer = await c.toArrayBuffer("test");
     await file.write(buffer);
     const stats = await file.stat();
-    expect(stats.size).toBe(4);
+    expect(stats?.size).toBe(4);
   });
 
   it("read text file", async () => {
     const file = await fs.getFile("/test.txt");
     const buffer = await file.read("uint8array");
-    expect(buffer.byteLength).toBe(4);
-    const text = await c.toText(buffer);
+    expect(buffer?.byteLength).toBe(4);
+    const text = await c.toText(buffer!);
     expect(text).toBe("test");
   });
 
@@ -82,7 +82,8 @@ export const testAll = (
     const folder = await fs.getDirectory("/folder");
     try {
       const stats = await folder.stat();
-      if (stats.size != null) {
+      expect(stats).not.toBeNull();
+      if (stats?.size != null) {
         throw new Error("Found file: " + folder.path);
       }
     } catch (e) {
@@ -92,7 +93,8 @@ export const testAll = (
     await folder.mkdir();
     try {
       const stats = await folder.stat();
-      if (stats.size != null) {
+      expect(stats).not.toBe(null);
+      if (stats?.size != null) {
         throw new Error("File has created: " + folder.path);
       }
     } catch (e) {
@@ -112,7 +114,8 @@ export const testAll = (
     await file.write("Sample");
     const after = Math.floor(Date.now() + 1 / 1000);
     const stats = await file.stat();
-    const modified = Math.floor((stats.modified ?? 0) / 1000);
+    expect(stats).not.toBeNull();
+    const modified = Math.floor((stats?.modified ?? 0) / 1000);
     expect(modified).toBeGreaterThanOrEqual(before);
     expect(modified).toBeLessThan(after);
     const text = await file.read("text");
@@ -126,10 +129,9 @@ export const testAll = (
   it("copy directory", async () => {
     const from = await fs.getDirectory("/folder");
     const to = await fs.getDirectory("/folder2");
-    const errors = await from.copy(to, { force: false, recursive: true });
-    expect(errors.length).toBe(0);
+    await from.copy(to, { force: false, recursive: true });
     const stats = await to.stat();
-    expect(stats.size).toBeUndefined();
+    expect(stats?.size).toBeUndefined();
     if (fs.supportDirectory()) {
       const root = await fs.getDirectory("/");
       const list = await root.ls();
@@ -147,8 +149,7 @@ export const testAll = (
   });
 
   it("move directory", async () => {
-    const errors = await fs.move("/folder2", "/folder3");
-    expect(errors.length).toBe(0);
+    await fs.move("/folder2", "/folder3");
     if (fs.supportDirectory()) {
       const root = await fs.getDirectory("/");
       const list = await root.ls();

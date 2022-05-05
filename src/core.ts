@@ -162,13 +162,13 @@ export interface FileSystem {
   cp(fromPath: string, toPath: string, options?: CopyOptions): Promise<void>;
   del(path: string, options?: DeleteOptions): Promise<void>;
   delete(path: string, options?: DeleteOptions): Promise<void>;
-  dir(path: string, options?: ListOptions): Promise<string[] | null>;
+  dir(path: string, options?: ListOptions): Promise<string[]>;
   getDirectory(path: string): Promise<Directory>;
   getFile(path: string): Promise<File>;
   hash(path: string, options?: ReadOptions): Promise<string | null>;
   head(path: string, options?: HeadOptions): Promise<Stats | null>;
-  list(path: string, options?: ListOptions): Promise<string[] | null>;
-  ls(path: string, options?: ListOptions): Promise<string[] | null>;
+  list(path: string, options?: ListOptions): Promise<string[]>;
+  ls(path: string, options?: ListOptions): Promise<string[]>;
   mkcol(path: string, options?: MkcolOptions): Promise<boolean>;
   mkdir(path: string, options?: MkcolOptions): Promise<boolean>;
   move(fromPath: string, toPath: string, options?: MoveOptions): Promise<void>;
@@ -179,9 +179,10 @@ export interface FileSystem {
     type?: T,
     options?: ReadOptions
   ): Promise<ReturnData<T> | null>;
-  readdir(path: string, options?: ListOptions): Promise<string[] | null>;
+  readdir(path: string, options?: ListOptions): Promise<string[]>;
   rm(path: string, options?: DeleteOptions): Promise<void>;
   stat(path: string, options?: HeadOptions): Promise<Stats | null>;
+  supportDirectory(): boolean;
   toURL(path: string, options?: URLOptions): Promise<string | null>;
   write(path: string, data: Data, options?: WriteOptions): Promise<void>;
 }
@@ -206,12 +207,12 @@ export interface Entry {
 }
 
 export interface Directory extends Entry {
-  dir(options?: ListOptions): Promise<string[] | null>;
-  list(options?: ListOptions): Promise<string[] | null>;
-  ls(options?: ListOptions): Promise<string[] | null>;
+  dir(options?: ListOptions): Promise<string[]>;
+  list(options?: ListOptions): Promise<string[]>;
+  ls(options?: ListOptions): Promise<string[]>;
   mkcol(options?: MkcolOptions): Promise<boolean>;
   mkdir(options?: MkcolOptions): Promise<boolean>;
-  readdir(options?: ListOptions): Promise<string[] | null>;
+  readdir(options?: ListOptions): Promise<string[]>;
 }
 
 export interface File extends Entry {
