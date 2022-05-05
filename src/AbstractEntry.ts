@@ -39,17 +39,25 @@ export abstract class AbstractEntry implements Entry {
     }
   }
 
-  public async copy(to: Entry, options?: CopyOptions): Promise<boolean> {
+  public async copy(
+    to: Entry,
+    options?: CopyOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
     options = { ...this.fs.defaultCopyOptions, ...options };
-    return this._xmit(to, options);
+    return this._xmit(to, options, errors);
   }
 
-  public cp = (to: Entry, options?: CopyOptions | undefined) =>
-    this.copy(to, options);
+  public cp = (to: Entry, options?: CopyOptions, errors?: FileSystemError[]) =>
+    this.copy(to, options, errors);
 
-  public del = (options?: DeleteOptions | undefined) => this.delete(options);
+  public del = (options?: DeleteOptions, errors?: FileSystemError[]) =>
+    this.delete(options, errors);
 
-  public async delete(options?: DeleteOptions): Promise<boolean> {
+  public async delete(
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
     try {
       options = { ...this.fs.defaultDeleteOptions, ...options };
       if (!options.ignoreHook && this.beforeDelete) {
@@ -64,53 +72,90 @@ export abstract class AbstractEntry implements Entry {
       }
       return true;
     } catch (e) {
-      this._handleNoModificationAllowedError(options?.errors, { e });
+      this._handleNoModificationAllowedError(errors, { e });
       return false;
     }
   }
 
-  public async getParent(options?: Options): Promise<Directory | null> {
+  public async getParent(): Promise<Directory>;
+  public async getParent(errors?: FileSystemError[]): Promise<Directory | null>;
+  public async getParent(
+    errors?: FileSystemError[]
+  ): Promise<Directory | null> {
     const parentPath = getParentPath(this.path);
-    return this.fs.getDirectory(parentPath, options);
+    return this.fs.getDirectory(parentPath, errors);
   }
 
-  public async move(to: Entry, options?: MoveOptions): Promise<boolean> {
-    let result = await this._xmit(to, {
-      ...this.fs.defaultMoveOptions,
-      ...options,
-      recursive: true,
-    });
+  public async move(
+    to: Entry,
+    options?: MoveOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    let result = await this._xmit(
+      to,
+      {
+        ...this.fs.defaultMoveOptions,
+        ...options,
+        recursive: true,
+      },
+      errors
+    );
     if (!result) {
       return false;
     }
 
-    result = await this.delete({
-      ...this.fs.defaultDeleteOptions,
-      ...options,
-      recursive: true,
-    });
+    result = await this.delete(
+      {
+        ...this.fs.defaultDeleteOptions,
+        ...options,
+        recursive: true,
+      },
+      errors
+    );
     return result;
   }
 
-  public mv = (to: Entry, options?: MoveOptions | undefined) =>
-    this.move(to, options);
+  public mv = (to: Entry, options?: MoveOptions, errors?: FileSystemError[]) =>
+    this.move(to, options, errors);
 
-  public patch = (props: Stats, options?: PatchOptions) =>
-    this.fs.patch(this.path, props, options);
+  public patch = (
+    props: Stats,
+    options?: PatchOptions,
+    errors?: FileSystemError[]
+  ) => this.fs.patch(this.path, props, options, errors);
 
-  public remove = (options?: DeleteOptions | undefined) => this.delete(options);
+  public remove = (options?: DeleteOptions, errors?: FileSystemError[]) =>
+    this.delete(options, errors);
 
-  public rm = (options?: DeleteOptions | undefined) => this.delete(options);
+  public rm = (options?: DeleteOptions, errors?: FileSystemError[]) =>
+    this.delete(options, errors);
 
-  public stat = (options?: HeadOptions | undefined) => this.head(options);
+  public stat(options?: HeadOptions): Promise<Stats>;
+  public stat(options?: HeadOptions, errors?: FileSystemError[]) {
+    return this.head(options, errors);
+  }
 
   public toString = () => `${this.fs.repository}:${this.path}`;
 
-  public toURL = (options?: URLOptions) => this.fs.toURL(this.path, options);
+  public toURL(options?: URLOptions): Promise<string>;
+  public toURL(
+    options?: URLOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null> {
+    return this.fs.toURL(this.path, options, errors);
+  }
 
   public abstract _delete(option: DeleteOptions): Promise<boolean>;
-  public abstract _xmit(entry: Entry, options: XmitOptions): Promise<boolean>;
-  public abstract head(options?: HeadOptions): Promise<Stats | null>;
+  public abstract _xmit(
+    entry: Entry,
+    options: XmitOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  public abstract head(options?: HeadOptions): Promise<Stats>;
+  public abstract head(
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
 
   protected _handleNoModificationAllowedError(
     errors?: FileSystemError[],

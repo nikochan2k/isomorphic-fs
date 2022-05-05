@@ -16,7 +16,6 @@ import {
   OnExists,
   OnNoParent,
   OnNotExist,
-  Options,
   PatchOptions,
   ReadOptions,
   Stats,
@@ -88,50 +87,82 @@ export abstract class AbstractFileSystem implements FileSystem {
   public async copy(
     fromPath: string,
     toPath: string,
-    options?: CopyOptions
+    options?: CopyOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean> {
     const result = await this._prepareXmit(fromPath, toPath);
     if (!result) {
       return false;
     }
     const { from, to } = result;
-    return from.copy(to, options);
+    return from.copy(to, options, errors);
   }
 
   public cp = (
     fromPath: string,
     toPath: string,
-    options?: CopyOptions | undefined
-  ) => this.copy(fromPath, toPath, options);
+    options?: CopyOptions,
+    errors?: FileSystemError[]
+  ) => this.copy(fromPath, toPath, options, errors);
 
-  public del = (path: string, options?: DeleteOptions | undefined) =>
-    this.delete(path, options);
+  public del = (
+    path: string,
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ) => this.delete(path, options, errors);
 
-  public async delete(path: string, options?: DeleteOptions): Promise<boolean> {
-    const entry = await this.getEntry(path, options);
+  public async delete(
+    path: string,
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    const entry = await this.getEntry(path, options, errors);
     if (!entry) {
       return false;
     }
     return entry.delete(options);
   }
 
-  public dir = (path: string, options?: ListOptions | undefined) =>
-    this.list(path, options);
+  public dir(path: string, options?: ListOptions): Promise<string[]>;
+  public dir(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  public dir(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null> {
+    return this.list(path, options, errors);
+  }
 
+  public getDirectory(path: string): Promise<Directory>;
   public getDirectory(
     path: string,
-    options?: Options
+    errors?: FileSystemError[]
+  ): Promise<Directory | null>;
+  public getDirectory(
+    path: string,
+    errors?: FileSystemError[]
   ): Promise<Directory | null> {
-    const checked = this._checkPath(path, options);
+    const checked = this._checkPath(path, errors);
     if (!checked) {
       return Promise.resolve(null);
     }
     return this._getDirectory(checked);
   }
 
+  public async getEntry(path: string, options?: HeadOptions): Promise<Entry>;
   public async getEntry(
     path: string,
-    options?: HeadOptions
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Entry | null>;
+  public async getEntry(
+    path: string,
+    options?: HeadOptions,
+    errors?: FileSystemError[]
   ): Promise<Entry | null> {
     options = { ...options };
 
@@ -142,36 +173,48 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
 
     if (options.type === EntryType.File) {
-      return this.getFile(path, options);
+      return this.getFile(path, errors);
     }
     if (options.type === EntryType.Directory) {
-      return this.getDirectory(path, options);
+      return this.getDirectory(path, errors);
     }
 
     const stats = await this.head(path, options);
-    if (!stats) {
-      return null;
-    }
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 
-  public getFile(path: string, options?: Options): Promise<File | null> {
-    const checked = this._checkPath(path, options);
+  public getFile(path: string): Promise<File>;
+  public getFile(
+    path: string,
+    errors?: FileSystemError[]
+  ): Promise<File | null>;
+  public getFile(
+    path: string,
+    errors?: FileSystemError[]
+  ): Promise<File | null> {
+    const checked = this._checkPath(path, errors);
     if (checked == null) {
       return Promise.resolve(null);
     }
     return this._getFile(checked);
   }
 
+  public async hash(path: string, options?: ReadOptions): Promise<string>;
   public async hash(
     path: string,
-    options?: ReadOptions
+    options?: ReadOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
+  public async hash(
+    path: string,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
   ): Promise<string | null> {
-    const file = await this.getFile(path);
+    const file = await this.getFile(path, errors);
     if (file == null) {
       return null;
     }
-    return file.hash(options);
+    return file.hash(options, errors);
   }
 
   public _handleError(
@@ -201,9 +244,16 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
+  public async head(path: string, options?: HeadOptions): Promise<Stats>;
   public async head(
     path: string,
-    options?: HeadOptions
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
+  public async head(
+    path: string,
+    options?: HeadOptions,
+    errors?: FileSystemError[]
   ): Promise<Stats | null> {
     try {
       options = { ...options };
@@ -213,10 +263,7 @@ export abstract class AbstractFileSystem implements FileSystem {
           options.type = EntryType.Directory;
         }
       }
-      const checked = this._checkPath(path, options);
-      if (checked == null) {
-        return null;
-      }
+      const checked = this._checkPath(path);
 
       if (options.type === EntryType.Directory) {
         if (!this.supportDirectory()) {
@@ -253,74 +300,93 @@ export abstract class AbstractFileSystem implements FileSystem {
 
       return stats;
     } catch (e) {
-      throw createError({
-        name: NotReadableError.name,
-        repository: this.repository,
-        path,
-        e,
-      });
+      this._handleError(NotReadableError.name, path, errors, { e });
+      return null;
     }
   }
 
+  public async list(path: string, options?: ListOptions): Promise<string[]>;
   public async list(
     path: string,
-    options?: ListOptions
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  public async list(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
   ): Promise<string[] | null> {
-    const dir = await this.getDirectory(path, options);
+    const dir = await this.getDirectory(path, errors);
     if (!dir) {
       return Promise.resolve([]);
     }
-    return dir.list(options);
+    return dir.list(options, errors);
   }
 
-  public ls = (path: string, options?: ListOptions | undefined) =>
-    this.list(path, options);
+  public ls(path: string, options?: ListOptions): Promise<string[]>;
+  public ls(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null> {
+    return this.list(path, options, errors);
+  }
 
-  public async mkcol(path: string, options?: MkcolOptions): Promise<boolean> {
-    const dir = await this.getDirectory(path, options);
+  public async mkcol(
+    path: string,
+    options?: MkcolOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    const dir = await this.getDirectory(path, errors);
     if (!dir) {
       return false;
     }
-    return dir.mkcol(options);
+    return dir.mkcol(options, errors);
   }
 
-  public mkdir = (path: string, options?: MkcolOptions | undefined) =>
-    this.mkcol(path, options);
+  public mkdir = (
+    path: string,
+    options?: MkcolOptions,
+    errors?: FileSystemError[]
+  ) => this.mkcol(path, options, errors);
 
   public async move(
     fromPath: string,
     toPath: string,
-    options?: MoveOptions
+    options?: MoveOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean> {
     const result = await this._prepareXmit(fromPath, toPath);
     if (!result) {
       return false;
     }
     const { from, to } = result;
-    return from.move(to, options);
+    return from.move(to, options, errors);
   }
 
   public mv = (
     fromPath: string,
     toPath: string,
-    options?: MoveOptions | undefined
-  ) => this.move(fromPath, toPath, options);
+    options?: MoveOptions,
+    errors?: FileSystemError[]
+  ) => this.move(fromPath, toPath, options, errors);
 
   public async patch(
     path: string,
     props: Stats,
-    options?: PatchOptions
+    options?: PatchOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean> {
-    options = { ...options };
+    const checked = this._checkPath(path, errors);
+    if (checked == null) {
+      return false;
+    }
 
+    options = { ...options };
     if (path.endsWith("/")) {
       if (!options.type) {
         options.type = EntryType.Directory;
       }
-    }
-    const checked = this._checkPath(path, options);
-    if (checked == null) {
-      return false;
     }
 
     try {
@@ -341,12 +407,9 @@ export abstract class AbstractFileSystem implements FileSystem {
       }
       return true;
     } catch (e) {
-      this._handleError(
-        NoModificationAllowedError.name,
-        checked,
-        options?.errors,
-        { e }
-      );
+      this._handleError(NoModificationAllowedError.name, checked, errors, {
+        e,
+      });
       return false;
     }
   }
@@ -355,35 +418,72 @@ export abstract class AbstractFileSystem implements FileSystem {
     path: string,
     type?: T,
     options?: ReadOptions
+  ): Promise<ReturnData<T>>;
+  public async read<T extends DataType>(
+    path: string,
+    type?: T,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null> {
-    const file = await this.getFile(path, options);
+    const file = await this.getFile(path, errors);
     if (!file) {
       return null;
     }
-    return file.read(type, options);
+    return file.read(type, options, errors);
   }
 
-  public readdir = (path: string, options?: ListOptions | undefined) =>
-    this.list(path, options);
+  public readdir(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[]>;
+  public readdir(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null> {
+    return this.list(path, options, errors);
+  }
 
-  public rm = (path: string, options?: DeleteOptions | undefined) =>
-    this.delete(path, options);
+  public rm = (
+    path: string,
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ) => this.delete(path, options, errors);
 
-  public stat = (path: string, options?: HeadOptions | undefined) =>
-    this.head(path, options);
+  public stat(path: string, options?: HeadOptions): Promise<Stats>;
+  public stat(
+    path: string,
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
+  public stat(
+    path: string,
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null> {
+    return this.head(path, options, errors);
+  }
 
+  public async toURL(path: string, options?: URLOptions): Promise<string>;
   public async toURL(
     path: string,
-    options?: URLOptions
+    options?: URLOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
+  public async toURL(
+    path: string,
+    options?: URLOptions,
+    errors?: FileSystemError[]
   ): Promise<string | null> {
-    const stats = await this.head(path);
+    const stats = await this.head(path, options, errors);
     if (stats == null) {
       return null;
     }
     return this._toURL(path, stats.size == null, options);
   }
 
-  public unlink = (path: string, options?: DeleteOptions | undefined) =>
+  public unlink = (path: string, options?: DeleteOptions) =>
     this.delete(path, options);
 
   public async write(
@@ -417,9 +517,14 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract canPatchModified(): boolean;
   public abstract supportDirectory(): boolean;
 
-  protected _checkPath(path: string, options?: Options): string | null {
+  protected _checkPath(path: string): string;
+  protected _checkPath(path: string, errors?: FileSystemError[]): string | null;
+  protected _checkPath(
+    path: string,
+    errors?: FileSystemError[]
+  ): string | null {
     if (INVALID_CHARS.test(path)) {
-      this._handleError(SyntaxError.name, path, options?.errors, {
+      this._handleError(SyntaxError.name, path, errors, {
         message: `"${path}" has invalid character`,
       });
       return null;

@@ -32,6 +32,7 @@ import {
   XmitOptions,
 } from "./core";
 import {
+  FileSystemError,
   InvalidModificationError,
   isFileSystemError,
   NotFoundError,
@@ -75,14 +76,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  public async _delete(options: DeleteOptions): Promise<boolean> {
+  public async _delete(
+    options: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
     try {
       await this._exists(options);
     } catch (e) {
-      const errors = options.errors;
       if (isFileSystemError(e) && e.name !== NotFoundError.name) {
         if (options.onNotExist === OnNotExist.Error) {
-          this.fs._handleFileSystemError(e, options.errors);
+          this.fs._handleFileSystemError(e, errors);
           return false;
         }
       } else {
@@ -95,14 +98,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       await this._rm();
       return true;
     } catch (e) {
-      this._handleNoModificationAllowedError(options.errors, { e });
+      this._handleNoModificationAllowedError(errors, { e });
       return false;
     }
   }
 
-  public async _xmit(toEntry: Entry, options: XmitOptions): Promise<boolean> {
-    const errors = options.errors;
-
+  public async _xmit(
+    toEntry: Entry,
+    options: XmitOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
     if (toEntry instanceof AbstractDirectory) {
       this.fs._handleError(TypeMismatchError.name, this.path, errors, {
         message: `"${toEntry.path}" is not a file`,
@@ -114,14 +119,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const to = toEntry as AbstractFile;
     let stats: Stats;
     try {
-      const s = await to.head({ ...options, type: EntryType.File });
-      if (s == null) {
-        return false;
-      }
+      stats = await to.head({ ...options, type: EntryType.File });
       if (options.onExists === OnExists.Ignore) {
         return true;
       }
-      stats = s;
       if (options.onExists === OnExists.Error) {
         this.fs._handleError(InvalidModificationError.name, this.path, errors, {
           from: this.path,
@@ -142,27 +143,25 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       return false;
     }
 
-    const data = await this._read(options, stats);
+    const data = await this._read(options, stats, errors);
     if (data == null) {
       return false;
     }
 
-    try {
-      const result = await to.write(data, options);
-      return result;
-    } catch (e) {
-      this._handleNotReadableError(errors, {
-        e: e as ErrorLike,
-        from: this.path,
-        to: toEntry.path,
-      });
-      return false;
-    }
+    return to.write(data, options, errors);
   }
 
-  public async hash(options?: ReadOptions): Promise<string | null> {
+  public hash(options?: ReadOptions): Promise<string>;
+  public hash(
+    options?: ReadOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
+  public async hash(
+    options?: ReadOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null> {
     options = { ...options };
-    const data = await this._read(options);
+    const data = await this._read(options, undefined, errors);
     if (data == null) {
       return null;
     }
@@ -191,14 +190,32 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return toHex(hash.digest());
   }
 
-  public head(options?: HeadOptions): Promise<Stats | null> {
+  public head(options?: HeadOptions): Promise<Stats>;
+  public head(
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
+  public head(
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null> {
     options = { ...options, type: EntryType.File };
-    return this.fs.head(this.path, options);
+    return this.fs.head(this.path, options, errors);
   }
 
   public async read<T extends DataType>(
     type?: T,
     options?: ReadOptions
+  ): Promise<ReturnData<T>>;
+  public async read<T extends DataType>(
+    type?: T,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
+  ): Promise<ReturnData<T> | null>;
+  public async read<T extends DataType>(
+    type?: T,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null> {
     options = { ...options };
     const converter = this._getConverter();
@@ -206,7 +223,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       return converter.empty(type);
     }
 
-    const data = await this._read(options);
+    const data = await this._read(options, undefined, errors);
     if (data === null) {
       return null;
     }
@@ -216,7 +233,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return converter.convert(data, type, options);
   }
 
-  public async write(data: Data, options?: WriteOptions): Promise<boolean> {
+  public async write(
+    data: Data,
+    options?: WriteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
     options = { ...options };
     const length = options.length;
     if (length === 0) {
@@ -271,8 +292,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    const errors = options.errors;
-
     options = { ...options };
     let stats: Stats | undefined;
     let create: boolean;
@@ -286,7 +305,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options?.create === false) {
-          this.fs._handleFileSystemError(e, options.errors);
+          this.fs._handleFileSystemError(e, errors);
           return false;
         }
         create = true;
@@ -337,20 +356,26 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportRangeWrite(): boolean;
 
   protected async _exists(options: Options): Promise<Stats> {
-    const stats = await this.head({
+    return this.head({
       type: EntryType.File,
       ignoreHook: options.ignoreHook,
     });
-    return stats as Stats;
   }
 
   protected _getConverter() {
     return DEFAULT_CONVERTER;
   }
 
+  protected async _read(options: ReadOptions, stats?: Stats): Promise<Data>;
   protected async _read(
     options: ReadOptions,
-    stats?: Stats
+    stats?: Stats,
+    errors?: FileSystemError[]
+  ): Promise<Data | null>;
+  protected async _read(
+    options: ReadOptions,
+    stats?: Stats,
+    errors?: FileSystemError[]
   ): Promise<Data | null> {
     const ignoreHook = options.ignoreHook;
     if (!stats) {
@@ -360,8 +385,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
       stats = s;
     }
-
-    const errors = options.errors;
 
     const path = this.path;
     if (stats.size == null) {

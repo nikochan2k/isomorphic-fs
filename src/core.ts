@@ -35,7 +35,6 @@ export interface FileSystemOptions {
 export type URLType = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface Options {
-  errors?: FileSystemError[];
   ignoreHook?: boolean;
 }
 
@@ -110,7 +109,7 @@ export interface XmitOptions extends Options {
   recursive: boolean;
 }
 
-export interface URLOptions {
+export interface URLOptions extends Options {
   expires?: number;
   urlType?: URLType;
 }
@@ -169,43 +168,133 @@ export interface FileSystem {
   repository: string;
 
   copy(
-    fromPath: string,
-    toPath: string,
-    options?: CopyOptions
+    from: string,
+    to: string,
+    options?: CopyOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean>;
-  cp(fromPath: string, toPath: string, options?: CopyOptions): Promise<boolean>;
-  del(path: string, options?: DeleteOptions): Promise<boolean>;
-  delete(path: string, options?: DeleteOptions): Promise<boolean>;
-  dir(path: string, options?: ListOptions): Promise<string[] | null>;
-  getDirectory(path: string, options?: Options): Promise<Directory | null>;
-  getFile(path: string, options?: Options): Promise<File | null>;
-  hash(path: string, options?: ReadOptions): Promise<string | null>;
-  head(path: string, options?: HeadOptions): Promise<Stats | null>;
-  list(path: string, options?: ListOptions): Promise<string[] | null>;
-  ls(path: string, options?: ListOptions): Promise<string[] | null>;
-  mkcol(path: string, options?: MkcolOptions): Promise<boolean>;
-  mkdir(path: string, options?: MkcolOptions): Promise<boolean>;
+  cp(
+    from: string,
+    to: string,
+    options?: CopyOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  del(
+    path: string,
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  delete(
+    path: string,
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  dir(path: string, options?: ListOptions): Promise<string[]>;
+  dir(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  getDirectory(path: string): Promise<Directory>;
+  getDirectory(
+    path: string,
+    errors?: FileSystemError[]
+  ): Promise<Directory | null>;
+  getFile(path: string): Promise<File>;
+  getFile(path: string, errors?: FileSystemError[]): Promise<File | null>;
+  hash(path: string, options?: ReadOptions): Promise<string>;
+  hash(
+    path: string,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
+  head(path: string, options?: HeadOptions): Promise<Stats>;
+  head(
+    path: string,
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
+  list(path: string, options?: ListOptions): Promise<string[]>;
+  list(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  ls(path: string, options?: ListOptions): Promise<string[]>;
+  ls(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  mkcol(
+    path: string,
+    options?: MkcolOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  mkdir(
+    path: string,
+    options?: MkcolOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
   move(
-    fromPath: string,
-    toPath: string,
-    options?: MoveOptions
+    from: string,
+    to: string,
+    options?: MoveOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean>;
-  mv(fromPath: string, toPath: string, options?: MoveOptions): Promise<boolean>;
-  patch(path: string, props: Stats, options?: PatchOptions): Promise<boolean>;
+  mv(
+    from: string,
+    to: string,
+    options?: MoveOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  patch(
+    path: string,
+    props: Stats,
+    options?: PatchOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
   read<T extends DataType>(
     path: string,
     type?: T,
     options?: ReadOptions
+  ): Promise<ReturnData<T>>;
+  read<T extends DataType>(
+    path: string,
+    type?: T,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null>;
-  readdir(path: string, options?: ListOptions): Promise<string[] | null>;
-  rm(path: string, options?: DeleteOptions): Promise<boolean>;
-  stat(path: string, options?: HeadOptions): Promise<Stats | null>;
+  readdir(path: string, options?: ListOptions): Promise<string[]>;
+  readdir(
+    path: string,
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  rm(
+    path: string,
+    options?: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  stat(path: string, options?: HeadOptions): Promise<Stats>;
+  stat(
+    path: string,
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
   supportDirectory(): boolean;
-  toURL(path: string, options?: URLOptions): Promise<string | null>;
+  toURL(path: string, options?: URLOptions): Promise<string>;
+  toURL(
+    path: string,
+    options?: URLOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
+  write(path: string, data: Data, options?: WriteOptions): Promise<boolean>;
   write(
     path: string,
     data: Data,
-    options?: WriteOptions
+    options?: WriteOptions,
+    errors?: FileSystemError[]
   ): Promise<boolean | null>;
 }
 
@@ -213,37 +302,99 @@ export interface Entry {
   fs: FileSystem;
   path: string;
 
-  copy(entry: Entry, options?: CopyOptions): Promise<boolean>;
-  cp(entry: Entry, options?: CopyOptions): Promise<boolean>;
-  del(options?: DeleteOptions): Promise<boolean>;
-  delete(options?: DeleteOptions): Promise<boolean>;
-  getParent(): Promise<Directory | null>;
-  head(options?: HeadOptions): Promise<Stats | null>;
-  move(entry: Entry, options?: MoveOptions): Promise<boolean>;
-  mv(entry: Entry, options?: MoveOptions): Promise<boolean>;
-  patch(props: Stats, options?: PatchOptions): Promise<boolean>;
-  remove(options?: DeleteOptions): Promise<boolean>;
-  rm(options?: DeleteOptions): Promise<boolean>;
-  stat(options?: HeadOptions): Promise<Stats | null>;
-  toURL(options?: URLOptions): Promise<string | null>;
+  copy(
+    to: Entry,
+    options?: CopyOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  cp(
+    to: Entry,
+    options?: CopyOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  del(options?: DeleteOptions, errors?: FileSystemError[]): Promise<boolean>;
+  delete(options?: DeleteOptions, errors?: FileSystemError[]): Promise<boolean>;
+  getParent(): Promise<Directory>;
+  getParent(errors?: FileSystemError[]): Promise<Directory | null>;
+  head(options?: HeadOptions): Promise<Stats>;
+  head(
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
+  move(
+    to: Entry,
+    options?: MoveOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  mv(
+    to: Entry,
+    options?: MoveOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  patch(
+    props: Stats,
+    options?: PatchOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
+  remove(options?: DeleteOptions, errors?: FileSystemError[]): Promise<boolean>;
+  rm(options?: DeleteOptions, errors?: FileSystemError[]): Promise<boolean>;
+  stat(options?: HeadOptions): Promise<Stats>;
+  stat(
+    options?: HeadOptions,
+    errors?: FileSystemError[]
+  ): Promise<Stats | null>;
+  toURL(options?: URLOptions): Promise<string>;
+  toURL(
+    options?: URLOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
 }
 
 export interface Directory extends Entry {
-  dir(options?: ListOptions): Promise<string[] | null>;
-  list(options?: ListOptions): Promise<string[] | null>;
-  ls(options?: ListOptions): Promise<string[] | null>;
-  mkcol(options?: MkcolOptions): Promise<boolean>;
-  mkdir(options?: MkcolOptions): Promise<boolean>;
-  readdir(options?: ListOptions): Promise<string[] | null>;
+  dir(options?: ListOptions): Promise<string[]>;
+  dir(
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  list(options?: ListOptions): Promise<string[]>;
+  list(
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  ls(options?: ListOptions): Promise<string[]>;
+  ls(
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
+  mkcol(options?: MkcolOptions, errors?: FileSystemError[]): Promise<boolean>;
+  mkdir(options?: MkcolOptions, errors?: FileSystemError[]): Promise<boolean>;
+  readdir(options?: ListOptions): Promise<string[]>;
+  readdir(
+    options?: ListOptions,
+    errors?: FileSystemError[]
+  ): Promise<string[] | null>;
 }
 
 export interface File extends Entry {
-  hash(options?: ReadOptions): Promise<string | null>;
+  hash(options?: ReadOptions): Promise<string>;
+  hash(
+    options?: ReadOptions,
+    errors?: FileSystemError[]
+  ): Promise<string | null>;
   read<T extends DataType>(
     type?: T,
     options?: ReadOptions
+  ): Promise<ReturnData<T>>;
+  read<T extends DataType>(
+    type?: T,
+    options?: ReadOptions,
+    errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null>;
-  write(data: Data, options?: WriteOptions): Promise<boolean>;
+  write(
+    data: Data,
+    options?: WriteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
 }
 
 export interface Modification {
