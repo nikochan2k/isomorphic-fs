@@ -77,7 +77,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _delete(options: DeleteOptions): Promise<boolean> {
     try {
-      await this._checkFile(options);
+      await this._exists(options);
     } catch (e) {
       const errors = options.errors;
       if (isFileSystemError(e) && e.name !== NotFoundError.name) {
@@ -277,7 +277,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     let stats: Stats | undefined;
     let create: boolean;
     try {
-      stats = await this._checkFile(options);
+      stats = await this._exists(options);
       if (options?.create) {
         this.fs._handleError(PathExistError.name, this.path, errors);
         return false;
@@ -336,11 +336,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
 
-  protected async _checkFile(options: Options): Promise<Stats> {
-    return (await this.head({
+  protected async _exists(options: Options): Promise<Stats> {
+    const stats = await this.head({
       type: EntryType.File,
       ignoreHook: options.ignoreHook,
-    })) as Stats;
+    });
+    return stats as Stats;
   }
 
   protected _getConverter() {

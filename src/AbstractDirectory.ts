@@ -55,7 +55,7 @@ export abstract class AbstractDirectory
     const fs = this.fs;
 
     try {
-      await this._checkDirectory(options);
+      await this._exists(options);
     } catch (e) {
       const errors = options.errors;
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
@@ -152,6 +152,8 @@ export abstract class AbstractDirectory
   }
 
   public async list(options?: ListOptions): Promise<string[] | null> {
+    options = { ...options };
+    await this._exists(options);
     const items = await this._items(options);
     if (!items) {
       return null;
@@ -170,7 +172,7 @@ export abstract class AbstractDirectory
     options = { ...this.fs.defaultMkdirOptions, ...options };
     const path = this.path;
     try {
-      await this._checkDirectory(options);
+      await this._exists(options);
       if (options.onExists === OnExists.Error) {
         this.fs._handleError(PathExistError.name, path, options.errors, {
           message: `"${path}" has already existed`,
@@ -221,23 +223,22 @@ export abstract class AbstractDirectory
   public abstract _mkdir(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
-  protected async _checkDirectory(options: Options): Promise<void> {
+  protected async _exists(options: Options): Promise<Stats> {
     if (!this.fs.supportDirectory) {
-      return;
+      return {};
     }
 
-    await this.head({
+    const stats = await this.head({
       type: EntryType.Directory,
       ignoreHook: options?.ignoreHook,
     });
+    return stats as Stats;
   }
 
   protected async _items(options?: ListOptions): Promise<Item[] | null> {
     try {
       options = { ...options };
       const path = this.path;
-
-      await this._checkDirectory(options);
 
       let items: Item[] | null | undefined;
       if (!options.ignoreHook && this.beforeList) {

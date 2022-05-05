@@ -142,4 +142,6 @@ export abstract class AbstractEntry implements Entry {
       params
     );
   }
+
+  protected abstract _exists(options: Options): Promise<Stats>;
 }
