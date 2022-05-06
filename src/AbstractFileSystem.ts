@@ -505,16 +505,19 @@ export abstract class AbstractFileSystem implements FileSystem {
     return file.write(data, options, errors);
   }
 
-  public abstract _doGetDirectory(path: string): Promise<Directory>;
-  public abstract _doGetFile(path: string): Promise<File>;
-  public abstract _doHead(path: string, options: HeadOptions): Promise<Stats>;
-  public abstract _doPatch(
+  protected abstract _doGetDirectory(path: string): Promise<Directory>;
+  protected abstract _doGetFile(path: string): Promise<File>;
+  protected abstract _doHead(
+    path: string,
+    options: HeadOptions
+  ): Promise<Stats>;
+  protected abstract _doPatch(
     path: string,
     stats: Stats,
     props: Stats,
     options: PatchOptions
   ): Promise<void>;
-  public abstract _doToURL(
+  protected abstract _doToURL(
     path: string,
     isDirectory: boolean,
     options?: URLOptions

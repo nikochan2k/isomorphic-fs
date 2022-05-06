@@ -258,10 +258,6 @@ export abstract class AbstractDirectory
     return this.list(options, errors);
   }
 
-  public abstract _doList(): Promise<Item[]>;
-  public abstract _doMkcol(): Promise<void>;
-  public abstract _doRmdir(): Promise<void>;
-
   protected async _afterList(
     options: ListOptions,
     list: Item[],
@@ -339,4 +335,8 @@ export abstract class AbstractDirectory
       return null;
     }
   }
+
+  protected abstract _doList(): Promise<Item[]>;
+  protected abstract _doMkcol(): Promise<void>;
+  protected abstract _doRmdir(): Promise<void>;
 }
