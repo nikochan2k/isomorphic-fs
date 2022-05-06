@@ -267,27 +267,28 @@ export function createError(params: ErrorParams): FileSystemError {
     return params.e;
   }
 
-  if (params.e) {
-    if (typeof params.e !== "object" && !params.message) {
-      if (!params.message) {
-        params.message = "" + params.e; // eslint-disable-line @typescript-eslint/restrict-plus-operands
-      }
-    } else {
-      params.innerError = params.e;
-    }
-    delete params.e;
-  }
-
+  const name: string = (params?.e as any).name ?? params.name; // eslint-disable-line
+  const code: number = (params?.e as any).code ?? params.code; // eslint-disable-line
   for (const de of domExceptions) {
-    if (de.name === params.name || (params.code && de.code === params.code)) {
+    if (de.name === name || (code != null && de.code === code)) {
       params.name = de.name;
       params.code = de.code;
       if (params.message) {
-        params["detail"] = params.message;
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+        params.message = `${de.message}\n${params.message}`;
+      } else {
         params.message = de.message;
       }
       break;
     }
+  }
+  if (!params.name) {
+    params.name = UnknownError.name;
+  }
+
+  if (params.e) {
+    params.innerError = params.e;
+    delete params.e;
   }
 
   return new FileSystemError(params);
