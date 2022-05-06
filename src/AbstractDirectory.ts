@@ -12,7 +12,6 @@ import {
   MkcolOptions,
   OnExists,
   OnNoParent,
-  OnNotExist,
   Options,
   Stats,
   XmitOptions,
@@ -30,84 +29,11 @@ export abstract class AbstractDirectory
   extends AbstractEntry
   implements Directory
 {
-  private readonly afterList?: (path: string, list: Item[]) => Promise<void>;
-  private readonly afterMkcol?: (path: string) => Promise<void>;
-  private readonly beforeList?: (
-    path: string,
-    options: ListOptions
-  ) => Promise<Item[] | null>;
-  private readonly beforeMkcol?: (
-    psth: string,
-    options: MkcolOptions
-  ) => Promise<boolean | null>;
-
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
-    const hook = fs.options?.hook;
-    if (hook) {
-      this.beforeMkcol = hook.beforeMkcol;
-      this.beforeList = hook.beforeList;
-      this.afterMkcol = hook.afterMkcol;
-      this.afterList = hook.afterList;
-    }
   }
 
-  public async _delete(
-    options: DeleteOptions,
-    errors?: FileSystemError[]
-  ): Promise<boolean> {
-    const fs = this.fs;
-
-    try {
-      await this._exists(options);
-    } catch (e) {
-      if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.onNotExist === OnNotExist.Error) {
-          this.fs._handleFileSystemError(e, errors);
-          return false;
-        }
-      } else {
-        this._handleNotReadableError(errors, { e });
-        return false;
-      }
-    }
-
-    let result = true;
-    if (options.recursive) {
-      const children = await this._items(options, errors);
-      if (!children) {
-        return false;
-      }
-
-      for (const child of children) {
-        const childEntry = await fs.getEntry(
-          child.path,
-          {
-            type: child.type,
-            ignoreHook: options.ignoreHook,
-          },
-          errors
-        );
-        if (!childEntry) {
-          continue;
-        }
-        result = (await childEntry.delete(options, errors)) && result;
-      }
-    }
-
-    if (result && this.path !== "/") {
-      try {
-        await this._rmdir();
-      } catch (e) {
-        this._handleNoModificationAllowedError(errors, { e });
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  public async _xmit(
+  public async _copy(
     to: Entry,
     options: XmitOptions,
     errors?: FileSystemError[]
@@ -116,7 +42,7 @@ export abstract class AbstractDirectory
     const path = this.path;
 
     if (to instanceof AbstractFile) {
-      this.fs._handleError(TypeMismatchError.name, this.path, errors, {
+      await this.fs._handleError(TypeMismatchError.name, this.path, errors, {
         message: `"${path}" is not a directory`,
       });
       return false;
@@ -156,13 +82,13 @@ export abstract class AbstractDirectory
         if (!toEntry) {
           continue;
         }
-        res = await fromEntry._xmit(toEntry, options, errors);
+        res = await fromEntry._copy(toEntry, options, errors);
       } else if (fromEntry instanceof AbstractDirectory) {
         const toEntry = await this.fs.getDirectory(toPath, errors);
         if (!toEntry) {
           continue;
         }
-        res = await fromEntry._xmit(toEntry, options, errors);
+        res = await fromEntry._copy(toEntry, options, errors);
       } else {
         continue;
       }
@@ -170,6 +96,42 @@ export abstract class AbstractDirectory
     }
 
     return result;
+  }
+
+  public async _delete(
+    options: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    const fs = this.fs;
+
+    let result = true;
+    if (options.recursive) {
+      const children = await this._items(options, errors);
+      if (!children) {
+        return false;
+      }
+
+      for (const child of children) {
+        const childEntry = await fs.getEntry(
+          child.path,
+          {
+            type: child.type,
+            ignoreHook: options.ignoreHook,
+          },
+          errors
+        );
+        if (!childEntry) {
+          continue;
+        }
+        result = (await childEntry.delete(options, errors)) && result;
+      }
+    }
+
+    if (result && this.path !== "/") {
+      await this._rmdir();
+    }
+
+    return true;
   }
 
   public dir(options?: ListOptions): Promise<string[]>;
@@ -245,7 +207,7 @@ export abstract class AbstractDirectory
     try {
       await this._exists(options);
       if (options.onExists === OnExists.Error) {
-        this.fs._handleError(PathExistError.name, path, errors, {
+        await this.fs._handleError(PathExistError.name, path, errors, {
           message: `"${path}" has already existed`,
         });
         return false;
@@ -263,25 +225,21 @@ export abstract class AbstractDirectory
           }
         }
       } else {
-        this._handleNotReadableError(errors, { e });
+        await this._handleNotReadableError(errors, { e });
         return false;
       }
     }
 
     try {
-      if (!options.ignoreHook && this.beforeMkcol) {
-        const result = await this.beforeMkcol(path, options);
-        if (result != null) {
-          return result;
-        }
+      const result = await this._beforeMkcol(options);
+      if (result != null) {
+        return result;
       }
       await this._mkdir();
-      if (!options.ignoreHook && this.afterMkcol) {
-        await this.afterMkcol(path);
-      }
+      await this._afterMkcol(options, true);
       return true;
     } catch (e) {
-      this._handleNoModificationAllowedError(errors, { e });
+      await this._handleNoModificationAllowedError(errors, { e });
       return false;
     }
   }
@@ -304,6 +262,48 @@ export abstract class AbstractDirectory
   public abstract _mkdir(): Promise<void>;
   public abstract _rmdir(): Promise<void>;
 
+  protected async _afterList(
+    options: ListOptions,
+    list: Item[],
+    error?: FileSystemError
+  ) {
+    const fs = this.fs;
+    const afterList = fs.options.hook?.afterList;
+    if (afterList && !options.ignoreHook) {
+      await afterList(fs.repository, this.path, options, list, error);
+    }
+  }
+
+  protected async _afterMkcol(
+    options: MkcolOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) {
+    const fs = this.fs;
+    const afterMkcol = fs.options.hook?.afterMkcol;
+    if (afterMkcol && !options.ignoreHook) {
+      await afterMkcol(fs.repository, this.path, options, result, error);
+    }
+  }
+
+  protected async _beforeList(options: ListOptions) {
+    const fs = this.fs;
+    const beforeList = fs.options.hook?.beforeList;
+    if (beforeList && !options.ignoreHook) {
+      return beforeList(fs.repository, this.path, options);
+    }
+    return null;
+  }
+
+  protected async _beforeMkcol(options: MkcolOptions) {
+    const fs = this.fs;
+    const beforeMkcol = fs.options.hook?.beforeMkcol;
+    if (beforeMkcol && !options.ignoreHook) {
+      return beforeMkcol(fs.repository, this.path, options);
+    }
+    return null;
+  }
+
   protected async _exists(options: Options): Promise<Stats> {
     return this.stat({
       type: EntryType.Directory,
@@ -315,20 +315,14 @@ export abstract class AbstractDirectory
     options?: ListOptions,
     errors?: FileSystemError[]
   ): Promise<Item[] | null> {
-    try {
-      options = { ...options };
-      const path = this.path;
+    options = { ...options };
 
-      let items: Item[] | null | undefined;
-      if (!options.ignoreHook && this.beforeList) {
-        items = await this.beforeList(path, options);
-      }
+    try {
+      let items = await this._beforeList(options);
       if (!items) {
         items = await this._list();
       }
-      if (!options.ignoreHook && this.afterList) {
-        await this.afterList(path, items);
-      }
+      await this._afterList(options, items);
 
       for (const item of items) {
         if (item.path.endsWith("/")) {
@@ -341,7 +335,7 @@ export abstract class AbstractDirectory
 
       return items;
     } catch (e) {
-      this._handleNotReadableError(errors, { e });
+      await this._handleNotReadableError(errors, { e });
       return null;
     }
   }

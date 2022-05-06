@@ -115,40 +115,103 @@ export interface URLOptions extends Options {
 }
 
 export interface Hook {
-  afterDelete?: (path: string) => Promise<void>;
-  afterGet?: (path: string, data: Data) => Promise<void>;
-  afterHead?: (path: string, stats: Stats) => Promise<void>;
-  afterList?: (path: string, list: Item[]) => Promise<void>;
-  afterMkcol?: (path: string) => Promise<void>;
-  afterPatch?: (path: string) => Promise<void>;
-  afterPost?: (path: string) => Promise<void>;
-  afterPut?: (path: string) => Promise<void>;
+  afterDelete?: (
+    repository: string,
+    path: string,
+    options: DeleteOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterGet?: (
+    repository: string,
+    path: string,
+    options: ReadOptions,
+    data: Data | null,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterHead?: (
+    repository: string,
+    path: string,
+    options: HeadOptions,
+    stats: Stats | null,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterList?: (
+    repository: string,
+    path: string,
+    options: ListOptions,
+    list: Item[] | null,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterMkcol?: (
+    repository: string,
+    path: string,
+    options: MkcolOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterPatch?: (
+    repository: string,
+    path: string,
+    options: PatchOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterPost?: (
+    repository: string,
+    path: string,
+    options: WriteOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) => Promise<void>;
+  afterPut?: (
+    repository: string,
+    path: string,
+    options: WriteOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) => Promise<void>;
   beforeDelete?: (
+    repository: string,
     path: string,
     options: DeleteOptions
   ) => Promise<boolean | null>;
-  beforeGet?: (path: string, options: ReadOptions) => Promise<Data | null>;
-  beforeHead?: (path: string, options: HeadOptions) => Promise<Stats | null>;
-  beforeList?: (path: string, options: ListOptions) => Promise<Item[] | null>;
+  beforeGet?: (
+    repository: string,
+    path: string,
+    options: ReadOptions
+  ) => Promise<Data | null>;
+  beforeHead?: (
+    repository: string,
+    path: string,
+    options: HeadOptions
+  ) => Promise<Stats | null>;
+  beforeList?: (
+    repository: string,
+    path: string,
+    options: ListOptions
+  ) => Promise<Item[] | null>;
   beforeMkcol?: (
+    repository: string,
     path: string,
     options: MkcolOptions
   ) => Promise<boolean | null>;
   beforePatch?: (
+    repository: string,
     path: string,
     props: Stats,
     options: PatchOptions
   ) => Promise<boolean | null>;
   beforePost?: (
+    repository: string,
     path: string,
     data: Data,
-    stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean | null>;
   beforePut?: (
+    repository: string,
     path: string,
     data: Data,
-    stats: Stats | undefined,
     options: WriteOptions
   ) => Promise<boolean | null>;
 }
@@ -158,6 +221,8 @@ export interface ErrorLike {
   message?: string;
   name: string;
   stack?: string;
+  repository?: string;
+  path?: string;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;

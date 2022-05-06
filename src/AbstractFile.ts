@@ -24,7 +24,6 @@ import {
   ErrorLike,
   File,
   OnExists,
-  OnNotExist,
   Options,
   ReadOptions,
   Stats,
@@ -43,79 +42,24 @@ import { createModifiedReadableStream, ModifiedReadable, modify } from "./mods";
 import { toHex } from "./util";
 
 export abstract class AbstractFile extends AbstractEntry implements File {
-  private readonly afterGet?: (path: string, data: Data) => Promise<void>;
-  private readonly afterPost?: (path: string) => Promise<void>;
-  private readonly afterPut?: (path: string) => Promise<void>;
-  private readonly beforeGet?: (
-    path: string,
-    options: ReadOptions
-  ) => Promise<Data | null>;
-  private readonly beforePost?: (
-    path: string,
-    data: Data,
-    stats: Stats | undefined,
-    options: WriteOptions
-  ) => Promise<boolean | null>;
-  private readonly beforePut?: (
-    path: string,
-    data: Data,
-    stats: Stats | undefined,
-    options: WriteOptions
-  ) => Promise<boolean | null>;
-
   constructor(fs: AbstractFileSystem, path: string) {
     super(fs, path);
-    const hook = fs.options?.hook;
-    if (hook) {
-      this.beforeGet = hook.beforeGet;
-      this.beforePost = hook.beforePost;
-      this.beforePut = hook.beforePut;
-      this.afterGet = hook.afterGet;
-      this.afterPost = hook.afterPost;
-      this.afterPut = hook.afterPut;
-    }
   }
 
-  public async _delete(
-    options: DeleteOptions,
-    errors?: FileSystemError[]
-  ): Promise<boolean> {
-    try {
-      await this._exists(options);
-    } catch (e) {
-      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
-        if (options.onNotExist === OnNotExist.Error) {
-          this.fs._handleFileSystemError(e, errors);
-          return false;
-        }
-      } else {
-        this._handleNotReadableError(errors, { e });
-        return false;
-      }
-    }
-
-    try {
-      await this._rm();
-      return true;
-    } catch (e) {
-      this._handleNoModificationAllowedError(errors, { e });
-      return false;
-    }
-  }
-
-  public async _xmit(
+  public async _copy(
     toEntry: Entry,
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
     if (toEntry instanceof AbstractDirectory) {
-      this.fs._handleError(TypeMismatchError.name, this.path, errors, {
+      await this.fs._handleError(TypeMismatchError.name, this.path, errors, {
         message: `"${toEntry.path}" is not a file`,
         from: this.path,
         to: toEntry.path,
       });
       return false;
     }
+
     const to = toEntry as AbstractFile;
     let stats: Stats | undefined;
     try {
@@ -124,15 +68,20 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         return true;
       }
       if (options.onExists === OnExists.Error) {
-        this.fs._handleError(InvalidModificationError.name, this.path, errors, {
-          from: this.path,
-          to: toEntry.path,
-        });
+        await this.fs._handleError(
+          InvalidModificationError.name,
+          this.path,
+          errors,
+          {
+            from: this.path,
+            to: toEntry.path,
+          }
+        );
         return false;
       }
     } catch (e) {
       if (!(isFileSystemError(e) && e.name === NotFoundError.name)) {
-        this._handleNotReadableError(errors, {
+        await this._handleNotReadableError(errors, {
           e: e as ErrorLike,
           from: this.path,
           to: toEntry.path,
@@ -149,6 +98,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return to.write(data, options, errors);
   }
 
+  public async _delete(
+    _options: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    try {
+      await this._rm();
+      return true;
+    } catch (e) {
+      await this._handleNoModificationAllowedError(errors, { e });
+      return false;
+    }
+  }
+
   public hash(options?: ReadOptions): Promise<string>;
   public hash(
     options?: ReadOptions,
@@ -163,6 +125,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     if (data == null) {
       return null;
     }
+
     const hash = createHash();
     if (readableConverter().typeEquals(data)) {
       await handleReadable(data, async (chunk) => {
@@ -250,8 +213,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       );
     }
 
-    const path = this.path;
-    const converter = this._getConverter();
     const rc = readableConverter();
     const rsc = readableStreamConverter();
     if (!this.supportAppend() && options.append) {
@@ -264,6 +225,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       if (head == null) {
         return false;
       }
+      const converter = this._getConverter();
       if (rc.typeEquals(head) || rc.typeEquals(data)) {
         data = await converter.merge([head, data], "readable");
       } else if (rsc.typeEquals(head) || rsc.typeEquals(data)) {
@@ -304,19 +266,19 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     try {
       stats = await this._exists(options);
       if (options?.create) {
-        this.fs._handleError(PathExistError.name, this.path, errors);
+        await this.fs._handleError(PathExistError.name, this.path, errors);
         return false;
       }
       create = false;
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options?.create === false) {
-          this.fs._handleFileSystemError(e, errors);
+          await this.fs._handleFileSystemError(e, errors);
           return false;
         }
         create = true;
       } else {
-        this._handleNotReadableError(errors, { e });
+        await this._handleNotReadableError(errors, { e });
         return false;
       }
     }
@@ -324,35 +286,38 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     try {
       options = { append: !!options?.append, create };
       if (create) {
-        if (this.beforePost) {
-          const result = await this.beforePost(path, data, stats, options);
-          if (result != null) {
-            return result;
-          }
+        const result = await this._beforePost(data, options);
+        if (result != null) {
+          return result;
         }
       } else {
-        if (this.beforePut) {
-          const result = await this.beforePut(path, data, stats, options);
-          if (result != null) {
-            return result;
-          }
+        const result = await this._beforePut(data, options);
+        if (result != null) {
+          return result;
         }
       }
 
       await this._save(data, stats, options);
 
       if (create) {
-        if (this.afterPost) {
-          this.afterPost(path).catch((e) => console.warn(e));
-        }
+        await this._afterPost(options, true);
       } else {
-        if (this.afterPut) {
-          this.afterPut(path).catch((e) => console.warn(e));
-        }
+        await this._afterPut(options, true);
       }
       return true;
     } catch (e) {
-      this._handleNoModificationAllowedError(errors, { e });
+      const opts = options;
+      await this._handleNoModificationAllowedError(
+        errors,
+        { e },
+        async (error) => {
+          if (create) {
+            await this._afterPost(opts, false, error);
+          } else {
+            await this._afterPut(opts, false, error);
+          }
+        }
+      );
       return false;
     }
   }
@@ -360,6 +325,67 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportAppend(): boolean;
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
+
+  protected async _afterGet(
+    options: ReadOptions,
+    data: Data | null,
+    error?: FileSystemError
+  ) {
+    const fs = this.fs;
+    const afterGet = fs.options.hook?.afterGet;
+    if (afterGet && !options.ignoreHook) {
+      await afterGet(fs.repository, this.path, options, data, error);
+    }
+  }
+
+  protected async _afterPost(
+    options: WriteOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) {
+    const fs = this.fs;
+    const afterPost = fs.options.hook?.afterPost;
+    if (afterPost && !options.ignoreHook) {
+      await afterPost(fs.repository, this.path, options, result, error);
+    }
+  }
+
+  protected async _afterPut(
+    options: WriteOptions,
+    result: boolean,
+    error?: FileSystemError
+  ) {
+    const fs = this.fs;
+    const afterPut = fs.options.hook?.afterPut;
+    if (afterPut && !options.ignoreHook) {
+      await afterPut(fs.repository, this.path, options, result, error);
+    }
+  }
+
+  protected _beforeGet(options: ReadOptions) {
+    const fs = this.fs;
+    const beforeGet = fs.options.hook?.beforeGet;
+    if (beforeGet && !options.ignoreHook) {
+      return beforeGet(fs.repository, this.path, options);
+    }
+    return null;
+  }
+
+  protected async _beforePost(data: Data, options: WriteOptions) {
+    const fs = this.fs;
+    const beforePost = fs.options.hook?.beforePost;
+    if (beforePost && !options.ignoreHook) {
+      await beforePost(fs.repository, this.path, data, options);
+    }
+  }
+
+  protected async _beforePut(data: Data, options: WriteOptions) {
+    const fs = this.fs;
+    const beforePut = fs.options.hook?.beforePut;
+    if (beforePut && !options.ignoreHook) {
+      await beforePut(fs.repository, this.path, data, options);
+    }
+  }
 
   protected async _exists(options: Options): Promise<Stats> {
     return this.head({
@@ -383,7 +409,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     stats?: Stats,
     errors?: FileSystemError[]
   ): Promise<Data | null> {
-    const ignoreHook = options.ignoreHook;
     if (!stats) {
       const s = await this.head({ ...options, type: EntryType.File });
       if (s == null) {
@@ -394,7 +419,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     const path = this.path;
     if (stats.size == null) {
-      this.fs._handleError(TypeMismatchError.name, this.path, errors, {
+      await this.fs._handleError(TypeMismatchError.name, this.path, errors, {
         message: `"${path}" must not end with slash`,
       });
       return null;
@@ -404,16 +429,11 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     try {
-      let data: Data | null = null;
-      if (!ignoreHook && this.beforeGet) {
-        data = await this.beforeGet(path, options);
-      }
+      let data = await this._beforeGet(options);
       if (!data) {
         data = await this._load(stats, options);
       }
-      if (!ignoreHook && this.afterGet) {
-        this.afterGet(path, data).catch((e) => console.warn(e));
-      }
+      await this._afterGet(options, data);
 
       if (
         data &&
@@ -426,7 +446,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
       return data;
     } catch (e) {
-      this._handleNotReadableError(errors, { e });
+      const opts = options;
+      await this._handleNotReadableError(errors, { e }, async (error) => {
+        await this._afterGet(opts, null, error);
+      });
       return null;
     }
   }

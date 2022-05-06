@@ -1,18 +1,19 @@
 import { ErrorLike } from "./core";
 
 export class FileSystemError extends Error {
-  public code: number | undefined;
+  public code?: number;
+  public path?: string;
+  public repository?: string;
 
   constructor(params: ErrorLike) {
-    super(FileSystemError.toMessage(params));
-    this.name = params.name;
-    this.code = params.code;
+    super(params.message);
+    for (const [key, value] of Object.entries(params)) {
+      (this as any)[key] = value; // eslint-disable-line
+    }
   }
 
-  private static toMessage(params: ErrorLike) {
-    params = { ...params };
-    delete params.stack;
-    return JSON.stringify(params, null, 2);
+  public override toString() {
+    return JSON.stringify(this, null, 2);
   }
 }
 
@@ -248,28 +249,17 @@ export const domExceptions: ErrorLike[] = [
 ];
 
 interface ErrorParams {
-  name: string;
-  repository: string;
-  path: string;
   e?: unknown;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  innerError?: any;
   message?: string;
+  code?: number;
+  name: string;
+  path: string;
+  repository: string;
 
-  [key: string]: any; // eslint-disable-line
-}
-
-function buildError(params: ErrorParams, e: ErrorLike) {
-  let repository = params.repository;
-  if (repository.endsWith("/")) {
-    repository = repository.substring(0, repository.length - 1);
-  }
-  if (!repository.startsWith("/")) {
-    repository = "/" + repository;
-  }
-  e["repository"] = repository;
-  for (const [key, value] of Object.entries(params)) {
-    if (key === "e" || key === "repository") continue;
-    e[key] = value; // eslint-disable-line
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
 }
 
 export function createError(params: ErrorParams): FileSystemError {
@@ -277,29 +267,30 @@ export function createError(params: ErrorParams): FileSystemError {
     return params.e;
   }
 
-  let e = params.e as ErrorLike;
-  if (typeof e === "object") {
-    e = { ...e };
-  } else {
-    e = { name: "", message: e };
-  }
-  buildError(params, e);
-
-  const name = params.name;
-  if (name) {
-    for (const de of domExceptions) {
-      if (de.name == name) {
-        e.name = name;
-        e.code = de.code;
-        if (!e.message) {
-          e.message = de.message;
-        }
-        break;
+  if (params.e) {
+    if (typeof params.e !== "object" && !params.message) {
+      if (!params.message) {
+        params.message = "" + params.e; // eslint-disable-line @typescript-eslint/restrict-plus-operands
       }
+    } else {
+      params.innerError = params.e;
+    }
+    delete params.e;
+  }
+
+  for (const de of domExceptions) {
+    if (de.name == params.name || de.code === params.code) {
+      params.name = de.name;
+      params.code = de.code;
+      if (params.message) {
+        params["detail"] = params.message;
+        params.message = de.message;
+      }
+      break;
     }
   }
 
-  return new FileSystemError(e);
+  return new FileSystemError(params);
 }
 
 export function isFileSystemError(e?: unknown): e is FileSystemError {

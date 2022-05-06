@@ -7,6 +7,7 @@ import {
   Entry,
   HeadOptions,
   MoveOptions,
+  OnNotExist,
   Options,
   PatchOptions,
   Stats,
@@ -14,7 +15,9 @@ import {
   XmitOptions,
 } from "./core";
 import {
+  createError,
   FileSystemError,
+  isFileSystemError,
   NoModificationAllowedError,
   NotFoundError,
   NotReadableError,
@@ -22,22 +25,10 @@ import {
 import { getParentPath } from "./util";
 
 export abstract class AbstractEntry implements Entry {
-  private readonly afterDelete?: (path: string) => Promise<void>;
-  private readonly beforeDelete?: (
-    path: string,
-    options: DeleteOptions
-  ) => Promise<boolean | null>;
-
   constructor(
     public readonly fs: AbstractFileSystem,
     public readonly path: string
-  ) {
-    const hook = fs.options.hook;
-    if (hook) {
-      this.beforeDelete = hook?.beforeDelete;
-      this.afterDelete = hook?.afterDelete;
-    }
-  }
+  ) {}
 
   public async copy(
     to: Entry,
@@ -45,7 +36,7 @@ export abstract class AbstractEntry implements Entry {
     errors?: FileSystemError[]
   ): Promise<boolean> {
     options = { ...this.fs.defaultCopyOptions, ...options };
-    return this._xmit(to, options, errors);
+    return this._copy(to, options, errors);
   }
 
   public cp = (to: Entry, options?: CopyOptions, errors?: FileSystemError[]) =>
@@ -58,21 +49,39 @@ export abstract class AbstractEntry implements Entry {
     options?: DeleteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
+    options = { ...this.fs.defaultDeleteOptions, ...options };
     try {
-      options = { ...this.fs.defaultDeleteOptions, ...options };
-      if (!options.ignoreHook && this.beforeDelete) {
-        const result = await this.beforeDelete(this.path, options);
-        if (result != null) {
-          return result;
-        }
-      }
-      await this._delete(options);
-      if (!options.ignoreHook && this.afterDelete) {
-        await this.afterDelete(this.path);
-      }
-      return true;
+      await this._exists(options);
     } catch (e) {
-      this._handleNoModificationAllowedError(errors, { e });
+      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
+        if (options.onNotExist === OnNotExist.Error) {
+          await this.fs._handleFileSystemError(e, errors);
+          return false;
+        }
+      } else {
+        await this._handleNotReadableError(errors, { e });
+        return false;
+      }
+    }
+
+    try {
+      let result = await this._beforeDelete(options);
+      if (result != null) {
+        return result;
+      }
+
+      result = await this._delete(options);
+      await this._afterDelete(result, options);
+      return result;
+    } catch (e) {
+      const opts = options;
+      await this._handleNoModificationAllowedError(
+        errors,
+        { e },
+        async (error) => {
+          await this._afterDelete(false, opts, error);
+        }
+      );
       return false;
     }
   }
@@ -91,7 +100,7 @@ export abstract class AbstractEntry implements Entry {
     options?: MoveOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    let result = await this._xmit(
+    let result = await this._copy(
       to,
       {
         ...this.fs.defaultMoveOptions,
@@ -145,47 +154,91 @@ export abstract class AbstractEntry implements Entry {
     return this.fs.toURL(this.path, options, errors);
   }
 
-  public abstract _delete(option: DeleteOptions): Promise<boolean>;
-  public abstract _xmit(
+  public abstract _copy(
     entry: Entry,
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean>;
+  public abstract _delete(option: DeleteOptions): Promise<boolean>;
   public abstract head(options?: HeadOptions): Promise<Stats>;
   public abstract head(
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
 
-  protected _handleNoModificationAllowedError(
-    errors?: FileSystemError[],
-    params?: ErrorParams
+  protected async _afterDelete(
+    result: boolean,
+    options: DeleteOptions,
+    error?: FileSystemError
   ) {
-    return this.fs._handleError(
-      NoModificationAllowedError.name,
-      this.path,
-      errors,
-      params
-    );
+    const fs = this.fs;
+    const afterDelete = fs.options.hook?.afterDelete;
+    if (afterDelete && !options.ignoreHook) {
+      await afterDelete(fs.repository, this.path, options, result, error);
+    }
+  }
+
+  protected _beforeDelete(options: DeleteOptions) {
+    const fs = this.fs;
+    const beforeDelete = fs.options.hook?.beforeDelete;
+    if (beforeDelete && !options.ignoreHook) {
+      return beforeDelete(fs.repository, this.path, options);
+    }
+    return null;
+  }
+
+  protected _createNoModificationAllowedError(params?: ErrorParams) {
+    return createError({
+      name: NoModificationAllowedError.name,
+      repository: this.fs.repository,
+      path: this.path,
+      ...params,
+    });
+  }
+
+  protected _createNotFoundError(params?: ErrorParams) {
+    return createError({
+      name: NotFoundError.name,
+      repository: this.fs.repository,
+      path: this.path,
+      ...params,
+    });
+  }
+
+  protected _createNotReadableError(params?: ErrorParams) {
+    return createError({
+      name: NotReadableError.name,
+      repository: this.fs.repository,
+      path: this.path,
+      ...params,
+    });
+  }
+
+  protected async _handleNoModificationAllowedError(
+    errors?: FileSystemError[],
+    params?: ErrorParams,
+    callback?: (e: FileSystemError) => Promise<void>
+  ) {
+    const error = this._createNoModificationAllowedError(params);
+    return this.fs._handleFileSystemError(error, errors, callback);
   }
 
   protected _handleNotFoundError(
     errors?: FileSystemError[],
-    params?: ErrorParams
+    params?: ErrorParams,
+    callback?: (e: FileSystemError) => Promise<void>
   ) {
-    return this.fs._handleError(NotFoundError.name, this.path, errors, params);
+    const error = this._createNotFoundError(params);
+    return this.fs._handleFileSystemError(error, errors, callback);
   }
 
   protected _handleNotReadableError(
     errors?: FileSystemError[],
-    params?: ErrorParams
+    params?: ErrorParams,
+    callback?: (e: FileSystemError) => Promise<void>
   ) {
-    return this.fs._handleError(
-      NotReadableError.name,
-      this.path,
-      errors,
-      params
-    );
+    const error = this._createNotReadableError(params);
+    return this.fs._handleFileSystemError(error, errors, callback);
   }
 
   protected abstract _exists(options: Options): Promise<Stats>;
