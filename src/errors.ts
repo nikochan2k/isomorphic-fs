@@ -263,17 +263,20 @@ interface ErrorParams {
 }
 
 export function createError(params: ErrorParams): FileSystemError {
+  if (isFileSystemError(params)) {
+    return params;
+  }
   if (isFileSystemError(params.e)) {
     return params.e;
   }
 
-  const name: string = (params?.e as any).name ?? params.name; // eslint-disable-line
-  const code: number = (params?.e as any).code ?? params.code; // eslint-disable-line
+  const name: string = (params.e as any)?.name ?? params.name; // eslint-disable-line
+  const code: number = (params.e as any)?.code ?? params.code; // eslint-disable-line
   for (const de of domExceptions) {
     if (de.name === name || (code != null && de.code === code)) {
       params.name = de.name;
       params.code = de.code;
-      if (params.message) {
+      if (params.message && params.message !== de.message) {
         // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         params.message = `${de.message}\n${params.message}`;
       } else {

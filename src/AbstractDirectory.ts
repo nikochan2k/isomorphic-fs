@@ -305,7 +305,7 @@ export abstract class AbstractDirectory
   }
 
   protected async _exists(options: Options): Promise<Stats> {
-    return this.stat({
+    return this.head({
       type: EntryType.Directory,
       ignoreHook: options?.ignoreHook,
     });
