@@ -279,7 +279,7 @@ export function createError(params: ErrorParams): FileSystemError {
   }
 
   for (const de of domExceptions) {
-    if (de.name == params.name || de.code === params.code) {
+    if (de.name === params.name || (params.code && de.code === params.code)) {
       params.name = de.name;
       params.code = de.code;
       if (params.message) {
