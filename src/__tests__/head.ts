@@ -16,7 +16,7 @@ export const testAll = (
 
   it("rootdir", async () => {
     const stat = await fs.head("/");
-    expect(stat?.size).toBeUndefined();
+    expect(stat.size).toBeUndefined();
   });
 
   it("nothing", async () => {
@@ -31,7 +31,7 @@ export const testAll = (
   it("file_head", async () => {
     await fs.write("/file_head", new ArrayBuffer(1));
     const stat = await fs.stat("/file_head");
-    expect(stat?.size).toBe(1);
+    expect(stat.size).toBe(1);
   });
 
   it("teardown", async () => {

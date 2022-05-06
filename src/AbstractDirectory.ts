@@ -58,7 +58,7 @@ export abstract class AbstractDirectory
       return true;
     }
 
-    const fromItems = await this._items(options, errors);
+    const fromItems = await this._list(options, errors);
     if (!fromItems) {
       return false;
     }
@@ -106,7 +106,7 @@ export abstract class AbstractDirectory
 
     let result = true;
     if (options.recursive) {
-      const children = await this._items(options, errors);
+      const children = await this._list(options, errors);
       if (!children) {
         return false;
       }
@@ -128,7 +128,7 @@ export abstract class AbstractDirectory
     }
 
     if (result && this.path !== "/") {
-      await this._rmdir();
+      await this._doRmdir();
     }
 
     return true;
@@ -174,11 +174,11 @@ export abstract class AbstractDirectory
   ): Promise<string[] | null> {
     options = { ...options };
     await this._exists(options);
-    const items = await this._items(options, errors);
-    if (!items) {
+    const list = await this._list(options, errors);
+    if (!list) {
       return null;
     }
-    return items.map((item) => item.path);
+    return list.map((item) => item.path);
   }
 
   public ls(options?: ListOptions): Promise<string[]>;
@@ -235,7 +235,7 @@ export abstract class AbstractDirectory
       if (result != null) {
         return result;
       }
-      await this._mkdir();
+      await this._doMkdir();
       await this._afterMkcol(options, true);
       return true;
     } catch (e) {
@@ -258,9 +258,9 @@ export abstract class AbstractDirectory
     return this.list(options, errors);
   }
 
-  public abstract _list(): Promise<Item[]>;
-  public abstract _mkdir(): Promise<void>;
-  public abstract _rmdir(): Promise<void>;
+  public abstract _doList(): Promise<Item[]>;
+  public abstract _doMkdir(): Promise<void>;
+  public abstract _doRmdir(): Promise<void>;
 
   protected async _afterList(
     options: ListOptions,
@@ -311,20 +311,20 @@ export abstract class AbstractDirectory
     });
   }
 
-  protected async _items(
+  protected async _list(
     options?: ListOptions,
     errors?: FileSystemError[]
   ): Promise<Item[] | null> {
     options = { ...options };
 
     try {
-      let items = await this._beforeList(options);
-      if (!items) {
-        items = await this._list();
+      let list = await this._beforeList(options);
+      if (!list) {
+        list = await this._doList();
       }
-      await this._afterList(options, items);
+      await this._afterList(options, list);
 
-      for (const item of items) {
+      for (const item of list) {
         if (item.path.endsWith("/")) {
           if (!item.type) {
             item.type = EntryType.Directory;
@@ -333,7 +333,7 @@ export abstract class AbstractDirectory
         }
       }
 
-      return items;
+      return list;
     } catch (e) {
       await this._handleNotReadableError(errors, { e });
       return null;

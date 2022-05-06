@@ -103,7 +103,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     errors?: FileSystemError[]
   ): Promise<boolean> {
     try {
-      await this._rm();
+      await this._doRm();
       return true;
     } catch (e) {
       await this._handleNoModificationAllowedError(errors, { e });
@@ -297,7 +297,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         }
       }
 
-      await this._save(data, stats, options);
+      await this._doWrite(data, stats, options);
 
       if (create) {
         await this._afterPost(options, true);
@@ -431,7 +431,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     try {
       let data = await this._beforeGet(options);
       if (!data) {
-        data = await this._load(stats, options);
+        data = await this._doRead(stats, options);
       }
       await this._afterGet(options, data);
 
@@ -454,9 +454,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  protected abstract _load(stats: Stats, options: ReadOptions): Promise<Data>;
-  protected abstract _rm(): Promise<void>;
-  protected abstract _save(
+  protected abstract _doRead(stats: Stats, options: ReadOptions): Promise<Data>;
+  protected abstract _doRm(): Promise<void>;
+  protected abstract _doWrite(
     data: Data,
     stats: Stats | undefined,
     options: WriteOptions

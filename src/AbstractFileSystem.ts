@@ -167,7 +167,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (!checked) {
       return null;
     }
-    return this._getDirectory(checked);
+    return this._doGetDirectory(checked);
   }
 
   public async getEntry(path: string, options?: HeadOptions): Promise<Entry>;
@@ -213,7 +213,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (checked == null) {
       return null;
     }
-    return this._getFile(checked);
+    return this._doGetFile(checked);
   }
 
   public async hash(path: string, options?: ReadOptions): Promise<string>;
@@ -270,7 +270,7 @@ export abstract class AbstractFileSystem implements FileSystem {
         }
       }
 
-      stats = await this._head(path, options);
+      stats = await this._doHead(path, options);
       if (stats.size != null && options.type === EntryType.Directory) {
         throw createError({
           name: TypeMismatchError.name,
@@ -402,7 +402,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       if (result != null) {
         return result;
       }
-      await this._patch(path, stats, props, options);
+      await this._doPatch(path, stats, props, options);
       await this._afterPatch(path, true, options);
       return true;
     } catch (e) {
@@ -486,7 +486,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (stats == null) {
       return null;
     }
-    return this._toURL(path, stats.size == null, options);
+    return this._doToURL(path, stats.size == null, options);
   }
 
   public unlink = (path: string, options?: DeleteOptions) =>
@@ -505,16 +505,16 @@ export abstract class AbstractFileSystem implements FileSystem {
     return file.write(data, options, errors);
   }
 
-  public abstract _getDirectory(path: string): Promise<Directory>;
-  public abstract _getFile(path: string): Promise<File>;
-  public abstract _head(path: string, options: HeadOptions): Promise<Stats>;
-  public abstract _patch(
+  public abstract _doGetDirectory(path: string): Promise<Directory>;
+  public abstract _doGetFile(path: string): Promise<File>;
+  public abstract _doHead(path: string, options: HeadOptions): Promise<Stats>;
+  public abstract _doPatch(
     path: string,
     stats: Stats,
     props: Stats,
     options: PatchOptions
   ): Promise<void>;
-  public abstract _toURL(
+  public abstract _doToURL(
     path: string,
     isDirectory: boolean,
     options?: URLOptions
