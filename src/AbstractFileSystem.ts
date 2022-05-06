@@ -26,7 +26,9 @@ import {
 import {
   createError,
   FileSystemError,
+  isFileSystemError,
   NoModificationAllowedError,
+  NotFoundError,
   NotReadableError,
   TypeMismatchError,
 } from "./errors";
@@ -107,11 +109,22 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: CopyOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const result = await this._prepareXmit(fromPath, toPath, options, errors);
-    if (!result) {
-      return false;
+    options = {
+      onExists: OnExists.Error,
+      onNoParent: OnNoParent.Error,
+      recursive: false,
+      ...options,
+    };
+    try {
+      // eslint-disable-next-line no-var
+      var { from, to } = await this._prepareCopy(fromPath, toPath, options);
+    } catch (e) {
+      if (errors) {
+        errors.push(e as FileSystemError);
+        return false;
+      }
+      throw e;
     }
-    const { from, to } = result;
     return from.copy(to, options, errors);
   }
 
@@ -357,11 +370,21 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: MoveOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const result = await this._prepareXmit(fromPath, toPath, options, errors);
-    if (!result) {
-      return false;
+    options = {
+      onExists: OnExists.Error,
+      onNoParent: OnNoParent.Error,
+      ...options,
+    };
+    try {
+      // eslint-disable-next-line no-var
+      var { from, to } = await this._prepareCopy(fromPath, toPath, options);
+    } catch (e) {
+      if (errors) {
+        errors.push(e as FileSystemError);
+        return false;
+      }
+      throw e;
     }
-    const { from, to } = result;
     return from.move(to, options, errors);
   }
 
@@ -643,22 +666,28 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
-  private async _prepareXmit(
+  private async _prepareCopy(
     fromPath: string,
     toPath: string,
-    options?: Options,
-    errors?: FileSystemError[]
-  ) {
-    const from = await this.getEntry(fromPath, options, errors);
-    if (!from) {
-      return null;
+    options?: Options
+  ): Promise<{ from: Entry; to: Entry }> {
+    let from: Entry;
+    try {
+      from = await this.getEntry(fromPath, options);
+    } catch (e) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
+        if (!this.supportDirectory()) {
+          from = await this.getDirectory(fromPath);
+        } else {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
     }
     const to = await (from instanceof AbstractFile
-      ? this.getFile(toPath, errors)
-      : this.getDirectory(toPath, errors));
-    if (!to) {
-      return null;
-    }
+      ? this.getFile(toPath)
+      : this.getDirectory(toPath));
     return { from, to };
   }
 }
