@@ -322,6 +322,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
+  public abstract _doRead(stats: Stats, options: ReadOptions): Promise<Data>;
+  public abstract _doRm(): Promise<void>;
+  public abstract _doWrite(
+    data: Data,
+    stats: Stats | undefined,
+    options: WriteOptions
+  ): Promise<void>;
   public abstract supportAppend(): boolean;
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
@@ -453,12 +460,4 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       return null;
     }
   }
-
-  protected abstract _doRead(stats: Stats, options: ReadOptions): Promise<Data>;
-  protected abstract _doRm(): Promise<void>;
-  protected abstract _doWrite(
-    data: Data,
-    stats: Stats | undefined,
-    options: WriteOptions
-  ): Promise<void>;
 }
