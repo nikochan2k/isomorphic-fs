@@ -235,7 +235,7 @@ export abstract class AbstractDirectory
       if (result != null) {
         return result;
       }
-      await this._doMkdir();
+      await this._doMkcol();
       await this._afterMkcol(options, true);
       return true;
     } catch (e) {
@@ -259,7 +259,7 @@ export abstract class AbstractDirectory
   }
 
   public abstract _doList(): Promise<Item[]>;
-  public abstract _doMkdir(): Promise<void>;
+  public abstract _doMkcol(): Promise<void>;
   public abstract _doRmdir(): Promise<void>;
 
   protected async _afterList(
