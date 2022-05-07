@@ -44,54 +44,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     super(fs, path);
   }
 
-  public async $write(
-    data: Data,
-    options: WriteOptions,
-    stats?: Stats
-  ): Promise<boolean> {
-    const length = options.length;
-    if (length === 0) {
-      return false;
-    }
-
-    const start = options.start;
-    const rc = readableConverter();
-    const rsc = readableStreamConverter();
-    if (!this.supportAppend() && options.append) {
-      options.append = false;
-      const head = await this._read({ bufferSize: options.bufferSize });
-      const converter = this._getConverter();
-      if (rc.typeEquals(head) || rc.typeEquals(data)) {
-        data = await converter.merge([head, data], "readable");
-      } else if (rsc.typeEquals(head) || rsc.typeEquals(data)) {
-        data = await converter.merge([head, data], "readablestream");
-      } else if (isBrowser) {
-        data = await converter.merge([head, data], "blob");
-      } else if (isNode) {
-        data = await converter.merge([head, data], "buffer");
-      } else {
-        data = await converter.merge([head, data], "uint8array");
-      }
-    } else if (
-      !this.supportRangeWrite() &&
-      (typeof start === "number" || typeof length === "number")
-    ) {
-      delete options.start;
-      delete options.length;
-      const src = await this._read({ bufferSize: options.bufferSize });
-      if (rc.typeEquals(src)) {
-        data = new ModifiedReadable(src, { data, start, length });
-      } else if (rsc.typeEquals(src)) {
-        data = createModifiedReadableStream(src, { data, start, length });
-      } else {
-        data = await modify(src, { data, start, length });
-      }
-    }
-
-    await this._doWrite(data, stats, options);
-    return true;
-  }
-
   public async _copy(
     toEntry: Entry,
     options: XmitOptions,
@@ -149,6 +101,74 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public async _deleteExisting(): Promise<boolean> {
     await this._doDelete();
     return true;
+  }
+
+  public async _write(
+    data: Data,
+    stats?: Stats,
+    options?: WriteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    options = { ...options };
+    if (options.append && options.start != null) {
+      options.append = false;
+      console.warn(
+        "Set options.append to false because options.start is not null."
+      );
+    }
+
+    if (!stats) {
+      try {
+        stats = await this._exists(options);
+        if (options?.create) {
+          throw this._createError(PathExistError.name, { path: this.path });
+        }
+      } catch (e) {
+        if (isFileSystemError(e) && e.name === NotFoundError.name) {
+          if (options?.create === false) {
+            throw e;
+          }
+        } else {
+          throw e;
+        }
+      }
+    }
+
+    try {
+      if (stats) {
+        const result = await this._beforePut(data, options);
+        if (result != null) {
+          return result;
+        }
+      } else {
+        const result = await this._beforePost(data, options);
+        if (result != null) {
+          return result;
+        }
+      }
+
+      const result = await this.$write(data, options, stats);
+      if (stats) {
+        await this._afterPut(options, result);
+      } else {
+        await this._afterPost(options, result);
+      }
+      return result;
+    } catch (e) {
+      const opts = options;
+      await this._handleNoModificationAllowedError(
+        { e },
+        errors,
+        async (error) => {
+          if (stats) {
+            await this._afterPut(opts, false, error);
+          } else {
+            await this._afterPost(opts, false, error);
+          }
+        }
+      );
+      return false;
+    }
   }
 
   public hash(options?: ReadOptions): Promise<string>;
@@ -238,74 +258,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return this._write(data, undefined, options, errors);
   }
 
-  public async _write(
-    data: Data,
-    stats?: Stats,
-    options?: WriteOptions,
-    errors?: FileSystemError[]
-  ): Promise<boolean> {
-    options = { ...options };
-    if (options.append && options.start != null) {
-      options.append = false;
-      console.warn(
-        "Set options.append to false because options.start is not null."
-      );
-    }
-
-    if (!stats) {
-      try {
-        stats = await this._exists(options);
-        if (options?.create) {
-          throw this._createError(PathExistError.name, { path: this.path });
-        }
-      } catch (e) {
-        if (isFileSystemError(e) && e.name === NotFoundError.name) {
-          if (options?.create === false) {
-            throw e;
-          }
-        } else {
-          throw this._createNotReadableError({ e });
-        }
-      }
-    }
-
-    try {
-      if (stats) {
-        const result = await this._beforePut(data, options);
-        if (result != null) {
-          return result;
-        }
-      } else {
-        const result = await this._beforePost(data, options);
-        if (result != null) {
-          return result;
-        }
-      }
-
-      const result = await this.$write(data, options, stats);
-      if (stats) {
-        await this._afterPut(options, result);
-      } else {
-        await this._afterPost(options, result);
-      }
-      return result;
-    } catch (e) {
-      const opts = options;
-      await this._handleNoModificationAllowedError(
-        { e },
-        errors,
-        async (error) => {
-          if (stats) {
-            await this._afterPut(opts, false, error);
-          } else {
-            await this._afterPost(opts, false, error);
-          }
-        }
-      );
-      return false;
-    }
-  }
-
   public abstract _doDelete(): Promise<void>;
   public abstract _doRead(stats: Stats, options: ReadOptions): Promise<Data>;
   public abstract _doWrite(
@@ -344,6 +296,54 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     return data;
+  }
+
+  protected async $write(
+    data: Data,
+    options: WriteOptions,
+    stats?: Stats
+  ): Promise<boolean> {
+    const length = options.length;
+    if (length === 0) {
+      return false;
+    }
+
+    const start = options.start;
+    const rc = readableConverter();
+    const rsc = readableStreamConverter();
+    if (!this.supportAppend() && options.append) {
+      options.append = false;
+      const head = await this._read({ bufferSize: options.bufferSize });
+      const converter = this._getConverter();
+      if (rc.typeEquals(head) || rc.typeEquals(data)) {
+        data = await converter.merge([head, data], "readable");
+      } else if (rsc.typeEquals(head) || rsc.typeEquals(data)) {
+        data = await converter.merge([head, data], "readablestream");
+      } else if (isBrowser) {
+        data = await converter.merge([head, data], "blob");
+      } else if (isNode) {
+        data = await converter.merge([head, data], "buffer");
+      } else {
+        data = await converter.merge([head, data], "uint8array");
+      }
+    } else if (
+      !this.supportRangeWrite() &&
+      (typeof start === "number" || typeof length === "number")
+    ) {
+      delete options.start;
+      delete options.length;
+      const src = await this._read({ bufferSize: options.bufferSize });
+      if (rc.typeEquals(src)) {
+        data = new ModifiedReadable(src, { data, start, length });
+      } else if (rsc.typeEquals(src)) {
+        data = createModifiedReadableStream(src, { data, start, length });
+      } else {
+        data = await modify(src, { data, start, length });
+      }
+    }
+
+    await this._doWrite(data, stats, options);
+    return true;
   }
 
   protected async _afterGet(

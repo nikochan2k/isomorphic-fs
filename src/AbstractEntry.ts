@@ -78,31 +78,6 @@ export abstract class AbstractEntry implements Entry {
     }
   }
 
-  public async $delete(
-    options: DeleteOptions,
-    errors?: FileSystemError[]
-  ): Promise<boolean> {
-    const result = await this._beforeDelete(options);
-    if (result != null) {
-      return result;
-    }
-
-    let stats: Stats;
-    try {
-      stats = await this.head({ ignoreHook: options.ignoreHook });
-      return this._deleteExisting(options, stats, errors);
-    } catch (e) {
-      if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.onNotExist === NotExistAction.Error) {
-          throw e;
-        }
-        return false;
-      } else {
-        throw e;
-      }
-    }
-  }
-
   public getParent(): Directory {
     const parentPath = getParentPath(this.path);
     return this.fs.getDirectory(parentPath);
@@ -182,6 +157,31 @@ export abstract class AbstractEntry implements Entry {
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
+
+  protected async $delete(
+    options: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    const result = await this._beforeDelete(options);
+    if (result != null) {
+      return result;
+    }
+
+    let stats: Stats;
+    try {
+      stats = await this.head({ ignoreHook: options.ignoreHook });
+      return this._deleteExisting(options, stats, errors);
+    } catch (e) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
+        if (options.onNotExist === NotExistAction.Error) {
+          throw e;
+        }
+        return false;
+      } else {
+        throw e;
+      }
+    }
+  }
 
   protected async _afterDelete(
     result: boolean,
