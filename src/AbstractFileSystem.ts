@@ -168,14 +168,6 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public getDirectory(path: string): Directory {
-    if (path.endsWith("/")) {
-      throw createError({
-        name: SyntaxError.name,
-        repository: this.repository,
-        path,
-        message: `"${path}" has invalid character`,
-      });
-    }
     const checked = this._checkPath(path);
     return this._doGetDirectory(checked);
   }
@@ -213,6 +205,14 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public getFile(path: string): File {
+    if (path.endsWith("/")) {
+      throw createError({
+        name: SyntaxError.name,
+        repository: this.repository,
+        path,
+        message: `"${path}" seems to be a directory.`,
+      });
+    }
     const checked = this._checkPath(path);
     return this._doGetFile(checked);
   }
