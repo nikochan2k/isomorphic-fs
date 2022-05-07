@@ -4,6 +4,7 @@ import {
   Data,
   DataType,
   DEFAULT_CONVERTER,
+  EMPTY_UINT8_ARRAY,
   handleReadable,
   handleReadableStream,
   isBrowser,
@@ -13,7 +14,6 @@ import {
   ReturnData,
   uint8ArrayConverter,
 } from "univ-conv";
-import { HeadOptions } from "./core";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -22,6 +22,7 @@ import {
   Entry,
   EntryType,
   File,
+  HeadOptions,
   OnExists,
   Options,
   ReadOptions,
@@ -35,7 +36,6 @@ import {
   isFileSystemError,
   NotFoundError,
   PathExistError,
-  TypeMismatchError,
 } from "./errors";
 import { createModifiedReadableStream, ModifiedReadable, modify } from "./mods";
 import { toHex } from "./util";
@@ -99,16 +99,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return to.write(data, options, errors);
   }
 
-  public async _delete(
-    _options: DeleteOptions,
-    errors?: FileSystemError[]
-  ): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  public async _delete(_options: DeleteOptions): Promise<boolean> {
     try {
-      await this._doRm();
+      await this._doDelete();
       return true;
     } catch (e) {
-      await this._handleNoModificationAllowedError({ e }, errors);
-      return false;
+      throw this._createNoModificationAllowedError({ e });
     }
   }
 
@@ -180,11 +177,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null> {
     options = { ...options };
-    const converter = this._getConverter();
-    if (options.length === 0) {
-      return converter.empty(type);
-    }
-
     const data = await this._read(options, undefined, errors);
     if (data === null) {
       return null;
@@ -192,6 +184,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     if (type == null) {
       return data as ReturnData<T>;
     }
+    const converter = this._getConverter();
     return converter.convert(data, type, options);
   }
 
@@ -326,8 +319,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
+  public abstract _doDelete(): Promise<void>;
   public abstract _doRead(stats: Stats, options: ReadOptions): Promise<Data>;
-  public abstract _doRm(): Promise<void>;
   public abstract _doWrite(
     data: Data,
     stats: Stats | undefined,
@@ -336,6 +329,40 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportAppend(): boolean;
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
+
+  protected async $read(options: ReadOptions, stats?: Stats): Promise<Data> {
+    if (options.length === 0) {
+      return EMPTY_UINT8_ARRAY;
+    }
+
+    if (!stats) {
+      stats = await this.head({ ...options, type: EntryType.File });
+    }
+    const path = this.path;
+    if (stats.size == null) {
+      throw this._createTypeMismatchError({
+        message: `"${path}" must not end with slash`,
+      });
+    } else if (stats.size === 0) {
+      return EMPTY_UINT8_ARRAY;
+    }
+
+    let data = await this._beforeGet(options);
+    if (!data) {
+      data = await this._doRead(stats, options);
+    }
+
+    if (
+      data &&
+      !this.supportRangeRead() &&
+      (typeof options?.start === "number" ||
+        typeof options?.length === "number")
+    ) {
+      data = await DEFAULT_CONVERTER.slice(data, options); // eslint-disable-line
+    }
+
+    return data;
+  }
 
   protected async _afterGet(
     options: ReadOptions,
@@ -409,57 +436,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return DEFAULT_CONVERTER;
   }
 
-  protected async _read(options: ReadOptions, stats?: Stats): Promise<Data>;
-  protected async _read(
-    options: ReadOptions,
-    stats?: Stats,
-    errors?: FileSystemError[]
-  ): Promise<Data | null>;
   protected async _read(
     options: ReadOptions,
     stats?: Stats,
     errors?: FileSystemError[]
   ): Promise<Data | null> {
-    if (!stats) {
-      const s = await this.head({ ...options, type: EntryType.File });
-      if (s == null) {
-        return null;
-      }
-      stats = s;
-    }
-
-    const path = this.path;
-    if (stats.size == null) {
-      await this.fs._handleError(
-        {
-          name: TypeMismatchError.name,
-          path: this.path,
-          message: `"${path}" must not end with slash`,
-        },
-        errors
-      );
-      return null;
-    } else if (stats.size === 0) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-      return this._getConverter().empty() as Data;
-    }
-
     try {
-      let data = await this._beforeGet(options);
-      if (!data) {
-        data = await this._doRead(stats, options);
-      }
+      const data = await this.$read(options, stats);
       await this._afterGet(options, data);
-
-      if (
-        data &&
-        !this.supportRangeRead() &&
-        (typeof options?.start === "number" ||
-          typeof options?.length === "number")
-      ) {
-        data = await DEFAULT_CONVERTER.slice(data, options); // eslint-disable-line
-      }
-
       return data;
     } catch (e) {
       const opts = options;
