@@ -278,7 +278,7 @@ export function createError(params: ErrorParams): FileSystemError {
   /* eslint-disable */
   let found = false;
   const e = params.e;
-  if (e.name) {
+  if (e?.name) {
     for (const de of domExceptions) {
       if (de.name === e.name) {
         found = true;
