@@ -38,13 +38,13 @@ export interface Options {
   ignoreHook?: boolean;
 }
 
-export enum OnNotExist {
+export enum NotExistAction {
   Error = "error",
   Ignore = "ignore",
 }
 
 export interface DeleteOptions extends Options {
-  onNotExist: OnNotExist;
+  onNotExist: NotExistAction;
   recursive: boolean;
 }
 
@@ -68,20 +68,20 @@ export interface PatchOptions extends Options {
 
 export type ListOptions = Options;
 
-export enum OnExists {
+export enum ExistsAction {
   Error = "error",
   Ignore = "ignore",
   Overwrite = "overwrite",
 }
 
-export enum OnNoParent {
+export enum NoParentAction {
   Error = "error",
   MakeParents = "make_parents",
 }
 
 export interface MkcolOptions extends Options {
-  onExists: OnExists;
-  onNoParent: OnNoParent;
+  onExists: ExistsAction;
+  onNoParent: NoParentAction;
 }
 export interface ReadOptions extends Options, Partial<ConvertOptions> {}
 
@@ -92,20 +92,20 @@ export interface WriteOptions extends Options, Partial<ConvertOptions> {
 
 export interface MoveOptions extends Options {
   bufferSize?: number;
-  onExists: OnExists;
-  onNoParent: OnNoParent;
+  onExists: ExistsAction;
+  onNoParent: NoParentAction;
 }
 
 export interface CopyOptions extends Options {
   bufferSize?: number;
-  onExists: OnExists;
-  onNoParent: OnNoParent;
+  onExists: ExistsAction;
+  onNoParent: NoParentAction;
   recursive: boolean;
 }
 export interface XmitOptions extends Options {
   bufferSize?: number;
-  onExists: OnExists;
-  onNoParent: OnNoParent;
+  onExists: ExistsAction;
+  onNoParent: NoParentAction;
   recursive: boolean;
 }
 

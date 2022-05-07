@@ -6,7 +6,7 @@ import {
   Entry,
   HeadOptions,
   MoveOptions,
-  OnNotExist,
+  NotExistAction,
   Options,
   PatchOptions,
   Stats,
@@ -164,7 +164,7 @@ export abstract class AbstractEntry implements Entry {
       await this._exists(options);
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.onNotExist === OnNotExist.Error) {
+        if (options.onNotExist === NotExistAction.Error) {
           throw e;
         }
         return false;

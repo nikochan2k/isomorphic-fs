@@ -13,9 +13,9 @@ import {
   ListOptions,
   MkcolOptions,
   MoveOptions,
-  OnExists,
-  OnNoParent,
-  OnNotExist,
+  ExistsAction,
+  NoParentAction,
+  NotExistAction,
   Options,
   PatchOptions,
   ReadOptions,
@@ -58,20 +58,20 @@ export abstract class AbstractFileSystem implements FileSystem {
     public readonly options: FileSystemOptions = {}
   ) {
     this.defaultDeleteOptions = options.defaultDeleteOptions ?? {
-      onNotExist: OnNotExist.Error,
+      onNotExist: NotExistAction.Error,
       recursive: false,
     };
     this.defaultMkdirOptions = options.defaultMkdirOptions ?? {
-      onExists: OnExists.Error,
-      onNoParent: OnNoParent.Error,
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
     };
     this.defaultMoveOptions = options.defaultMoveOptions ?? {
-      onExists: OnExists.Error,
-      onNoParent: OnNoParent.Error,
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
     };
     this.defaultCopyOptions = options.defaultCopyOptions ?? {
-      onExists: OnExists.Error,
-      onNoParent: OnNoParent.Error,
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
       recursive: false,
     };
   }
@@ -108,8 +108,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     errors?: FileSystemError[]
   ): Promise<boolean> {
     options = {
-      onExists: OnExists.Error,
-      onNoParent: OnNoParent.Error,
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
       recursive: false,
       ...options,
     };
@@ -340,8 +340,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     errors?: FileSystemError[]
   ): Promise<boolean> {
     options = {
-      onExists: OnExists.Error,
-      onNoParent: OnNoParent.Error,
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
       ...options,
     };
     try {

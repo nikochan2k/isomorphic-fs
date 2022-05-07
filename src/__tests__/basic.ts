@@ -1,5 +1,5 @@
 import { DEFAULT_CONVERTER } from "univ-conv";
-import { File, FileSystem, OnExists, OnNoParent } from "../core";
+import { File, FileSystem, ExistsAction, NoParentAction } from "../core";
 import { ErrorLike, NotFoundError } from "../errors";
 
 const c = DEFAULT_CONVERTER;
@@ -129,8 +129,8 @@ export const testAll = (
     const from = fs.getDirectory("/folder");
     const to = fs.getDirectory("/folder2");
     await from.copy(to!, {
-      onExists: OnExists.Error,
-      onNoParent: OnNoParent.Error,
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
       recursive: true,
     });
     const stats = await to.stat();

@@ -23,7 +23,7 @@ import {
   EntryType,
   File,
   HeadOptions,
-  OnExists,
+  ExistsAction,
   Options,
   ReadOptions,
   Stats,
@@ -114,10 +114,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     let stats: Stats | undefined;
     try {
       stats = await to.head({ ...options, type: EntryType.File });
-      if (options.onExists === OnExists.Ignore) {
+      if (options.onExists === ExistsAction.Ignore) {
         return true;
       }
-      if (options.onExists === OnExists.Error) {
+      if (options.onExists === ExistsAction.Error) {
         await this.fs._handleError(
           {
             name: InvalidModificationError.name,
