@@ -18,12 +18,11 @@ import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
-  DeleteOptions,
   Entry,
   EntryType,
+  ExistsAction,
   File,
   HeadOptions,
-  ExistsAction,
   Options,
   ReadOptions,
   Stats,
@@ -147,14 +146,9 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return to._write(data, stats, options, errors);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async _deleteExisting(_options: DeleteOptions): Promise<boolean> {
-    try {
-      await this._doDelete();
-      return true;
-    } catch (e) {
-      throw this._createNoModificationAllowedError({ e });
-    }
+  public async _deleteExisting(): Promise<boolean> {
+    await this._doDelete();
+    return true;
   }
 
   public hash(options?: ReadOptions): Promise<string>;

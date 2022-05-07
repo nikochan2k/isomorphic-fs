@@ -62,12 +62,7 @@ export abstract class AbstractEntry implements Entry {
   ): Promise<boolean> {
     options = { ...this.fs.defaultDeleteOptions, ...options };
     try {
-      let result = await this._beforeDelete(options);
-      if (result != null) {
-        return result;
-      }
-
-      result = await this.$delete(options);
+      const result = await this.$delete(options, errors);
       await this._afterDelete(result, options);
       return result;
     } catch (e) {
@@ -80,6 +75,31 @@ export abstract class AbstractEntry implements Entry {
         }
       );
       return false;
+    }
+  }
+
+  public async $delete(
+    options: DeleteOptions,
+    errors?: FileSystemError[]
+  ): Promise<boolean> {
+    const result = await this._beforeDelete(options);
+    if (result != null) {
+      return result;
+    }
+
+    let stats: Stats;
+    try {
+      stats = await this.head({ ignoreHook: options.ignoreHook });
+      return this._deleteExisting(options, stats, errors);
+    } catch (e) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
+        if (options.onNotExist === NotExistAction.Error) {
+          throw e;
+        }
+        return false;
+      } else {
+        throw e;
+      }
     }
   }
 
@@ -152,29 +172,16 @@ export abstract class AbstractEntry implements Entry {
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean>;
-  public abstract _deleteExisting(option: DeleteOptions): Promise<boolean>;
+  public abstract _deleteExisting(
+    option: DeleteOptions,
+    stats: Stats,
+    errors?: FileSystemError[]
+  ): Promise<boolean>;
   public abstract head(options?: HeadOptions): Promise<Stats>;
   public abstract head(
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
-
-  protected async $delete(options: DeleteOptions): Promise<boolean> {
-    try {
-      await this._exists(options);
-    } catch (e) {
-      if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.onNotExist === NotExistAction.Error) {
-          throw e;
-        }
-        return false;
-      } else {
-        throw this._createNotReadableError({ e });
-      }
-    }
-
-    return this._deleteExisting(options);
-  }
 
   protected async _afterDelete(
     result: boolean,

@@ -6,11 +6,11 @@ import {
   Directory,
   Entry,
   EntryType,
+  ExistsAction,
   HeadOptions,
   Item,
   ListOptions,
   MkcolOptions,
-  ExistsAction,
   NoParentAction,
   Options,
   Stats,
@@ -45,6 +45,11 @@ export abstract class AbstractDirectory
       return false;
     }
 
+    const fromItems = await this._list(options, errors);
+    if (!fromItems) {
+      return false;
+    }
+
     const toDir = to as Directory;
     let result = await toDir.mkcol(options, errors);
     if (!result) {
@@ -53,11 +58,6 @@ export abstract class AbstractDirectory
 
     if (!options.recursive) {
       return true;
-    }
-
-    const fromItems = await this._list(options, errors);
-    if (!fromItems) {
-      return false;
     }
 
     const fs = this.fs;
@@ -75,17 +75,17 @@ export abstract class AbstractDirectory
       );
       const name = getName(fromPath);
       const toPath = joinPaths(toDir.path, name);
-      let res: boolean;
+      let copyResult: boolean;
       if (fromEntry instanceof AbstractFile) {
         const toEntry = fs.getFile(toPath);
-        res = await fromEntry._copy(toEntry, options, errors);
+        copyResult = await fromEntry._copy(toEntry, options, errors);
       } else if (fromEntry instanceof AbstractDirectory) {
         const toEntry = fs.getDirectory(toPath);
-        res = await fromEntry._copy(toEntry, options, errors);
+        copyResult = await fromEntry._copy(toEntry, options, errors);
       } else {
         continue;
       }
-      result = res && result;
+      result = copyResult && result;
     }
 
     return result;
@@ -93,6 +93,7 @@ export abstract class AbstractDirectory
 
   public async _deleteExisting(
     options: DeleteOptions,
+    _stats: Stats,
     errors?: FileSystemError[]
   ): Promise<boolean> {
     let result = true;
@@ -112,6 +113,7 @@ export abstract class AbstractDirectory
           errors
         );
         if (!childEntry) {
+          result = false;
           continue;
         }
         result = (await childEntry.delete(options, errors)) && result;
@@ -119,13 +121,7 @@ export abstract class AbstractDirectory
     }
 
     if (result) {
-      if (this.path === "/") {
-        console.warn("Cannot delete root dir.");
-        result = false;
-      } else {
-        await this._doDelete();
-        result = true;
-      }
+      await this._doDelete();
     }
 
     return result;
@@ -170,7 +166,6 @@ export abstract class AbstractDirectory
     errors?: FileSystemError[]
   ): Promise<string[] | null> {
     options = { ...options };
-    await this._exists(options);
     const list = await this._list(options, errors);
     if (!list) {
       return null;
@@ -194,14 +189,6 @@ export abstract class AbstractDirectory
     options?: MkcolOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    if (!this.fs.supportDirectory()) {
-      return true;
-    }
-    if (this.path === "/") {
-      console.warn("Root directory has already existed.");
-      return false;
-    }
-
     options = { ...this.fs.defaultMkdirOptions, ...options };
 
     try {
@@ -239,7 +226,12 @@ export abstract class AbstractDirectory
   public abstract _doList(): Promise<Item[]>;
   public abstract _doMkcol(): Promise<void>;
 
-  protected async $list(): Promise<Item[]> {
+  protected async $list(options: ListOptions): Promise<Item[]> {
+    await this.head({
+      type: EntryType.Directory,
+      ignoreHook: options.ignoreHook,
+    });
+
     const list = await this._doList();
     for (const item of list) {
       if (item.path.endsWith("/")) {
@@ -254,21 +246,8 @@ export abstract class AbstractDirectory
   }
 
   protected async $mkcol(options: MkcolOptions): Promise<boolean> {
-    const parent = this.getParent();
-    try {
-      await parent.head({
-        type: EntryType.Directory,
-        ignoreHook: options?.ignoreHook,
-      });
-    } catch (e) {
-      if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.onNoParent === NoParentAction.Error) {
-          throw e;
-        }
-        if (parent.path !== "/") {
-          await parent.mkcol(options);
-        }
-      }
+    if (!this.fs.supportDirectory()) {
+      return true;
     }
 
     try {
@@ -281,6 +260,7 @@ export abstract class AbstractDirectory
           message: `"${this.path}" has already existed`,
         });
       }
+      return true;
     } catch (e) {
       if (isFileSystemError(e)) {
         if (e.name !== NotFoundError.name) {
@@ -288,6 +268,26 @@ export abstract class AbstractDirectory
         }
       } else {
         throw e;
+      }
+    }
+
+    const parent = this.getParent();
+    try {
+      await parent.head({
+        type: EntryType.Directory,
+        ignoreHook: options?.ignoreHook,
+      });
+    } catch (e) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
+        if (options.onNoParent === NoParentAction.Error) {
+          throw e;
+        }
+        if (parent.path !== "/") {
+          const result = await parent.mkcol(options);
+          if (!result) {
+            return false;
+          }
+        }
       }
     }
 
@@ -351,7 +351,7 @@ export abstract class AbstractDirectory
     try {
       let list = await this._beforeList(options);
       if (!list) {
-        list = await this.$list();
+        list = await this.$list(options);
       }
 
       await this._afterList(options, list);
