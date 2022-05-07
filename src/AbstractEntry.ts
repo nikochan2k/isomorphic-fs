@@ -152,6 +152,7 @@ export abstract class AbstractEntry implements Entry {
     option: DeleteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean>;
+  public abstract _validate(options?: HeadOptions): Promise<void>;
   public abstract head(options?: HeadOptions): Promise<Stats>;
   public abstract head(
     options?: HeadOptions,
@@ -168,7 +169,7 @@ export abstract class AbstractEntry implements Entry {
     }
 
     try {
-      await this.head({ ignoreHook: options.ignoreHook });
+      await this._validate(options);
       return this._deleteExisting(options, errors);
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {

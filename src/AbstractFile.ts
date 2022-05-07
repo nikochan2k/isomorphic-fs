@@ -47,15 +47,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    if (!this.stats) {
-      await this.head(options);
-    }
-
     const to = toFile as AbstractFile;
     try {
-      if (!to.stats) {
-        await to.head(options);
-      }
+      await this._validate(options);
+
       if (options.onExists === ExistsAction.Ignore) {
         return true;
       }
@@ -73,9 +68,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     } catch (e) {
       if (isFileSystemError(e)) {
-        if (e.name === NotFoundError.name) {
-          // do nothing
-        } else {
+        if (e.name !== NotFoundError.name) {
           throw e;
         }
       } else {
@@ -96,6 +89,18 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return true;
   }
 
+  public async _validate(options?: HeadOptions) {
+    if (this.stats) {
+      if (this.stats.size == null) {
+        throw this._createTypeMismatchError({
+          message: `"${this.path}" is not a file`,
+        });
+      }
+    } else {
+      await this.head(options);
+    }
+  }
+
   public async _write(
     data: Data,
     options?: WriteOptions,
@@ -111,9 +116,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     try {
       try {
-        if (!this.stats) {
-          await this.head(options);
-        }
+        await this._validate(options);
         if (options?.create) {
           throw this._createError(PathExistError.name, { path: this.path });
         }
@@ -259,20 +262,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   public abstract supportRangeRead(): boolean;
   public abstract supportRangeWrite(): boolean;
 
-  protected async $read(options: ReadOptions, stats?: Stats): Promise<Data> {
+  protected async $read(options: ReadOptions): Promise<Data> {
     if (options.length === 0) {
       return EMPTY_UINT8_ARRAY;
     }
 
-    if (!stats) {
-      stats = await this.head({ ...options, type: EntryType.File });
-    }
-    const path = this.path;
-    if (stats.size == null) {
-      throw this._createTypeMismatchError({
-        message: `"${path}" must not end with slash`,
-      });
-    } else if (stats.size === 0) {
+    await this._validate(options);
+    const stats = this.stats as Stats;
+    if (stats.size === 0) {
       return EMPTY_UINT8_ARRAY;
     }
 

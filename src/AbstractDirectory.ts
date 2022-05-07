@@ -65,9 +65,7 @@ export abstract class AbstractDirectory
       }
     } catch (e) {
       if (isFileSystemError(e)) {
-        if (e.name === NotFoundError.name) {
-          // Do nothing
-        } else {
+        if (e.name !== NotFoundError.name) {
           throw e;
         }
       } else {
@@ -146,6 +144,18 @@ export abstract class AbstractDirectory
     }
 
     return result;
+  }
+
+  public async _validate(options?: HeadOptions) {
+    if (this.stats) {
+      if (this.stats.size != null) {
+        throw this._createTypeMismatchError({
+          message: `"${this.path}" is not a directory`,
+        });
+      }
+    } else {
+      await this.head(options);
+    }
   }
 
   public dir(options?: ListOptions): Promise<string[]>;
@@ -250,12 +260,7 @@ export abstract class AbstractDirectory
   public abstract _doMkcol(): Promise<void>;
 
   protected async $list(options: ListOptions): Promise<Item[]> {
-    if (!this.stats) {
-      await this.head({
-        type: EntryType.Directory,
-        ignoreHook: options.ignoreHook,
-      });
-    }
+    await this._validate(options);
 
     const list = await this._doList();
     for (const item of list) {
@@ -276,10 +281,7 @@ export abstract class AbstractDirectory
     }
 
     try {
-      if (!this.stats) {
-        await this.stat(options);
-      }
-
+      await this._validate(options);
       if (options.onExists === ExistsAction.Error) {
         throw this._createError(PathExistError.name, {
           message: `"${this.path}" has already existed`,
