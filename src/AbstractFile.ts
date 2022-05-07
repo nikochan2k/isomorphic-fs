@@ -13,7 +13,7 @@ import {
   ReturnData,
   uint8ArrayConverter,
 } from "univ-conv";
-import { HeadOptions } from ".";
+import { HeadOptions } from "./core";
 import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
@@ -21,7 +21,6 @@ import {
   DeleteOptions,
   Entry,
   EntryType,
-  ErrorLike,
   File,
   OnExists,
   Options,
@@ -52,11 +51,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     errors?: FileSystemError[]
   ): Promise<boolean> {
     if (toEntry instanceof AbstractDirectory) {
-      await this.fs._handleError(TypeMismatchError.name, this.path, errors, {
-        message: `"${toEntry.path}" is not a file`,
-        from: this.path,
-        to: toEntry.path,
-      });
+      await this._handleTypeMismatchError(
+        {
+          message: `"${toEntry.path}" is not a file`,
+          from: this.path,
+          to: toEntry.path,
+        },
+        errors
+      );
       return false;
     }
 
@@ -69,23 +71,22 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
       if (options.onExists === OnExists.Error) {
         await this.fs._handleError(
-          InvalidModificationError.name,
-          this.path,
-          errors,
           {
+            name: InvalidModificationError.name,
+            path: this.path,
             from: this.path,
             to: toEntry.path,
-          }
+          },
+          errors
         );
         return false;
       }
     } catch (e) {
       if (!(isFileSystemError(e) && e.name === NotFoundError.name)) {
-        await this._handleNotReadableError(errors, {
-          e: e as ErrorLike,
-          from: this.path,
-          to: toEntry.path,
-        });
+        await this._handleNotReadableError(
+          { e, from: this.path, to: toEntry.path },
+          errors
+        );
         return false;
       }
     }
@@ -106,7 +107,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       await this._doRm();
       return true;
     } catch (e) {
-      await this._handleNoModificationAllowedError(errors, { e });
+      await this._handleNoModificationAllowedError({ e }, errors);
       return false;
     }
   }
@@ -266,7 +267,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     try {
       stats = await this._exists(options);
       if (options?.create) {
-        await this.fs._handleError(PathExistError.name, this.path, errors);
+        await this.fs._handleError(
+          { name: PathExistError.name, path: this.path },
+          errors
+        );
         return false;
       }
       create = false;
@@ -278,7 +282,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         }
         create = true;
       } else {
-        await this._handleNotReadableError(errors, { e });
+        await this._handleNotReadableError({ e }, errors);
         return false;
       }
     }
@@ -308,8 +312,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     } catch (e) {
       const opts = options;
       await this._handleNoModificationAllowedError(
-        errors,
         { e },
+        errors,
         async (error) => {
           if (create) {
             await this._afterPost(opts, false, error);
@@ -426,9 +430,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     const path = this.path;
     if (stats.size == null) {
-      await this.fs._handleError(TypeMismatchError.name, this.path, errors, {
-        message: `"${path}" must not end with slash`,
-      });
+      await this.fs._handleError(
+        {
+          name: TypeMismatchError.name,
+          path: this.path,
+          message: `"${path}" must not end with slash`,
+        },
+        errors
+      );
       return null;
     } else if (stats.size === 0) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-call
@@ -454,7 +463,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       return data;
     } catch (e) {
       const opts = options;
-      await this._handleNotReadableError(errors, { e }, async (error) => {
+      await this._handleNotReadableError({ e }, errors, async (error) => {
         await this._afterGet(opts, null, error);
       });
       return null;

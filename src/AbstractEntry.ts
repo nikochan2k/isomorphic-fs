@@ -1,4 +1,3 @@
-import { ErrorParams } from ".";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
   CopyOptions,
@@ -21,8 +20,20 @@ import {
   NoModificationAllowedError,
   NotFoundError,
   NotReadableError,
+  TypeMismatchError,
 } from "./errors";
 import { getParentPath } from "./util";
+
+interface ErrorParams {
+  code?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  e?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  message?: string;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
 
 export abstract class AbstractEntry implements Entry {
   constructor(
@@ -59,7 +70,7 @@ export abstract class AbstractEntry implements Entry {
           return false;
         }
       } else {
-        await this._handleNotReadableError(errors, { e });
+        await this._handleNotReadableError({ e }, errors);
         return false;
       }
     }
@@ -76,8 +87,8 @@ export abstract class AbstractEntry implements Entry {
     } catch (e) {
       const opts = options;
       await this._handleNoModificationAllowedError(
-        errors,
         { e },
+        errors,
         async (error) => {
           await this._afterDelete(false, opts, error);
         }
@@ -86,13 +97,9 @@ export abstract class AbstractEntry implements Entry {
     }
   }
 
-  public async getParent(): Promise<Directory>;
-  public async getParent(errors?: FileSystemError[]): Promise<Directory | null>;
-  public async getParent(
-    errors?: FileSystemError[]
-  ): Promise<Directory | null> {
+  public getParent(): Directory {
     const parentPath = getParentPath(this.path);
-    return this.fs.getDirectory(parentPath, errors);
+    return this.fs.getDirectory(parentPath);
   }
 
   public async move(
@@ -151,7 +158,7 @@ export abstract class AbstractEntry implements Entry {
     options?: URLOptions,
     errors?: FileSystemError[]
   ): Promise<string | null> {
-    return this.fs.toURL(this.path, options, errors);
+    return this.fs.getURL(this.path, options, errors);
   }
 
   public abstract _copy(
@@ -187,36 +194,34 @@ export abstract class AbstractEntry implements Entry {
     return null;
   }
 
-  protected _createNoModificationAllowedError(params?: ErrorParams) {
+  protected _createError(name: string, params?: ErrorParams) {
     return createError({
-      name: NoModificationAllowedError.name,
+      name,
       repository: this.fs.repository,
       path: this.path,
       ...params,
     });
+  }
+
+  protected _createNoModificationAllowedError(params?: ErrorParams) {
+    return this._createError(NoModificationAllowedError.name, params);
   }
 
   protected _createNotFoundError(params?: ErrorParams) {
-    return createError({
-      name: NotFoundError.name,
-      repository: this.fs.repository,
-      path: this.path,
-      ...params,
-    });
+    return this._createError(NotFoundError.name, params);
   }
 
   protected _createNotReadableError(params?: ErrorParams) {
-    return createError({
-      name: NotReadableError.name,
-      repository: this.fs.repository,
-      path: this.path,
-      ...params,
-    });
+    return this._createError(NotReadableError.name, params);
+  }
+
+  protected _createTypeMismatchError(params?: ErrorParams) {
+    return this._createError(TypeMismatchError.name, params);
   }
 
   protected async _handleNoModificationAllowedError(
+    params: ErrorParams,
     errors?: FileSystemError[],
-    params?: ErrorParams,
     callback?: (e: FileSystemError) => Promise<void>
   ) {
     const error = this._createNoModificationAllowedError(params);
@@ -224,8 +229,8 @@ export abstract class AbstractEntry implements Entry {
   }
 
   protected _handleNotFoundError(
+    params: ErrorParams,
     errors?: FileSystemError[],
-    params?: ErrorParams,
     callback?: (e: FileSystemError) => Promise<void>
   ) {
     const error = this._createNotFoundError(params);
@@ -233,11 +238,20 @@ export abstract class AbstractEntry implements Entry {
   }
 
   protected _handleNotReadableError(
+    params: ErrorParams,
     errors?: FileSystemError[],
-    params?: ErrorParams,
     callback?: (e: FileSystemError) => Promise<void>
   ) {
     const error = this._createNotReadableError(params);
+    return this.fs._handleFileSystemError(error, errors, callback);
+  }
+
+  protected async _handleTypeMismatchError(
+    params: ErrorParams,
+    errors?: FileSystemError[],
+    callback?: (e: FileSystemError) => Promise<void>
+  ) {
+    const error = this._createTypeMismatchError(params);
     return this.fs._handleFileSystemError(error, errors, callback);
   }
 

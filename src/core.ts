@@ -216,18 +216,6 @@ export interface Hook {
   ) => Promise<boolean | null>;
 }
 
-export interface ErrorLike {
-  code?: number;
-  message?: string;
-  name: string;
-  stack?: string;
-  repository?: string;
-  path?: string;
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
-}
-
 export interface FileSystem {
   options: FileSystemOptions;
   repository: string;
@@ -260,13 +248,14 @@ export interface FileSystem {
     options?: ListOptions,
     errors?: FileSystemError[]
   ): Promise<string[] | null>;
-  getDirectory(path: string): Promise<Directory>;
-  getDirectory(
+  getDirectory(path: string): Directory;
+  getFile(path: string): File;
+  getURL(path: string, options?: URLOptions): Promise<string>;
+  getURL(
     path: string,
+    options?: URLOptions,
     errors?: FileSystemError[]
-  ): Promise<Directory | null>;
-  getFile(path: string): Promise<File>;
-  getFile(path: string, errors?: FileSystemError[]): Promise<File | null>;
+  ): Promise<string | null>;
   hash(path: string, options?: ReadOptions): Promise<string>;
   hash(
     path: string,
@@ -348,12 +337,6 @@ export interface FileSystem {
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
   supportDirectory(): boolean;
-  toURL(path: string, options?: URLOptions): Promise<string>;
-  toURL(
-    path: string,
-    options?: URLOptions,
-    errors?: FileSystemError[]
-  ): Promise<string | null>;
   write(path: string, data: Data, options?: WriteOptions): Promise<boolean>;
   write(
     path: string,
@@ -379,8 +362,7 @@ export interface Entry {
   ): Promise<boolean>;
   del(options?: DeleteOptions, errors?: FileSystemError[]): Promise<boolean>;
   delete(options?: DeleteOptions, errors?: FileSystemError[]): Promise<boolean>;
-  getParent(): Promise<Directory>;
-  getParent(errors?: FileSystemError[]): Promise<Directory | null>;
+  getParent(): Directory;
   head(options?: HeadOptions): Promise<Stats>;
   head(
     options?: HeadOptions,

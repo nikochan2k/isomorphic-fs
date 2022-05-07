@@ -1,14 +1,22 @@
-import { ErrorLike } from "./core";
+export interface ErrorLike {
+  code?: number;
+  message?: string;
+  name: string;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
 
 export class FileSystemError extends Error {
   public code?: number;
   public path?: string;
   public repository?: string;
+  [key: string]: any; // eslint-disable-line
 
   constructor(params: ErrorLike) {
     super(params.message);
     for (const [key, value] of Object.entries(params)) {
-      (this as any)[key] = value; // eslint-disable-line
+      this[key] = value; // eslint-disable-line
     }
   }
 
@@ -249,9 +257,9 @@ export const domExceptions: ErrorLike[] = [
 ];
 
 interface ErrorParams {
-  e?: unknown;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  innerError?: any;
+  e?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   message?: string;
   code?: number;
   name: string;
@@ -263,36 +271,43 @@ interface ErrorParams {
 }
 
 export function createError(params: ErrorParams): FileSystemError {
-  if (isFileSystemError(params)) {
-    return params;
-  }
   if (isFileSystemError(params.e)) {
     return params.e;
   }
 
-  const name: string = (params.e as any)?.name ?? params.name; // eslint-disable-line
-  const code: number = (params.e as any)?.code ?? params.code; // eslint-disable-line
-  for (const de of domExceptions) {
-    if (de.name === name || (code != null && de.code === code)) {
-      params.name = de.name;
-      params.code = de.code;
-      if (params.message && params.message !== de.message) {
-        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-        params.message = `${de.message}\n${params.message}`;
-      } else {
-        params.message = de.message;
+  /* eslint-disable */
+  let found = false;
+  const e = params.e;
+  if (e.name) {
+    for (const de of domExceptions) {
+      if (de.name === e.name) {
+        found = true;
+        params.name = de.name;
+        params.code = de.code;
+        if (!params.message) {
+          params.message = de.message;
+        }
+        break;
       }
-      break;
+    }
+  }
+  if (!found) {
+    for (const de of domExceptions) {
+      if (de.name === params.name) {
+        params.name = de.name;
+        params.code = de.code;
+        if (!params.message) {
+          params.message = de.message;
+        }
+        break;
+      }
     }
   }
   if (!params.name) {
     params.name = UnknownError.name;
+    params.message = UnknownError.message;
   }
-
-  if (params.e) {
-    params.innerError = params.e;
-    delete params.e;
-  }
+  /* eslint-enable */
 
   return new FileSystemError(params);
 }

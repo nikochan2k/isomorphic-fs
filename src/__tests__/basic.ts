@@ -1,6 +1,6 @@
 import { DEFAULT_CONVERTER } from "univ-conv";
-import { ErrorLike, File, FileSystem, OnExists, OnNoParent } from "../core";
-import { NotFoundError } from "../errors";
+import { File, FileSystem, OnExists, OnNoParent } from "../core";
+import { ErrorLike, NotFoundError } from "../errors";
 
 const c = DEFAULT_CONVERTER;
 

@@ -34,9 +34,14 @@ import {
 } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
 
-export interface ErrorParams {
-  e?: unknown;
+interface ErrorParams {
+  code?: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  e?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   message?: string;
+  name: string;
+  path: string;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
@@ -72,18 +77,11 @@ export abstract class AbstractFileSystem implements FileSystem {
   }
 
   public async _handleError(
-    name: string,
-    path: string,
+    params: ErrorParams,
     errors?: FileSystemError[],
-    params?: ErrorParams,
     callback?: (error: FileSystemError) => Promise<void>
   ) {
-    const error = createError({
-      name,
-      repository: this.repository,
-      path: path,
-      ...params,
-    });
+    const error = createError({ repository: this.repository, ...params });
     await this._handleFileSystemError(error, errors, callback);
   }
 
@@ -167,19 +165,8 @@ export abstract class AbstractFileSystem implements FileSystem {
     return this.list(path, options, errors);
   }
 
-  public getDirectory(path: string): Promise<Directory>;
-  public getDirectory(
-    path: string,
-    errors?: FileSystemError[]
-  ): Promise<Directory | null>;
-  public async getDirectory(
-    path: string,
-    errors?: FileSystemError[]
-  ): Promise<Directory | null> {
-    const checked = await this._checkPath(path, errors);
-    if (!checked) {
-      return null;
-    }
+  public getDirectory(path: string): Directory {
+    const checked = this._checkPath(path);
     return this._doGetDirectory(checked);
   }
 
@@ -191,8 +178,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   ): Promise<Entry | null>;
   public async getEntry(
     path: string,
-    options?: HeadOptions,
-    errors?: FileSystemError[]
+    options?: HeadOptions
   ): Promise<Entry | null> {
     options = { ...options };
 
@@ -203,29 +189,18 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
 
     if (options.type === EntryType.File) {
-      return this.getFile(path, errors);
+      return this.getFile(path);
     }
     if (options.type === EntryType.Directory) {
-      return this.getDirectory(path, errors);
+      return this.getDirectory(path);
     }
 
     const stats = await this.head(path, options);
     return stats.size != null ? this.getFile(path) : this.getDirectory(path);
   }
 
-  public getFile(path: string): Promise<File>;
-  public getFile(
-    path: string,
-    errors?: FileSystemError[]
-  ): Promise<File | null>;
-  public async getFile(
-    path: string,
-    errors?: FileSystemError[]
-  ): Promise<File | null> {
-    const checked = await this._checkPath(path, errors);
-    if (checked == null) {
-      return null;
-    }
+  public getFile(path: string): File {
+    const checked = this._checkPath(path);
     return this._doGetFile(checked);
   }
 
@@ -240,7 +215,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: ReadOptions,
     errors?: FileSystemError[]
   ): Promise<string | null> {
-    const file = await this.getFile(path, errors);
+    const file = this.getFile(path);
     if (file == null) {
       return null;
     }
@@ -265,52 +240,21 @@ export abstract class AbstractFileSystem implements FileSystem {
         options.type = EntryType.Directory;
       }
     }
-    const checked = await this._checkPath(path, errors);
-    if (!checked) {
-      return null;
-    }
-    path = checked;
+    path = this._checkPath(path);
 
     try {
-      let stats = await this._beforeHead(path, options);
-      if (stats) {
-        return stats;
-      }
-
-      if (options.type === EntryType.Directory) {
-        if (!this.supportDirectory()) {
-          return {};
-        }
-      }
-
-      stats = await this._doHead(path, options);
-      if (stats.size != null && options.type === EntryType.Directory) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.repository,
-          path: path,
-          message: `"${path}" is not a directory`,
-        });
-      }
-      if (stats.size == null && options.type === EntryType.File) {
-        throw createError({
-          name: TypeMismatchError.name,
-          repository: this.repository,
-          path: path,
-          message: `"${path}" is not a file`,
-        });
-      }
-
+      const stats = await this._head(path, options);
       await this._afterHead(path, stats, options);
-
       return stats;
     } catch (e) {
       const opts = options;
       await this._handleError(
-        NotReadableError.name,
-        path,
+        {
+          name: NotReadableError.name,
+          path,
+          e,
+        },
         errors,
-        { e },
         async (error) => {
           await this._afterHead(path, null, opts, error);
         }
@@ -330,10 +274,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: ListOptions,
     errors?: FileSystemError[]
   ): Promise<string[] | null> {
-    const dir = await this.getDirectory(path, errors);
-    if (!dir) {
-      return Promise.resolve([]);
-    }
+    const dir = this.getDirectory(path);
     return dir.list(options, errors);
   }
 
@@ -351,10 +292,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: MkcolOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const dir = await this.getDirectory(path, errors);
-    if (!dir) {
-      return false;
-    }
+    const dir = this.getDirectory(path);
     return dir.mkcol(options, errors);
   }
 
@@ -401,11 +339,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: PatchOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const checked = await this._checkPath(path, errors);
-    if (!checked) {
-      return false;
-    }
-    path = checked;
+    path = this._checkPath(path);
 
     options = { ...options };
     if (path.endsWith("/")) {
@@ -431,10 +365,12 @@ export abstract class AbstractFileSystem implements FileSystem {
     } catch (e) {
       const opts = options;
       await this._handleError(
-        NoModificationAllowedError.name,
-        path,
+        {
+          name: NoModificationAllowedError.name,
+          path,
+          e,
+        },
         errors,
-        { e },
         async (errors) => {
           await this._afterPatch(path, false, opts, errors);
         }
@@ -454,10 +390,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: ReadOptions,
     errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null> {
-    const file = await this.getFile(path, errors);
-    if (!file) {
-      return null;
-    }
+    const file = this.getFile(path);
     return file.read(type, options, errors);
   }
 
@@ -494,13 +427,13 @@ export abstract class AbstractFileSystem implements FileSystem {
     return this.head(path, options, errors);
   }
 
-  public async toURL(path: string, options?: URLOptions): Promise<string>;
-  public async toURL(
+  public async getURL(path: string, options?: URLOptions): Promise<string>;
+  public async getURL(
     path: string,
     options?: URLOptions,
     errors?: FileSystemError[]
   ): Promise<string | null>;
-  public async toURL(
+  public async getURL(
     path: string,
     options?: URLOptions,
     errors?: FileSystemError[]
@@ -509,7 +442,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     if (stats == null) {
       return null;
     }
-    return this._doToURL(path, stats.size == null, options);
+    return this._doGetURL(path, stats.size == null, options);
   }
 
   public unlink = (path: string, options?: DeleteOptions) =>
@@ -521,15 +454,12 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: WriteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    const file = await this.getFile(path, errors);
-    if (!file) {
-      return false;
-    }
+    const file = this.getFile(path);
     return file.write(data, options, errors);
   }
 
-  public abstract _doGetDirectory(path: string): Promise<Directory>;
-  public abstract _doGetFile(path: string): Promise<File>;
+  public abstract _doGetDirectory(path: string): Directory;
+  public abstract _doGetFile(path: string): File;
   public abstract _doHead(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _doPatch(
     path: string,
@@ -537,7 +467,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     props: Stats,
     options: PatchOptions
   ): Promise<void>;
-  public abstract _doToURL(
+  public abstract _doGetURL(
     path: string,
     isDirectory: boolean,
     options?: URLOptions
@@ -591,20 +521,14 @@ export abstract class AbstractFileSystem implements FileSystem {
     return null;
   }
 
-  protected _checkPath(path: string): Promise<string>;
-  protected _checkPath(
-    path: string,
-    errors?: FileSystemError[]
-  ): Promise<string | null>;
-  protected async _checkPath(
-    path: string,
-    errors?: FileSystemError[]
-  ): Promise<string | null> {
+  protected _checkPath(path: string): string {
     if (INVALID_CHARS.test(path)) {
-      await this._handleError(SyntaxError.name, path, errors, {
+      throw createError({
+        name: SyntaxError.name,
+        repository: this.repository,
+        path,
         message: `"${path}" has invalid character`,
       });
-      return null;
     }
     return normalizePath(path);
   }
@@ -666,6 +590,42 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
   }
 
+  protected async _head(
+    path: string,
+    options: HeadOptions
+  ): Promise<Stats | null> {
+    let stats = await this._beforeHead(path, options);
+    if (stats) {
+      return stats;
+    }
+
+    if (options.type === EntryType.Directory) {
+      if (!this.supportDirectory()) {
+        return {};
+      }
+    }
+
+    stats = await this._doHead(path, options);
+    if (stats.size != null && options.type === EntryType.Directory) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.repository,
+        path,
+        message: `"${path}" is not a directory`,
+      });
+    }
+    if (stats.size == null && options.type === EntryType.File) {
+      throw createError({
+        name: TypeMismatchError.name,
+        repository: this.repository,
+        path,
+        message: `"${path}" is not a file`,
+      });
+    }
+
+    return stats;
+  }
+
   private async _prepareCopy(
     fromPath: string,
     toPath: string,
@@ -677,7 +637,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (!this.supportDirectory()) {
-          from = await this.getDirectory(fromPath);
+          from = this.getDirectory(fromPath);
         } else {
           throw e;
         }
@@ -685,9 +645,12 @@ export abstract class AbstractFileSystem implements FileSystem {
         throw e;
       }
     }
-    const to = await (from instanceof AbstractFile
-      ? this.getFile(toPath)
-      : this.getDirectory(toPath));
+
+    const to =
+      from instanceof AbstractFile
+        ? this.getFile(toPath)
+        : this.getDirectory(toPath);
+
     return { from, to };
   }
 }

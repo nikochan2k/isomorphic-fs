@@ -21,7 +21,6 @@ import {
   isFileSystemError,
   NotFoundError,
   PathExistError,
-  TypeMismatchError,
 } from "./errors";
 import { getName, joinPaths, normalizePath } from "./util";
 
@@ -42,9 +41,10 @@ export abstract class AbstractDirectory
     const path = this.path;
 
     if (to instanceof AbstractFile) {
-      await this.fs._handleError(TypeMismatchError.name, this.path, errors, {
-        message: `"${path}" is not a directory`,
-      });
+      await this._handleTypeMismatchError(
+        { message: `"${path}" is not a directory` },
+        errors
+      );
       return false;
     }
 
@@ -78,16 +78,10 @@ export abstract class AbstractDirectory
       const toPath = joinPaths(toDir.path, name);
       let res: boolean;
       if (fromEntry instanceof AbstractFile) {
-        const toEntry = await this.fs.getFile(toPath, errors);
-        if (!toEntry) {
-          continue;
-        }
+        const toEntry = this.fs.getFile(toPath);
         res = await fromEntry._copy(toEntry, options, errors);
       } else if (fromEntry instanceof AbstractDirectory) {
-        const toEntry = await this.fs.getDirectory(toPath, errors);
-        if (!toEntry) {
-          continue;
-        }
+        const toEntry = this.fs.getDirectory(toPath);
         res = await fromEntry._copy(toEntry, options, errors);
       } else {
         continue;
@@ -207,25 +201,27 @@ export abstract class AbstractDirectory
     try {
       await this._exists(options);
       if (options.onExists === OnExists.Error) {
-        await this.fs._handleError(PathExistError.name, path, errors, {
-          message: `"${path}" has already existed`,
-        });
+        await this.fs._handleError(
+          {
+            name: PathExistError.name,
+            path,
+            message: `"${path}" has already existed`,
+          },
+          errors
+        );
         return false;
       }
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options.onNoParent === OnNoParent.MakeParents && path !== "/") {
-          const parent = await this.getParent(errors);
-          if (!parent) {
-            return false;
-          }
+          const parent = this.getParent();
           const result = await parent.mkcol(options, errors);
           if (!result) {
             return false;
           }
         }
       } else {
-        await this._handleNotReadableError(errors, { e });
+        await this._handleNotReadableError({ e }, errors);
         return false;
       }
     }
@@ -239,7 +235,7 @@ export abstract class AbstractDirectory
       await this._afterMkcol(options, true);
       return true;
     } catch (e) {
-      await this._handleNoModificationAllowedError(errors, { e });
+      await this._handleNoModificationAllowedError({ e }, errors);
       return false;
     }
   }
@@ -335,7 +331,7 @@ export abstract class AbstractDirectory
 
       return list;
     } catch (e) {
-      await this._handleNotReadableError(errors, { e });
+      await this._handleNotReadableError({ e }, errors);
       return null;
     }
   }

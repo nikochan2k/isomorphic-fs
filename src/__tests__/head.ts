@@ -1,5 +1,5 @@
-import { ErrorLike, FileSystem } from "../core";
-import { NotFoundError } from "../errors";
+import { FileSystem } from "../core";
+import { ErrorLike, NotFoundError } from "../errors";
 
 export const testAll = (
   fs: FileSystem,
