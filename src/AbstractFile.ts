@@ -14,7 +14,6 @@ import {
   ReturnData,
   uint8ArrayConverter,
 } from "univ-conv";
-import { AbstractDirectory } from "./AbstractDirectory";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
@@ -44,26 +43,18 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   public async _copy(
-    toEntry: Entry,
+    toFile: Entry,
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    if (toEntry instanceof AbstractDirectory) {
-      await this._handleTypeMismatchError(
-        {
-          message: `"${toEntry.path}" is not a file`,
-          from: this.path,
-          to: toEntry.path,
-        },
-        errors
-      );
-      return false;
+    if (!this.stats) {
+      await this.head(options);
     }
 
-    const to = toEntry as AbstractFile;
+    const to = toFile as AbstractFile;
     try {
-      if (!this.stats) {
-        await this.head(options);
+      if (!to.stats) {
+        await to.head(options);
       }
       if (options.onExists === ExistsAction.Ignore) {
         return true;
@@ -74,19 +65,21 @@ export abstract class AbstractFile extends AbstractEntry implements File {
             name: InvalidModificationError.name,
             path: this.path,
             from: this.path,
-            to: toEntry.path,
+            to: to.path,
           },
           errors
         );
         return false;
       }
     } catch (e) {
-      if (!(isFileSystemError(e) && e.name === NotFoundError.name)) {
-        await this._handleNotReadableError(
-          { e, from: this.path, to: toEntry.path },
-          errors
-        );
-        return false;
+      if (isFileSystemError(e)) {
+        if (e.name === NotFoundError.name) {
+          // do nothing
+        } else {
+          throw e;
+        }
+      } else {
+        throw e;
       }
     }
 

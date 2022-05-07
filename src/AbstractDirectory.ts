@@ -17,6 +17,7 @@ import {
 } from "./core";
 import {
   FileSystemError,
+  InvalidModificationError,
   isFileSystemError,
   NotFoundError,
   PathExistError,
@@ -32,16 +33,12 @@ export abstract class AbstractDirectory
   }
 
   public async _copy(
-    to: Entry,
+    toDir: Entry,
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    if (to instanceof AbstractFile) {
-      await this._handleTypeMismatchError(
-        { message: `"${this.path}" is not a directory` },
-        errors
-      );
-      return false;
+    if (this.stats) {
+      await this.stat(options);
     }
 
     const fromItems = await this._list(options, errors);
@@ -49,8 +46,36 @@ export abstract class AbstractDirectory
       return false;
     }
 
-    const toDir = to as Directory;
-    let result = await toDir.mkcol(options, errors);
+    const to = toDir as AbstractDirectory;
+    try {
+      if (!to.stats) {
+        await to.head(options);
+      }
+      if (options.onExists === ExistsAction.Error) {
+        await this.fs._handleError(
+          {
+            name: InvalidModificationError.name,
+            path: this.path,
+            from: this.path,
+            to: to.path,
+          },
+          errors
+        );
+        return false;
+      }
+    } catch (e) {
+      if (isFileSystemError(e)) {
+        if (e.name === NotFoundError.name) {
+          // Do nothing
+        } else {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    }
+
+    let result = await to.mkcol(options, errors);
     if (!result) {
       return false;
     }
@@ -60,8 +85,6 @@ export abstract class AbstractDirectory
     }
 
     const fs = this.fs;
-
-    result = true;
     for (const fromItem of fromItems) {
       const fromPath = fromItem.path;
       const fromEntry = await fs.getEntry(
@@ -73,7 +96,7 @@ export abstract class AbstractDirectory
         errors
       );
       const name = getName(fromPath);
-      const toPath = joinPaths(toDir.path, name);
+      const toPath = joinPaths(to.path, name);
       let copyResult: boolean;
       if (fromEntry instanceof AbstractFile) {
         const toEntry = fs.getFile(toPath);
