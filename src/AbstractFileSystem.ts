@@ -269,7 +269,12 @@ export abstract class AbstractFileSystem implements FileSystem {
     path = this._checkPath(path);
 
     try {
-      const stats = await this.$head(path, options);
+      let stats = await this._beforeHead(path, options);
+      if (stats) {
+        return stats;
+      }
+
+      stats = await this.$head(path, options);
       await this._afterHead(path, stats, options);
       return stats;
     } catch (e) {
@@ -489,18 +494,13 @@ export abstract class AbstractFileSystem implements FileSystem {
     path: string,
     options: HeadOptions
   ): Promise<Stats | null> {
-    let stats = await this._beforeHead(path, options);
-    if (stats) {
-      return stats;
-    }
-
     if (options.type === EntryType.Directory) {
       if (!this.supportDirectory()) {
         return {};
       }
     }
 
-    stats = await this._doHead(path, options);
+    const stats = await this._doHead(path, options);
     if (stats.size != null && options.type === EntryType.Directory) {
       throw createError({
         name: TypeMismatchError.name,

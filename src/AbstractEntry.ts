@@ -62,7 +62,12 @@ export abstract class AbstractEntry implements Entry {
   ): Promise<boolean> {
     options = { ...this.fs.defaultDeleteOptions, ...options };
     try {
-      const result = await this.$delete(options);
+      let result = await this._beforeDelete(options);
+      if (result != null) {
+        return result;
+      }
+
+      result = await this.$delete(options);
       await this._afterDelete(result, options);
       return result;
     } catch (e) {
@@ -165,11 +170,6 @@ export abstract class AbstractEntry implements Entry {
       } else {
         throw this._createNotReadableError({ e });
       }
-    }
-
-    const result = await this._beforeDelete(options);
-    if (result != null) {
-      return result;
     }
 
     return this._delete(options);
