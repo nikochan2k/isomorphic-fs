@@ -18,13 +18,13 @@ export const testAll = (
   });
 
   it("rootdir", async () => {
-    const dir = await fs.getDirectory("/");
+    const dir = fs.getDirectory("/");
     const paths = await dir.readdir();
     expect(paths.length).toBe(0);
   });
 
   it("add empty file", async () => {
-    const file = await fs.getFile("/empty.txt");
+    const file = fs.getFile("/empty.txt");
     try {
       await file.stat();
       throw new Error("Found file: " + file.path);
@@ -38,7 +38,7 @@ export const testAll = (
   });
 
   it("add text file", async () => {
-    const file = await fs.getFile("/test.txt");
+    const file = fs.getFile("/test.txt");
     try {
       await file.stat();
       throw new Error("Found file: " + file.path);
@@ -52,7 +52,7 @@ export const testAll = (
   });
 
   it("read text file", async () => {
-    const file = await fs.getFile("/test.txt");
+    const file = fs.getFile("/test.txt");
     const buffer = await file.read("uint8array");
     expect(buffer.byteLength).toBe(4);
     const text = await c.toText(buffer!);
@@ -60,7 +60,7 @@ export const testAll = (
   });
 
   it("continuous read and write", async () => {
-    const file = await fs.getFile("/otani.txt");
+    const file = fs.getFile("/otani.txt");
     await file.write("大谷翔平");
     let text = await file.read("text");
     expect(text).toBe("大谷翔平");
@@ -71,7 +71,7 @@ export const testAll = (
   });
 
   it("listdir test", async () => {
-    const dir = await fs.getDirectory("/");
+    const dir = fs.getDirectory("/");
     let dirs = await dir.readdir();
     expect(0 <= dirs.indexOf("/empty.txt")).toBe(true);
     expect(0 <= dirs.indexOf("/test.txt")).toBe(true);
@@ -79,7 +79,7 @@ export const testAll = (
   });
 
   it("mkdir test", async () => {
-    const folder = await fs.getDirectory("/folder");
+    const folder = fs.getDirectory("/folder");
     try {
       const stats = await folder.stat();
       if (stats.size != null) {
@@ -102,7 +102,7 @@ export const testAll = (
   });
 
   it("create file in dir", async () => {
-    let file = await fs.getFile("/folder/sample.txt");
+    let file = fs.getFile("/folder/sample.txt");
     file = file as File;
     try {
       await file.stat();
@@ -120,14 +120,14 @@ export const testAll = (
     const text = await file.read("text");
     expect(text).toBe("Sample");
 
-    const dir = await fs.getDirectory("/folder/");
+    const dir = fs.getDirectory("/folder/");
     const list = await dir.list();
     expect(0 <= list.indexOf("/folder/sample.txt")).toBe(true);
   });
 
   it("copy directory", async () => {
-    const from = await fs.getDirectory("/folder");
-    const to = await fs.getDirectory("/folder2");
+    const from = fs.getDirectory("/folder");
+    const to = fs.getDirectory("/folder2");
     await from.copy(to!, {
       onExists: OnExists.Error,
       onNoParent: OnNoParent.Error,
@@ -136,7 +136,7 @@ export const testAll = (
     const stats = await to.stat();
     expect(stats.size).toBeUndefined();
     if (fs.supportDirectory()) {
-      const root = await fs.getDirectory("/");
+      const root = fs.getDirectory("/");
       const list = await root.ls();
       expect(0 <= list.indexOf("/folder2")).toBe(true);
     }
@@ -154,12 +154,12 @@ export const testAll = (
   it("move directory", async () => {
     await fs.move("/folder2", "/folder3");
     if (fs.supportDirectory()) {
-      const root = await fs.getDirectory("/");
+      const root = fs.getDirectory("/");
       const list = await root.ls();
       expect(list.indexOf("/folder2") < 0).toBe(true);
       expect(0 <= list.indexOf("/folder3")).toBe(true);
     }
-    const folder3 = await fs.getDirectory("/folder3");
+    const folder3 = fs.getDirectory("/folder3");
     const folder3List = await folder3.ls();
     expect(0 <= folder3List.indexOf("/folder3/sample2.txt")).toBe(true);
   });

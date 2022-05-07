@@ -62,26 +62,7 @@ export abstract class AbstractEntry implements Entry {
   ): Promise<boolean> {
     options = { ...this.fs.defaultDeleteOptions, ...options };
     try {
-      await this._exists(options);
-    } catch (e) {
-      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
-        if (options.onNotExist === OnNotExist.Error) {
-          await this.fs._handleFileSystemError(e, errors);
-          return false;
-        }
-      } else {
-        await this._handleNotReadableError({ e }, errors);
-        return false;
-      }
-    }
-
-    try {
-      let result = await this._beforeDelete(options);
-      if (result != null) {
-        return result;
-      }
-
-      result = await this._delete(options);
+      const result = await this.$delete(options);
       await this._afterDelete(result, options);
       return result;
     } catch (e) {
@@ -172,6 +153,27 @@ export abstract class AbstractEntry implements Entry {
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
+
+  protected async $delete(options: DeleteOptions): Promise<boolean> {
+    try {
+      await this._exists(options);
+    } catch (e) {
+      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
+        if (options.onNotExist === OnNotExist.Error) {
+          throw e;
+        }
+      } else {
+        throw this._createNotReadableError({ e });
+      }
+    }
+
+    const result = await this._beforeDelete(options);
+    if (result != null) {
+      return result;
+    }
+
+    return this._delete(options);
+  }
 
   protected async _afterDelete(
     result: boolean,
