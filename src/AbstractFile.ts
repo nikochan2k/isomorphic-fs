@@ -148,7 +148,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async _delete(_options: DeleteOptions): Promise<boolean> {
+  public async _deleteExisting(_options: DeleteOptions): Promise<boolean> {
     try {
       await this._doDelete();
       return true;

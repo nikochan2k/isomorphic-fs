@@ -91,7 +91,7 @@ export abstract class AbstractDirectory
     return result;
   }
 
-  public async _delete(
+  public async _deleteExisting(
     options: DeleteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {

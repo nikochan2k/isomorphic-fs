@@ -152,7 +152,7 @@ export abstract class AbstractEntry implements Entry {
     options: XmitOptions,
     errors?: FileSystemError[]
   ): Promise<boolean>;
-  public abstract _delete(option: DeleteOptions): Promise<boolean>;
+  public abstract _deleteExisting(option: DeleteOptions): Promise<boolean>;
   public abstract head(options?: HeadOptions): Promise<Stats>;
   public abstract head(
     options?: HeadOptions,
@@ -173,7 +173,7 @@ export abstract class AbstractEntry implements Entry {
       }
     }
 
-    return this._delete(options);
+    return this._deleteExisting(options);
   }
 
   protected async _afterDelete(
