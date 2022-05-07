@@ -163,10 +163,11 @@ export abstract class AbstractEntry implements Entry {
     try {
       await this._exists(options);
     } catch (e) {
-      if (isFileSystemError(e) && e.name !== NotFoundError.name) {
+      if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options.onNotExist === OnNotExist.Error) {
           throw e;
         }
+        return false;
       } else {
         throw this._createNotReadableError({ e });
       }
