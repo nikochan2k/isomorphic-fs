@@ -7,7 +7,6 @@ import {
   HeadOptions,
   MoveOptions,
   NotExistAction,
-  Options,
   PatchOptions,
   Stats,
   URLOptions,
@@ -36,6 +35,8 @@ interface ErrorParams {
 }
 
 export abstract class AbstractEntry implements Entry {
+  public stats: Stats | undefined | null;
+
   constructor(
     public readonly fs: AbstractFileSystem,
     public readonly path: string
@@ -149,7 +150,6 @@ export abstract class AbstractEntry implements Entry {
   ): Promise<boolean>;
   public abstract _deleteExisting(
     option: DeleteOptions,
-    stats: Stats,
     errors?: FileSystemError[]
   ): Promise<boolean>;
   public abstract head(options?: HeadOptions): Promise<Stats>;
@@ -167,10 +167,9 @@ export abstract class AbstractEntry implements Entry {
       return result;
     }
 
-    let stats: Stats;
     try {
-      stats = await this.head({ ignoreHook: options.ignoreHook });
-      return this._deleteExisting(options, stats, errors);
+      await this.head({ ignoreHook: options.ignoreHook });
+      return this._deleteExisting(options, errors);
     } catch (e) {
       if (isFileSystemError(e) && e.name === NotFoundError.name) {
         if (options.onNotExist === NotExistAction.Error) {
@@ -264,6 +263,4 @@ export abstract class AbstractEntry implements Entry {
     const error = this._createTypeMismatchError(params);
     return this.fs._handleFileSystemError(error, errors, callback);
   }
-
-  protected abstract _exists(options: Options): Promise<Stats>;
 }

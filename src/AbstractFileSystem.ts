@@ -1,4 +1,5 @@
 import { Data, DataType, ReturnData } from "univ-conv";
+import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFile } from "./AbstractFile";
 import {
   CopyOptions,
@@ -204,7 +205,10 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
 
     const stats = await this.head(path, options);
-    return stats.size != null ? this.getFile(path) : this.getDirectory(path);
+    const entry =
+      stats.size != null ? this.getFile(path) : this.getDirectory(path);
+    (entry as unknown as AbstractEntry).stats = stats;
+    return entry;
   }
 
   public getFile(path: string): File {
@@ -501,20 +505,19 @@ export abstract class AbstractFileSystem implements FileSystem {
     }
 
     const stats = await this._doHead(path, options);
+    let errorMessage: string | undefined;
     if (stats.size != null && options.type === EntryType.Directory) {
-      throw createError({
-        name: TypeMismatchError.name,
-        repository: this.repository,
-        path,
-        message: `"${path}" is not a directory`,
-      });
+      errorMessage = `"${path}" is not a directory`;
     }
     if (stats.size == null && options.type === EntryType.File) {
+      errorMessage = `"${path}" is not a file`;
+    }
+    if (errorMessage) {
       throw createError({
         name: TypeMismatchError.name,
         repository: this.repository,
         path,
-        message: `"${path}" is not a file`,
+        message: errorMessage,
       });
     }
 

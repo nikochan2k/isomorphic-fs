@@ -23,7 +23,6 @@ import {
   ExistsAction,
   File,
   HeadOptions,
-  Options,
   ReadOptions,
   Stats,
   WriteOptions,
@@ -62,9 +61,10 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     const to = toEntry as AbstractFile;
-    let stats: Stats | undefined;
     try {
-      stats = await to.head({ ...options, type: EntryType.File });
+      if (!this.stats) {
+        await this.head(options);
+      }
       if (options.onExists === ExistsAction.Ignore) {
         return true;
       }
@@ -90,12 +90,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    const data = await this._read(options, stats, errors);
+    const data = await this._read(options, errors);
     if (data == null) {
       return false;
     }
 
-    return to._write(data, stats, options, errors);
+    return to._write(data, options, errors);
   }
 
   public async _deleteExisting(): Promise<boolean> {
@@ -105,7 +105,6 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _write(
     data: Data,
-    stats?: Stats,
     options?: WriteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
@@ -118,29 +117,29 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
 
     try {
-      if (!stats) {
-        try {
-          stats = await this._exists(options);
-          if (options?.create) {
-            throw this._createError(PathExistError.name, { path: this.path });
-          }
-        } catch (e) {
-          if (isFileSystemError(e)) {
-            if (e.name === NotFoundError.name) {
-              if (options?.create === false) {
-                throw e;
-              }
-            } else {
+      try {
+        if (!this.stats) {
+          await this.head(options);
+        }
+        if (options?.create) {
+          throw this._createError(PathExistError.name, { path: this.path });
+        }
+      } catch (e) {
+        if (isFileSystemError(e)) {
+          if (e.name === NotFoundError.name) {
+            if (options?.create === false) {
               throw e;
             }
           } else {
             throw e;
           }
+        } else {
+          throw e;
         }
       }
 
-      const result = await this.$write(data, options, stats);
-      if (stats) {
+      const result = await this.$write(data, options);
+      if (this.stats) {
         await this._afterPut(options, result);
       } else {
         await this._afterPost(options, result);
@@ -152,7 +151,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         { e },
         errors,
         async (error) => {
-          if (stats) {
+          if (this.stats) {
             await this._afterPut(opts, false, error);
           } else {
             await this._afterPost(opts, false, error);
@@ -173,7 +172,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     errors?: FileSystemError[]
   ): Promise<string | null> {
     options = { ...options };
-    const data = await this._read(options, undefined, errors);
+    const data = await this._read(options, errors);
     if (data == null) {
       return null;
     }
@@ -208,12 +207,18 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
-  public head(
+  public async head(
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null> {
     options = { ...options, type: EntryType.File };
-    return this.fs.head(this.path, options, errors);
+    try {
+      this.stats = await this.fs.head(this.path, options, errors);
+    } catch (e) {
+      this.stats = null;
+      throw e;
+    }
+    return this.stats;
   }
 
   public async read<T extends DataType>(
@@ -231,7 +236,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null> {
     options = { ...options };
-    const data = await this._read(options, undefined, errors);
+    const data = await this._read(options, errors);
     if (data === null) {
       return null;
     }
@@ -247,14 +252,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options?: WriteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    return this._write(data, undefined, options, errors);
+    return this._write(data, options, errors);
   }
 
   public abstract _doDelete(): Promise<void>;
   public abstract _doRead(stats: Stats, options: ReadOptions): Promise<Data>;
   public abstract _doWrite(
     data: Data,
-    stats: Stats | undefined,
+    stats: Stats | undefined | null,
     options: WriteOptions
   ): Promise<void>;
   public abstract supportAppend(): boolean;
@@ -290,17 +295,13 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     return data;
   }
 
-  protected async $write(
-    data: Data,
-    options: WriteOptions,
-    stats?: Stats
-  ): Promise<boolean> {
+  protected async $write(data: Data, options: WriteOptions): Promise<boolean> {
     const length = options.length;
     if (length === 0) {
       return false;
     }
 
-    if (stats) {
+    if (this.stats) {
       const result = await this._beforePut(data, options);
       if (result != null) {
         return result;
@@ -346,7 +347,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       }
     }
 
-    await this._doWrite(data, stats, options);
+    await this._doWrite(data, this.stats, options);
     return true;
   }
 
@@ -411,26 +412,17 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     }
   }
 
-  protected async _exists(options: Options): Promise<Stats> {
-    return this.head({
-      type: EntryType.File,
-      ignoreHook: options.ignoreHook,
-    });
-  }
-
   protected _getConverter() {
     return DEFAULT_CONVERTER;
   }
 
-  protected async _read(options: ReadOptions, stats?: Stats): Promise<Data>;
+  protected async _read(options: ReadOptions): Promise<Data>;
   protected async _read(
     options: ReadOptions,
-    stats?: Stats,
     errors?: FileSystemError[]
   ): Promise<Data | null>;
   protected async _read(
     options: ReadOptions,
-    stats?: Stats,
     errors?: FileSystemError[]
   ): Promise<Data | null> {
     try {
@@ -439,7 +431,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         return data;
       }
 
-      data = await this.$read(options, stats);
+      data = await this.$read(options);
       await this._afterGet(options, data);
       return data;
     } catch (e) {

@@ -12,7 +12,6 @@ import {
   ListOptions,
   MkcolOptions,
   NoParentAction,
-  Options,
   Stats,
   XmitOptions,
 } from "./core";
@@ -93,7 +92,6 @@ export abstract class AbstractDirectory
 
   public async _deleteExisting(
     options: DeleteOptions,
-    _stats: Stats,
     errors?: FileSystemError[]
   ): Promise<boolean> {
     let result = true;
@@ -144,16 +142,18 @@ export abstract class AbstractDirectory
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null>;
-  public head(
+  public async head(
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null> {
     if (!this.fs.supportDirectory()) {
-      return Promise.resolve({});
+      this.stats = {};
+      return this.stats;
     }
 
     options = { ...options, type: EntryType.Directory };
-    return this.fs.head(this.path, options, errors);
+    this.stats = await this.fs.head(this.path, options, errors);
+    return this.stats;
   }
 
   public async list(options?: ListOptions): Promise<string[]>;
@@ -227,10 +227,12 @@ export abstract class AbstractDirectory
   public abstract _doMkcol(): Promise<void>;
 
   protected async $list(options: ListOptions): Promise<Item[]> {
-    await this.head({
-      type: EntryType.Directory,
-      ignoreHook: options.ignoreHook,
-    });
+    if (!this.stats) {
+      await this.head({
+        type: EntryType.Directory,
+        ignoreHook: options.ignoreHook,
+      });
+    }
 
     const list = await this._doList();
     for (const item of list) {
@@ -238,8 +240,8 @@ export abstract class AbstractDirectory
         if (!item.type) {
           item.type = EntryType.Directory;
         }
-        item.path = normalizePath(item.path);
       }
+      item.path = normalizePath(item.path);
     }
 
     return list;
@@ -251,10 +253,10 @@ export abstract class AbstractDirectory
     }
 
     try {
-      await this.head({
-        type: EntryType.Directory,
-        ignoreHook: options?.ignoreHook,
-      });
+      if (!this.stats) {
+        await this.stat(options);
+      }
+
       if (options.onExists === ExistsAction.Error) {
         throw this._createError(PathExistError.name, {
           message: `"${this.path}" has already existed`,
@@ -335,13 +337,6 @@ export abstract class AbstractDirectory
       return beforeMkcol(fs.repository, this.path, options);
     }
     return null;
-  }
-
-  protected async _exists(options: Options): Promise<Stats> {
-    return this.head({
-      type: EntryType.Directory,
-      ignoreHook: options?.ignoreHook,
-    });
   }
 
   protected async _list(
