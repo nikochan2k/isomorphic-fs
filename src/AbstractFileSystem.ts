@@ -32,6 +32,7 @@ import {
   NotFoundError,
   NotReadableError,
   TypeMismatchError,
+  SyntaxError,
 } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
 
