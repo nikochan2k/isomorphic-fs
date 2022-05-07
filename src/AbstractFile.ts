@@ -277,12 +277,12 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
     try {
       if (stats) {
-        const result = await this._beforePost(data, options);
+        const result = await this._beforePut(data, options);
         if (result != null) {
           return result;
         }
       } else {
-        const result = await this._beforePut(data, options);
+        const result = await this._beforePost(data, options);
         if (result != null) {
           return result;
         }
