@@ -117,33 +117,25 @@ export abstract class AbstractFile extends AbstractEntry implements File {
       );
     }
 
-    if (!stats) {
-      try {
-        stats = await this._exists(options);
-        if (options?.create) {
-          throw this._createError(PathExistError.name, { path: this.path });
-        }
-      } catch (e) {
-        if (isFileSystemError(e) && e.name === NotFoundError.name) {
-          if (options?.create === false) {
+    try {
+      if (!stats) {
+        try {
+          stats = await this._exists(options);
+          if (options?.create) {
+            throw this._createError(PathExistError.name, { path: this.path });
+          }
+        } catch (e) {
+          if (isFileSystemError(e)) {
+            if (e.name === NotFoundError.name) {
+              if (options?.create === false) {
+                throw e;
+              }
+            } else {
+              throw e;
+            }
+          } else {
             throw e;
           }
-        } else {
-          throw e;
-        }
-      }
-    }
-
-    try {
-      if (stats) {
-        const result = await this._beforePut(data, options);
-        if (result != null) {
-          return result;
-        }
-      } else {
-        const result = await this._beforePost(data, options);
-        if (result != null) {
-          return result;
         }
       }
 
@@ -306,6 +298,18 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     const length = options.length;
     if (length === 0) {
       return false;
+    }
+
+    if (stats) {
+      const result = await this._beforePut(data, options);
+      if (result != null) {
+        return result;
+      }
+    } else {
+      const result = await this._beforePost(data, options);
+      if (result != null) {
+        return result;
+      }
     }
 
     const start = options.start;
