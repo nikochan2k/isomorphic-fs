@@ -121,11 +121,17 @@ export abstract class AbstractDirectory
       }
     }
 
-    if (result && this.path !== "/") {
-      await this._doRmdir();
+    if (result) {
+      if (this.path === "/") {
+        console.warn("Cannot delete root dir.");
+        result = false;
+      } else {
+        await this._doDelete();
+        result = true;
+      }
     }
 
-    return true;
+    return result;
   }
 
   public dir(options?: ListOptions): Promise<string[]>;
@@ -254,13 +260,27 @@ export abstract class AbstractDirectory
     return this.list(options, errors);
   }
 
+  public abstract _doDelete(): Promise<void>;
   public abstract _doList(): Promise<Item[]>;
   public abstract _doMkcol(): Promise<void>;
-  public abstract _doRmdir(): Promise<void>;
+
+  protected async $list(): Promise<Item[]> {
+    const list = await this._doList();
+    for (const item of list) {
+      if (item.path.endsWith("/")) {
+        if (!item.type) {
+          item.type = EntryType.Directory;
+        }
+        item.path = normalizePath(item.path);
+      }
+    }
+
+    return list;
+  }
 
   protected async _afterList(
     options: ListOptions,
-    list: Item[],
+    list: Item[] | null,
     error?: FileSystemError
   ) {
     const fs = this.fs;
@@ -308,30 +328,21 @@ export abstract class AbstractDirectory
   }
 
   protected async _list(
-    options?: ListOptions,
+    options: ListOptions,
     errors?: FileSystemError[]
   ): Promise<Item[] | null> {
-    options = { ...options };
-
     try {
       let list = await this._beforeList(options);
       if (!list) {
-        list = await this._doList();
+        list = await this.$list();
       }
+
       await this._afterList(options, list);
-
-      for (const item of list) {
-        if (item.path.endsWith("/")) {
-          if (!item.type) {
-            item.type = EntryType.Directory;
-          }
-          item.path = normalizePath(item.path);
-        }
-      }
-
       return list;
     } catch (e) {
-      await this._handleNotReadableError({ e }, errors);
+      await this._handleNotReadableError({ e }, errors, async (error) => {
+        await this._afterList(options, null, error);
+      });
       return null;
     }
   }
