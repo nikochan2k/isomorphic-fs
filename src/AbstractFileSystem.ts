@@ -1,4 +1,4 @@
-import { Data, DataType, ReturnData } from "univ-conv";
+import { Data, DataType, DEFAULT_BUFFER_SIZE, ReturnData } from "univ-conv";
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFile } from "./AbstractFile";
 import {
@@ -7,6 +7,7 @@ import {
   Directory,
   Entry,
   EntryType,
+  ExistsAction,
   File,
   FileSystem,
   FileSystemOptions,
@@ -14,7 +15,6 @@ import {
   ListOptions,
   MkcolOptions,
   MoveOptions,
-  ExistsAction,
   NoParentAction,
   NotExistAction,
   Options,
@@ -31,10 +31,15 @@ import {
   NoModificationAllowedError,
   NotFoundError,
   NotReadableError,
-  TypeMismatchError,
   SyntaxError,
+  TypeMismatchError,
 } from "./errors";
 import { INVALID_CHARS, normalizePath } from "./util";
+
+interface CopyInfo {
+  from: Entry;
+  to: Entry;
+}
 
 interface ErrorParams {
   code?: number;
@@ -52,29 +57,68 @@ interface ErrorParams {
 export abstract class AbstractFileSystem implements FileSystem {
   public readonly defaultCopyOptions: CopyOptions;
   public readonly defaultDeleteOptions: DeleteOptions;
-  public readonly defaultMkdirOptions: MkcolOptions;
+  public readonly defaultHeadOptions: HeadOptions;
+  public readonly defaultMkcolOptions: MkcolOptions;
   public readonly defaultMoveOptions: MoveOptions;
+  public readonly defaultPatchOptions: PatchOptions;
+  public readonly defaultReadOptions: ReadOptions;
+  public readonly defaultWriteOptions: WriteOptions;
 
   constructor(
     public readonly repository: string,
     public readonly options: FileSystemOptions = {}
   ) {
-    this.defaultDeleteOptions = options.defaultDeleteOptions ?? {
+    this.defaultReadOptions = {
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      ignoreHook: false,
+      ...options.defaultReadOptions,
+    };
+    this.defaultWriteOptions = {
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      append: false,
+      onExists: ExistsAction.Overwrite,
+      onNotExist: NotExistAction.Ignore,
+      ignoreHook: false,
+      ...options.defaultWriteOptions,
+    };
+    this.defaultHeadOptions = {
+      ignoreHook: false,
+      ...options.defaultHeadOptions,
+    };
+    this.defaultPatchOptions = {
+      ignoreHook: false,
+      ...options.defaultPatchOptions,
+    };
+    this.defaultMkcolOptions = {
+      onExists: ExistsAction.Error,
+      onNoParent: NoParentAction.Error,
+      ignoreHook: false,
+      ...options.defaultMkdirOptions,
+    };
+    this.defaultDeleteOptions = {
       onNotExist: NotExistAction.Error,
       recursive: false,
+      ignoreHook: false,
+      ...options.defaultDeleteOptions,
     };
-    this.defaultMkdirOptions = options.defaultMkdirOptions ?? {
+    this.defaultMoveOptions = {
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      append: false,
       onExists: ExistsAction.Error,
+      onNotExist: NotExistAction.Ignore,
       onNoParent: NoParentAction.Error,
+      ignoreHook: false,
+      ...options.defaultMoveOptions,
     };
-    this.defaultMoveOptions = options.defaultMoveOptions ?? {
+    this.defaultCopyOptions = {
+      bufferSize: DEFAULT_BUFFER_SIZE,
+      append: false,
       onExists: ExistsAction.Error,
-      onNoParent: NoParentAction.Error,
-    };
-    this.defaultCopyOptions = options.defaultCopyOptions ?? {
-      onExists: ExistsAction.Error,
+      onNotExist: NotExistAction.Ignore,
       onNoParent: NoParentAction.Error,
       recursive: false,
+      ignoreHook: false,
+      ...options.defaultCopyOptions,
     };
   }
 
@@ -109,15 +153,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: CopyOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    options = {
-      onExists: ExistsAction.Error,
-      onNoParent: NoParentAction.Error,
-      recursive: false,
-      ...options,
-    };
+    options = { ...this.defaultCopyOptions, ...options };
+
+    let info: CopyInfo;
     try {
-      // eslint-disable-next-line no-var
-      var { from, to } = await this._prepareCopy(fromPath, toPath, options);
+      info = await this._prepareCopy(fromPath, toPath, options);
     } catch (e) {
       if (errors) {
         errors.push(e as FileSystemError);
@@ -125,6 +165,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       }
       throw e;
     }
+    const { from, to } = info;
     return from.copy(to, options, errors);
   }
 
@@ -264,7 +305,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: HeadOptions,
     errors?: FileSystemError[]
   ): Promise<Stats | null> {
-    options = { ...options };
+    options = { ...this.defaultHeadOptions, ...options };
 
     if (!options.type) {
       if (path.endsWith("/")) {
@@ -344,14 +385,11 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: MoveOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    options = {
-      onExists: ExistsAction.Error,
-      onNoParent: NoParentAction.Error,
-      ...options,
-    };
+    options = { ...this.defaultMoveOptions, ...options };
+
+    let info: CopyInfo;
     try {
-      // eslint-disable-next-line no-var
-      var { from, to } = await this._prepareCopy(fromPath, toPath, options);
+      info = await this._prepareCopy(fromPath, toPath, options);
     } catch (e) {
       if (errors) {
         errors.push(e as FileSystemError);
@@ -359,6 +397,7 @@ export abstract class AbstractFileSystem implements FileSystem {
       }
       throw e;
     }
+    const { from, to } = info;
     return from.move(to, options, errors);
   }
 
@@ -377,14 +416,14 @@ export abstract class AbstractFileSystem implements FileSystem {
   ): Promise<boolean> {
     path = this._checkPath(path);
 
-    options = { ...options };
+    options = { ...this.defaultPatchOptions, ...options };
     if (path.endsWith("/")) {
       if (!options.type) {
         options.type = EntryType.Directory;
       }
     }
 
-    const stats = await this.head(path, options);
+    const stats = await this.head(path, options, errors);
     if (!stats) {
       return false;
     }
@@ -642,7 +681,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     fromPath: string,
     toPath: string,
     options?: Options
-  ): Promise<{ from: Entry; to: Entry }> {
+  ): Promise<CopyInfo> {
     let from: Entry;
     try {
       from = await this.getEntry(fromPath, options);

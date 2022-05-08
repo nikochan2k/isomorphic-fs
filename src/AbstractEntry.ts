@@ -10,7 +10,6 @@ import {
   PatchOptions,
   Stats,
   URLOptions,
-  XmitOptions,
 } from "./core";
 import {
   createError,
@@ -145,7 +144,7 @@ export abstract class AbstractEntry implements Entry {
 
   public abstract _copy(
     entry: Entry,
-    options: XmitOptions,
+    options: CopyOptions,
     errors?: FileSystemError[]
   ): Promise<boolean>;
   public abstract _deleteExisting(

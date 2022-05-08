@@ -17,15 +17,16 @@ import {
 import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
+  CopyOptions,
   Entry,
   EntryType,
   ExistsAction,
   File,
   HeadOptions,
+  NotExistAction,
   ReadOptions,
   Stats,
   WriteOptions,
-  XmitOptions,
 } from "./core";
 import {
   FileSystemError,
@@ -44,14 +45,14 @@ export abstract class AbstractFile extends AbstractEntry implements File {
 
   public async _copy(
     toFile: Entry,
-    options: XmitOptions,
+    options: CopyOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
     const to = toFile as AbstractFile;
     try {
       await this._validate(options);
 
-      if (options.onExists === ExistsAction.Ignore) {
+      if (options.onExists === ExistsAction.Skip) {
         return true;
       }
       if (options.onExists === ExistsAction.Error) {
@@ -106,7 +107,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options?: WriteOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    options = { ...options };
+    options = { ...this.fs.defaultWriteOptions, ...options };
     if (options.append && options.start != null) {
       options.append = false;
       console.warn(
@@ -117,13 +118,16 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     try {
       try {
         await this._validate(options);
-        if (options?.create) {
+        if (options.onExists === ExistsAction.Skip) {
+          return true;
+        }
+        if (options.onExists === ExistsAction.Error) {
           throw this._createError(PathExistError.name, { path: this.path });
         }
       } catch (e) {
         if (isFileSystemError(e)) {
           if (e.name === NotFoundError.name) {
-            if (options?.create === false) {
+            if (options.onNotExist === NotExistAction.Error) {
               throw e;
             }
           } else {
@@ -231,7 +235,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
     options?: ReadOptions,
     errors?: FileSystemError[]
   ): Promise<ReturnData<T> | null> {
-    options = { ...options };
+    options = { ...this.fs.defaultReadOptions, ...options };
     const data = await this._read(options, errors);
     if (data === null) {
       return null;
@@ -288,7 +292,7 @@ export abstract class AbstractFile extends AbstractEntry implements File {
   protected async $write(data: Data, options: WriteOptions): Promise<boolean> {
     const length = options.length;
     if (length === 0) {
-      return false;
+      return true;
     }
 
     if (this.stats) {

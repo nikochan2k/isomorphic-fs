@@ -27,12 +27,16 @@ export const EXCLUDE_PROP_NAMES = [
 export interface FileSystemOptions {
   defaultCopyOptions?: CopyOptions;
   defaultDeleteOptions?: DeleteOptions;
+  defaultHeadOptions?: HeadOptions;
   defaultMkdirOptions?: MkcolOptions;
   defaultMoveOptions?: MoveOptions;
+  defaultPatchOptions?: PatchOptions;
+  defaultReadOptions?: ReadOptions;
+  defaultWriteOptions?: WriteOptions;
   hook?: Hook;
 }
 
-export type URLType = "GET" | "POST" | "PUT" | "DELETE";
+export type Method = "GET" | "POST" | "PUT" | "DELETE";
 
 export interface Options {
   ignoreHook?: boolean;
@@ -41,11 +45,6 @@ export interface Options {
 export enum NotExistAction {
   Error = "error",
   Ignore = "ignore",
-}
-
-export interface DeleteOptions extends Options {
-  onNotExist: NotExistAction;
-  recursive: boolean;
 }
 
 export enum EntryType {
@@ -58,19 +57,11 @@ export interface Item extends Stats {
   type?: EntryType;
 }
 
-export interface HeadOptions extends Options {
-  type?: EntryType;
-}
-
-export interface PatchOptions extends Options {
-  type?: EntryType;
-}
-
 export type ListOptions = Options;
 
 export enum ExistsAction {
   Error = "error",
-  Ignore = "ignore",
+  Skip = "skip",
   Overwrite = "overwrite",
 }
 
@@ -79,39 +70,47 @@ export enum NoParentAction {
   MakeParents = "make_parents",
 }
 
-export interface MkcolOptions extends Options {
-  onExists: ExistsAction;
-  onNoParent: NoParentAction;
+export interface HeadOptions extends Options {
+  type?: EntryType;
 }
+
+export type PatchOptions = HeadOptions;
+
+export interface DeleteOptions extends Options {
+  onNotExist: NotExistAction;
+  recursive: boolean;
+}
+
+export interface MkcolOptions extends Options {
+  onExists?: ExistsAction;
+  onNoParent?: NoParentAction;
+}
+
 export interface ReadOptions extends Options, Partial<ConvertOptions> {}
 
 export interface WriteOptions extends Options, Partial<ConvertOptions> {
   append?: boolean;
-  create?: boolean;
+  onExists?: ExistsAction;
+  onNotExist?: NotExistAction;
 }
 
-export interface MoveOptions extends Options {
-  bufferSize?: number;
-  onExists: ExistsAction;
-  onNoParent: NoParentAction;
-}
+export interface MoveOptions
+  extends HeadOptions,
+    ReadOptions,
+    WriteOptions,
+    MkcolOptions {}
 
-export interface CopyOptions extends Options {
-  bufferSize?: number;
-  onExists: ExistsAction;
-  onNoParent: NoParentAction;
-  recursive: boolean;
-}
-export interface XmitOptions extends Options {
-  bufferSize?: number;
-  onExists: ExistsAction;
-  onNoParent: NoParentAction;
-  recursive: boolean;
+export interface CopyOptions
+  extends HeadOptions,
+    ReadOptions,
+    WriteOptions,
+    MkcolOptions {
+  recursive?: boolean;
 }
 
 export interface URLOptions extends Options {
   expires?: number;
-  urlType?: URLType;
+  method?: Method;
 }
 
 export interface Hook {

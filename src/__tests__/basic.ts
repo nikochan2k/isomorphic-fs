@@ -65,7 +65,10 @@ export const testAll = (
     let text = await file.read("text");
     expect(text).toBe("大谷翔平");
 
-    await file.write("ホームラン", { append: true, create: false });
+    await file.write("ホームラン", {
+      append: true,
+      onExists: ExistsAction.Overwrite,
+    });
     text = await file.read("text");
     expect(text).toBe("大谷翔平ホームラン");
   });
@@ -128,8 +131,8 @@ export const testAll = (
   it("copy directory", async () => {
     const from = fs.getDirectory("/folder");
     const to = fs.getDirectory("/folder2");
-    await from.copy(to!, {
-      onExists: ExistsAction.Error,
+    await from.copy(to, {
+      onExists: ExistsAction.Overwrite,
       onNoParent: NoParentAction.Error,
       recursive: true,
     });
@@ -145,14 +148,20 @@ export const testAll = (
   });
 
   it("move file", async () => {
-    await fs.move("/folder2/sample.txt", "/folder2/sample2.txt");
+    await fs.move("/folder2/sample.txt", "/folder2/sample2.txt", {
+      onExists: ExistsAction.Overwrite,
+      onNoParent: NoParentAction.Error,
+    });
     const list = await fs.list("/folder2");
     expect(list.indexOf("/folder2/sample.txt") < 0).toBe(true);
     expect(0 <= list.indexOf("/folder2/sample2.txt")).toBe(true);
   });
 
   it("move directory", async () => {
-    await fs.move("/folder2", "/folder3");
+    await fs.move("/folder2", "/folder3", {
+      onExists: ExistsAction.Overwrite,
+      onNoParent: NoParentAction.Error,
+    });
     if (fs.supportDirectory()) {
       const root = fs.getDirectory("/");
       const list = await root.ls();

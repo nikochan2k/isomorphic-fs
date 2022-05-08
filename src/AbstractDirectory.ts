@@ -2,6 +2,7 @@ import { AbstractEntry } from "./AbstractEntry";
 import { AbstractFile } from "./AbstractFile";
 import { AbstractFileSystem } from "./AbstractFileSystem";
 import {
+  CopyOptions,
   DeleteOptions,
   Directory,
   Entry,
@@ -13,7 +14,6 @@ import {
   MkcolOptions,
   NoParentAction,
   Stats,
-  XmitOptions,
 } from "./core";
 import {
   FileSystemError,
@@ -34,7 +34,7 @@ export abstract class AbstractDirectory
 
   public async _copy(
     toDir: Entry,
-    options: XmitOptions,
+    options: CopyOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
     if (this.stats) {
@@ -48,8 +48,9 @@ export abstract class AbstractDirectory
 
     const to = toDir as AbstractDirectory;
     try {
-      if (!to.stats) {
-        await to.head(options);
+      await to._validate(options);
+      if (options.onExists === ExistsAction.Skip) {
+        return true;
       }
       if (options.onExists === ExistsAction.Error) {
         await this.fs._handleError(
@@ -98,10 +99,18 @@ export abstract class AbstractDirectory
       let copyResult: boolean;
       if (fromEntry instanceof AbstractFile) {
         const toEntry = fs.getFile(toPath);
-        copyResult = await fromEntry._copy(toEntry, options, errors);
+        copyResult = await fromEntry._copy(
+          toEntry,
+          { ...options, type: EntryType.File },
+          errors
+        );
       } else if (fromEntry instanceof AbstractDirectory) {
         const toEntry = fs.getDirectory(toPath);
-        copyResult = await fromEntry._copy(toEntry, options, errors);
+        copyResult = await fromEntry._copy(
+          toEntry,
+          { ...options, type: EntryType.Directory },
+          errors
+        );
       } else {
         continue;
       }
@@ -222,7 +231,7 @@ export abstract class AbstractDirectory
     options?: MkcolOptions,
     errors?: FileSystemError[]
   ): Promise<boolean> {
-    options = { ...this.fs.defaultMkdirOptions, ...options };
+    options = { ...this.fs.defaultMkcolOptions, ...options };
 
     try {
       const result = await this.$mkcol(options);
