@@ -289,6 +289,25 @@ export abstract class AbstractDirectory
       return true;
     }
 
+    if (this.path !== "/") {
+      const parent = this.getParent();
+      try {
+        await parent.head({
+          type: EntryType.Directory,
+          ignoreHook: options?.ignoreHook,
+        });
+      } catch (e) {
+        if (isFileSystemError(e) && e.name === NotFoundError.name) {
+          if (options.onNoParent === NoParentAction.Error) {
+            throw e;
+          }
+          if (parent.path !== "/") {
+            await parent.mkcol(options);
+          }
+        }
+      }
+    }
+
     try {
       await this._validate(options);
       if (options.onExists === ExistsAction.Error) {
@@ -304,26 +323,6 @@ export abstract class AbstractDirectory
         }
       } else {
         throw e;
-      }
-    }
-
-    const parent = this.getParent();
-    try {
-      await parent.head({
-        type: EntryType.Directory,
-        ignoreHook: options?.ignoreHook,
-      });
-    } catch (e) {
-      if (isFileSystemError(e) && e.name === NotFoundError.name) {
-        if (options.onNoParent === NoParentAction.Error) {
-          throw e;
-        }
-        if (parent.path !== "/") {
-          const result = await parent.mkcol(options);
-          if (!result) {
-            return false;
-          }
-        }
       }
     }
 
