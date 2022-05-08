@@ -108,7 +108,7 @@ export interface CopyOptions
   recursive?: boolean;
 }
 
-export interface URLOptions extends Options {
+export interface URLOptions extends HeadOptions {
   expires?: number;
   method?: Method;
 }

@@ -269,6 +269,7 @@ export abstract class AbstractFileSystem implements FileSystem {
     options?: URLOptions,
     errors?: FileSystemError[]
   ): Promise<string | null> {
+    options = { method: "GET", ...options };
     const stats = await this.head(path, options, errors);
     if (stats == null) {
       return null;
@@ -520,7 +521,7 @@ export abstract class AbstractFileSystem implements FileSystem {
   public abstract _doGetURL(
     path: string,
     isDirectory: boolean,
-    options?: URLOptions
+    options: URLOptions
   ): Promise<string>;
   public abstract _doHead(path: string, options: HeadOptions): Promise<Stats>;
   public abstract _doPatch(
