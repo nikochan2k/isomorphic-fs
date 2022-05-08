@@ -159,6 +159,8 @@ export abstract class AbstractFile extends AbstractEntry implements File {
         }
       );
       return false;
+    } finally {
+      this.stats = undefined;
     }
   }
 

@@ -247,6 +247,8 @@ export abstract class AbstractDirectory
         }
       );
       return false;
+    } finally {
+      this.stats = undefined;
     }
   }
 

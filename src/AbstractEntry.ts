@@ -75,6 +75,8 @@ export abstract class AbstractEntry implements Entry {
         }
       );
       return false;
+    } finally {
+      this.stats = undefined;
     }
   }
 
