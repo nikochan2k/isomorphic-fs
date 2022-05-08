@@ -309,7 +309,6 @@ export function createError(params: ErrorParams): FileSystemError {
   }
   /* eslint-enable */
 
-  console.warn(params);
   return new FileSystemError(params);
 }
 
